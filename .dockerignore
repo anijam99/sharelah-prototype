@@ -1,0 +1,10 @@
+node_modules
+dist
+design-reference
+test-results
+playwright-report
+.git
+.env
+*.zip
+*.tsbuildinfo
+.DS_Store

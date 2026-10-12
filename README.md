@@ -1,1 +1,98 @@
-# sharelah-prototype
+# ShareLah web prototype
+
+A mobile-first, self-hosted implementation of the current orange-and-white [ShareLah Figma design](https://www.figma.com/design/ak4IecsfKTbnzfkWYzbOnK?node-id=2-86), with the original illustrations and icon paths. React + TypeScript + Vite, served by Nginx in Docker.
+
+Each tester has independent, resettable data in their own browser. Reservations, messages, listings, saved offers, payment choices and reports persist across refreshes. Photos use IndexedDB; other state uses localStorage. No application database or account setup is required.
+
+## Deploy through GitHub and Coolify
+
+Push the contents of this folder to your GitHub repository. In Coolify, connect the repository through your GitHub integration and create an application with these settings:
+
+| Setting               | Value                                    |
+| --------------------- | ---------------------------------------- |
+| Build pack / strategy | **Dockerfile**                           |
+| Base Directory        | `/` if the app is at the repository root |
+| Dockerfile Location   | `/Dockerfile`                            |
+| Ports Exposes         | `8080`                                   |
+| Domain                | Your HTTPS app domain                    |
+| Auto deploy           | **Deploy on push (webhooks)**            |
+| Health check          | HTTP `GET /health`, port `8080`          |
+
+If you keep the folder inside an existing repository, set Base Directory to its actual path: for example `/web-app`, or `/Iter2/web-app` in the original SMU repository. The Dockerfile location stays relative to that directory.
+
+Click Deploy once. Afterward, pushes to the selected branch trigger redeployment. Coolify handles the HTTPS proxy and certificates. No app environment variables, persistent server volume, Compose stack or separate Caddy service is required.
+
+The Dockerfile installs dependencies, prepares the original fonts with their licenses, builds the app and serves it on port 8080. Camera access works through the HTTPS domain. See the official [Dockerfile deployment guide](https://coolify.io/docs/applications/builds/dockerfile) and [automatic deployments guide](https://coolify.io/docs/applications/deployments/automatic-deployments).
+
+## Test locally
+
+With Node.js 24 or newer installed, open a terminal in this folder and run:
+
+```sh
+npm run dev
+```
+
+That command installs dependencies automatically when they are missing or don't match the lockfile, prepares any missing fonts, and starts Vite. The first run needs internet access to install dependencies. Subsequent runs reuse the installed packages and fonts. If a font download fails, development still starts using a system-font fallback and retries on the next run.
+
+Open `http://localhost:5173`. Localhost supports browser camera access. To test on a phone, use the deployed HTTPS URL; a plain HTTP LAN address does not enable the camera.
+
+Other commands, once dependencies are installed:
+
+```sh
+npm test
+npm run build
+npm run preview
+```
+
+For optional browser tests:
+
+```sh
+npx playwright install chromium
+npm run test:e2e
+```
+
+To check the deployed site:
+
+```sh
+BASE_URL=https://sharelah.your-domain.com npm run test:e2e
+```
+
+## What works
+
+- Home / Map / Create / Splits / Profile navigation, contextual Back labels and a four-step creation indicator.
+- Browse, search, category, distance, sorting, saved offers and neighbourhood changes.
+- Two-axis map browsing with clickable offer pins and restored selection/scroll position. The map is the Figma neighbourhood illustration, not a live map service or GPS location.
+- Consistent membership on Home, map pins and cards. Greek yoghurt starts in your splits and ready for pickup.
+- Offer details → reservation sheet → payment choice → held reservation. Cancellation before purchase restores availability.
+- Ready pickup → live rear-camera QR scanner or uploaded QR image / manual six-digit code → explicit item check → completion and rating. A valid scan does not release payment by itself.
+- Problem reports retain the held payment and block pickup completion.
+- Persistent local conversations, message drafts and quick replies.
+- Shelf-photo capture and upload, item entry, bundle allocation in integer cents, editable pickup details, review, publishing and hosting controls.
+- Deal reporting opens the camera, saves a compressed photo locally and lets the tester enter the item and advertised price. Price-tag text is entered manually; OCR is not included.
+- Camera switching, optional torch where supported, permission-denied fallbacks, and stream cleanup when the screen closes or becomes hidden.
+
+Payments, neighbour actions, notifications, ratings/history and support resolution are simulated. Messages and reports stay in this browser; they do not reach another person. Each browser has its own listings, so this prototype intentionally has no cross-device marketplace or shared chat.
+
+## Facilitate a usability session
+
+Use **Profile → Testing controls → Reset my demo** before a new participant uses the same browser. Separate browser profiles/devices start independently. Data remains until reset or the browser clears its storage. Private browsing may remove it when the session ends.
+
+The test controls let you rename the sample account, simulate a seeded host buying a reserved bundle, and add a sample neighbour to your own listing. Show a facilitator pickup code on another device or print it:
+
+`https://your-domain/testing/pickup-codes.html`
+
+The same cards are available locally in `public/testing/pickup-codes.html`.
+
+| Item          | Initial state                                  | Pickup number |
+| ------------- | ---------------------------------------------- | ------------- |
+| Greek yoghurt | Ready for pickup                               | 482913        |
+| Top detergent | Available; reserve then simulate host purchase | 635271        |
+| Oat milk      | Available; reserve then simulate host purchase | 729418        |
+
+Before the study, test on the actual participant phones over HTTPS: allow/deny permission, capture and retake a shelf photo, upload an image, scan a printed code, enter a wrong number, complete pickup, and navigate away while the camera is running. Check the keyboard and map panning in Safari on iPhone and Chrome on Android. Read `VERIFICATION.md` for the checks completed during implementation and the remaining environment-dependent checks.
+
+## Project layout
+
+`src/` contains the application, domain transitions, browser persistence, router and camera adapter. `public/assets/` contains original Figma artwork; `src/vendor/` contains the bundled QR JavaScript modules; `public/vendor/` contains the WASM binary served locally. `tests/` contains domain, DOM, lifecycle, QR and Playwright checks. `design-reference/` contains the Figma implementation references and is excluded from the Docker image.
+
+Third-party notices are in `THIRD_PARTY_NOTICES.md` and are included in the built app. The earlier `../prototype/` study app is separate from this implementation.
