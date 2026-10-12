@@ -60,6 +60,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
+  vi.useRealTimers();
 });
 
 it("shows existing membership on Home and Map and opens the same ready split", () => {
@@ -82,6 +83,7 @@ it("shows existing membership on Home and Map and opens the same ready split", (
 });
 
 it("reserves via a sheet, saves the chosen payment, and cancels without leaving a stale checkout", () => {
+  vi.useFakeTimers();
   render(<App />);
   click("Open Top detergent");
   click("Reserve a portion");
@@ -92,6 +94,16 @@ it("reserves via a sheet, saves the chosen payment, and cancels without leaving 
   click(/ShareLah wallet/);
   click("Use payment method");
   click("Confirm & hold S$8.10");
+  expect(screen.getByRole("timer").getAttribute("aria-label")).toBe(
+    "Confirmation in 5 seconds",
+  );
+  expect(saved().reservations.det).toBeUndefined();
+  act(() => vi.advanceTimersByTime(4000));
+  expect(screen.getByRole("timer").getAttribute("aria-label")).toBe(
+    "Confirmation in 1 seconds",
+  );
+  expect(saved().reservations.det).toBeUndefined();
+  act(() => vi.advanceTimersByTime(1000));
   expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(
     "My reservation",
   );
@@ -223,4 +235,48 @@ it("opens the camera for a deal report and offers a usable permission-denied fal
   expect(
     screen.getByRole("heading", { name: "Neighbourhood find" }),
   ).toBeTruthy();
+});
+
+it("cancels during the grace period without taking availability or holding payment", () => {
+  vi.useFakeTimers();
+  render(<App />);
+  click("Open Top detergent");
+  click("Reserve a portion");
+  click("Confirm & hold S$8.10");
+  act(() => vi.advanceTimersByTime(3000));
+  click("Cancel reservation");
+  expect(location.hash).toBe("#/offer/det");
+  act(() => vi.advanceTimersByTime(6000));
+  expect(saved().reservations.det).toBeUndefined();
+  expect(saved().products.find((p: any) => p.id === "det").available).toBe(1);
+});
+
+it("keeps the original countdown deadline when the screen remounts", () => {
+  vi.useFakeTimers();
+  const view = render(<App />);
+  click("Open Top detergent");
+  click("Reserve a portion");
+  click("Confirm & hold S$8.10");
+  act(() => vi.advanceTimersByTime(2000));
+  view.unmount();
+  render(<App />);
+  expect(screen.getByRole("timer").getAttribute("aria-label")).toBe(
+    "Confirmation in 3 seconds",
+  );
+  act(() => vi.advanceTimersByTime(3000));
+  expect(location.hash).toBe("#/split/det");
+  expect(saved().reservations.det.status).toBe("reserved");
+  expect(saved().products.find((p: any) => p.id === "det").available).toBe(0);
+});
+
+it("abandons the countdown on navigation and rejects a direct countdown URL", () => {
+  vi.useFakeTimers();
+  render(<App />);
+  navigate("/holding/det");
+  expect(location.hash).toBe("#/offer/det");
+  click("Reserve a portion");
+  click("Confirm & hold S$8.10");
+  navigate("/");
+  act(() => vi.advanceTimersByTime(6000));
+  expect(saved().reservations.det).toBeUndefined();
 });

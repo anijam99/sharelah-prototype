@@ -1,6 +1,6 @@
 import { mkdir, readFile, writeFile, copyFile } from "node:fs/promises";
 await mkdir("public/licenses", { recursive: true });
-for (const name of ["react", "react-dom", "lucide-react", "idb"])
+for (const name of ["react", "react-dom", "lucide-react", "idb", "leaflet"])
   await copyFile(`node_modules/${name}/LICENSE`, `public/licenses/${name}.txt`);
 const mit = await readFile("node_modules/react/LICENSE", "utf8");
 for (const [name, copyright] of Object.entries({

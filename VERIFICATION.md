@@ -24,3 +24,11 @@ Implementation checked on 12 October 2026.
 Data is isolated per browser, as requested. Payments, neighbour participation, notification delivery and support outcomes are simulated. Reports and chat are saved locally. The map is the original illustrated Figma neighbourhood map. Deal photographs are captured locally and details are entered manually; OCR, a live marketplace backend and shared chat are outside this prototype.
 
 The app includes explicit receipt confirmation, guarded state transitions, contextual Back links, accessible native modal sheets, reduced-motion support, mobile safe-area layout, 16-pixel form fields and camera fallbacks. These are implementation checks, not a substitute for observing participant behaviour in a usability study.
+
+## Mobile layout, maps and reservation grace period (12 October 2026)
+
+- `npm run build` passes, including TypeScript and production assets.
+- `npm test`: 24 tests pass. Added checks for five-second expiry, cancelling before expiry without taking availability, preserving the deadline when the screen remounts, and leaving the screen without creating a reservation.
+- Manually checked the running development app in Zen at a 390px iframe width: compact headers, real OpenStreetMap tiles, price-pin selection, countdown ring and number, pinned cancel action, and automatic transition to the reservation. Cancelled the simulated reservation created by this check.
+- Playwright coverage was extended for compact headers, early cancellation, tile rendering, attribution, selection, zoom and pickup maps. The end-to-end suite could not run in this sandbox: opening the dev-server socket and launching headless Chromium are denied. These tests remain to be run outside the sandbox.
+- Real phone checks remain necessary for safe-area insets, Safari/Android touch panning, keyboard behavior and motion preferences. Tiles need an internet connection; pickup points and distances are demo data.

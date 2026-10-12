@@ -61,9 +61,9 @@ BASE_URL=https://sharelah.your-domain.com npm run test:e2e
 
 - Home / Map / Create / Splits / Profile navigation, contextual Back labels and a four-step creation indicator.
 - Browse, search, category, distance, sorting, saved offers and neighbourhood changes.
-- Two-axis map browsing with clickable offer pins and restored selection/scroll position. The map is the Figma neighbourhood illustration, not a live map service or GPS location.
+- Interactive Leaflet maps with OpenStreetMap tiles, clickable offer pins, zoom controls and a remembered map view. Pickup points and walking distances are sample data; “Near me” resets to the demo Bugis location rather than using GPS. Map tiles require internet access.
 - Consistent membership on Home, map pins and cards. Greek yoghurt starts in your splits and ready for pickup.
-- Offer details → reservation sheet → payment choice → held reservation. Cancellation before purchase restores availability.
+- Offer details → reservation sheet → payment choice → animated five-second cancellation screen → held reservation. Cancelling during the countdown leaves availability and demo payment untouched. Refresh preserves the original deadline; navigating away abandons confirmation. Cancellation after confirmation and before purchase restores availability.
 - Ready pickup → live rear-camera QR scanner or uploaded QR image / manual six-digit code → explicit item check → completion and rating. A valid scan does not release payment by itself.
 - Problem reports retain the held payment and block pickup completion.
 - Persistent local conversations, message drafts and quick replies.

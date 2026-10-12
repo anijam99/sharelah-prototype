@@ -19,3 +19,7 @@ Fonts are downloaded at image build time from the official Google Fonts reposito
 - Bricolage Grotesque — The Bricolage Grotesque Project Authors, Mathieu Triay. https://github.com/google/fonts/tree/main/ofl/bricolagegrotesque
 
 Build/test dependencies remain governed by the licenses in their npm packages. No authentication credentials, analytics, external QR service, or camera upload service is included.
+
+## Leaflet and map data
+
+Leaflet 1.9.4, Copyright (c) 2010–2023 Vladimir Agafonkin and contributors, uses the BSD 2-Clause license, bundled in `public/licenses/leaflet.txt`. Map tiles © OpenStreetMap contributors, under ODbL: https://www.openstreetmap.org/copyright. Tiles are requested directly from https://tile.openstreetmap.org following https://operations.osmfoundation.org/policies/tiles/.

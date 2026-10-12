@@ -1,7 +1,8 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { MapPin, Navigation, Search, SlidersHorizontal } from "lucide-react";
 import { Art, Button, Card, Empty, Photo, Row, TopHeader } from "./ui";
 import { go } from "./router";
+import { TileMap } from "./TileMap";
 import { useStore } from "./store";
 import { money, owned, statusLabel, total, visibleProducts } from "./model";
 export type OpenModal = (type: string) => void;
@@ -179,8 +180,7 @@ export function MapScreen({ open }: { open: OpenModal }) {
     [selected, setSelected] = useState(
       sessionStorage.getItem("sharelah-map-selected") || "yog",
     ),
-    ref = useRef<HTMLDivElement>(null),
-    drag = useRef<{ x: number; y: number; l: number; t: number } | null>(null);
+    [recenter, setRecenter] = useState(0);
   const p = products.find((p) => p.id === selected) || products[0];
   return (
     <>
@@ -201,99 +201,23 @@ export function MapScreen({ open }: { open: OpenModal }) {
             <span>Drag the map to explore</span>
             <button
               className="text-button"
-              onClick={() =>
-                ref.current?.scrollTo({
-                  left: 0,
-                  top: 0,
-                  behavior: matchMedia("(prefers-reduced-motion: reduce)")
-                    .matches
-                    ? "instant"
-                    : "smooth",
-                })
-              }
+              onClick={() => setRecenter((n) => n + 1)}
             >
               <Navigation size={16} />
               Near me
             </button>
           </div>
-          <div
-            className="map-viewport"
-            ref={(n) => {
-              ref.current = n;
-              if (n) {
-                try {
-                  const [l, t] = JSON.parse(
-                    sessionStorage.getItem("sharelah-map-scroll") || "[0,0]",
-                  );
-                  n.scrollLeft = l;
-                  n.scrollTop = t;
-                } catch {}
-              }
+          <TileMap
+            products={products}
+            reservations={state.reservations}
+            selected={p?.id}
+            recenter={recenter}
+            remember
+            onSelect={(id) => {
+              setSelected(id);
+              sessionStorage.setItem("sharelah-map-selected", id);
             }}
-            onScroll={(e) =>
-              sessionStorage.setItem(
-                "sharelah-map-scroll",
-                JSON.stringify([
-                  e.currentTarget.scrollLeft,
-                  e.currentTarget.scrollTop,
-                ]),
-              )
-            }
-            onPointerDown={(e) => {
-              if (
-                e.pointerType === "mouse" &&
-                !(e.target as Element).closest("button")
-              ) {
-                drag.current = {
-                  x: e.clientX,
-                  y: e.clientY,
-                  l: e.currentTarget.scrollLeft,
-                  t: e.currentTarget.scrollTop,
-                };
-                e.currentTarget.setPointerCapture(e.pointerId);
-              }
-            }}
-            onPointerMove={(e) => {
-              if (drag.current) {
-                e.currentTarget.scrollLeft =
-                  drag.current.l - (e.clientX - drag.current.x);
-                e.currentTarget.scrollTop =
-                  drag.current.t - (e.clientY - drag.current.y);
-              }
-            }}
-            onPointerUp={() => {
-              drag.current = null;
-            }}
-            onPointerCancel={() => {
-              drag.current = null;
-            }}
-            tabIndex={0}
-            aria-label="Scrollable neighbourhood map"
-          >
-            <div className="map-world">
-              <img
-                src="/assets/map.png"
-                width="720"
-                height="660"
-                alt="Illustrated Bugis neighbourhood street map"
-              />
-              {products.map((q) => (
-                <button
-                  key={q.id}
-                  className={"map-pin " + (q.id === p?.id ? "selected" : "")}
-                  style={{ left: q.x, top: q.y }}
-                  onClick={() => {
-                    setSelected(q.id);
-                    sessionStorage.setItem("sharelah-map-selected", q.id);
-                  }}
-                  aria-label={"Select " + q.title}
-                >
-                  {owned(state.reservations[q.id]) ? "Yours · " : ""}
-                  {money(total(q))}
-                </button>
-              ))}
-            </div>
-          </div>
+          />
           {p ? (
             <div className="panel map-selected">
               <div className="product-line">
@@ -356,8 +280,7 @@ export function MapScreen({ open }: { open: OpenModal }) {
               <Card p={q} key={q.id} />
             ))}
           <p className="fine">
-            Illustrated demo map · locations and walking estimates are sample
-            data.
+            Pickup locations and walking estimates are sample data.
           </p>
         </div>
       </main>

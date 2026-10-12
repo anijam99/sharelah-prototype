@@ -1,3 +1,4 @@
+import { ReservationCountdown } from "./ReservationCountdown";
 import { useEffect, useState } from "react";
 import {
   Check,
@@ -31,14 +32,7 @@ import {
 } from "./Journey";
 import { Create } from "./Create";
 import { finish, go, useRoute } from "./router";
-import {
-  cancelReservation,
-  money,
-  owned,
-  reserve,
-  total,
-  type Product,
-} from "./model";
+import { cancelReservation, money, owned, total, type Product } from "./model";
 function Navigation({
   active,
   open,
@@ -134,9 +128,11 @@ function ReviewSheet({ p, close }: { p: Product; close: () => void }) {
         footer={
           <Button
             onClick={() => {
-              update((s) => reserve(s, p.id));
               close();
-              go("/split/" + p.id, undefined, true);
+              go("/holding/" + p.id, undefined, true, {
+                holdDeadline: Date.now() + 5000,
+                holdMethod: state.payment,
+              });
             }}
           >
             Confirm &amp; hold {money(total(p))}
@@ -834,6 +830,7 @@ function Root() {
     );
   else if (page === "deal") screen = <DealPage id={id} />;
   else if (p) {
+    if (page === "holding") screen = <ReservationCountdown key={p.id} p={p} />;
     if (page === "offer") screen = <Offer p={p} open={setModal} />;
     if (page === "split") screen = <MySplit p={p} open={setModal} />;
     if (["scan", "code", "receipt"].includes(page))

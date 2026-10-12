@@ -1,5 +1,6 @@
+import { TileMap } from "./TileMap";
 import { useState, useEffect, useRef } from "react";
-import { Check, Send, Camera as CameraIcon, MapPin } from "lucide-react";
+import { Check, Send, Camera as CameraIcon } from "lucide-react";
 import { Art, Button, Header, PriceRows, Row, QRCode, Empty } from "./ui";
 import { Camera } from "./Camera";
 import { back, finish, go } from "./router";
@@ -607,18 +608,7 @@ export function Directions({ p }: { p: Product }) {
       <Header title="Pickup directions" item={p.title} />
       <main className="page-scroll">
         <div className="content">
-          <div className="directions-map">
-            <img
-              src="/assets/map.png"
-              width="720"
-              height="660"
-              alt="Illustrated neighbourhood map"
-            />
-            <span>
-              <MapPin />
-              Pickup point
-            </span>
-          </div>
+          <TileMap products={[p]} selected={p.id} pickup />
           <h2>{p.place}</h2>
           <p>{p.address}</p>
           <Row

@@ -15,7 +15,15 @@ test("browse, reserve, change payment, cancel, and reset", async ({ page }) => {
   await page.getByRole("button", { name: "Use payment method" }).click();
   await review.getByRole("button", { name: "Confirm & hold S$8.10" }).click();
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+    "Confirming your split",
+  );
+  await expect(page.getByRole("timer")).toHaveAttribute(
+    "aria-label",
+    /Confirmation in [1-5] seconds/,
+  );
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(
     "My reservation",
+    { timeout: 7000 },
   );
   await page.reload();
   await expect(page.getByText("Your portion is reserved.")).toBeVisible();
@@ -87,4 +95,64 @@ test("map pans, restores selection and shows ownership", async ({ page }) => {
   await page.getByRole("button", { name: "Near me" }).click();
   await page.getByRole("button", { name: "Select Greek yoghurt" }).click();
   await expect(page.getByText("In your splits", { exact: true })).toBeVisible();
+});
+
+test("mobile headers stay compact and checkout can be undone during the countdown", async ({
+  page,
+}) => {
+  await page.goto("/");
+  expect(
+    await page
+      .locator(".top-header")
+      .evaluate((el) => el.getBoundingClientRect().height),
+  ).toBeLessThanOrEqual(64);
+  await page.getByRole("button", { name: "Open Top detergent" }).click();
+  expect(
+    await page
+      .locator(".page-header")
+      .evaluate((el) => el.getBoundingClientRect().height),
+  ).toBeLessThanOrEqual(64);
+  await page.getByRole("button", { name: "Reserve a portion" }).click();
+  await page.getByRole("button", { name: "Confirm & hold S$8.10" }).click();
+  await expect(page.getByRole("timer")).toBeVisible();
+  await page
+    .getByRole("button", { name: "Cancel reservation", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Reserve a portion" }),
+  ).toBeVisible();
+  await page.waitForTimeout(5200);
+  expect(
+    await page.evaluate(
+      () =>
+        JSON.parse(localStorage.getItem("sharelah-demo-v1")!).reservations.det,
+    ),
+  ).toBeUndefined();
+});
+
+test("the tile map has accessible offer pins, attribution, zoom and pickup locations", async ({
+  page,
+}) => {
+  // Keep tests deterministic without requesting a community tile service.
+  await page.route("https://tile.openstreetmap.org/**", async (route) => {
+    await route.fulfill({
+      contentType: "image/png",
+      body: Buffer.from(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRzUAAAAASUVORK5CYII=",
+        "base64",
+      ),
+    });
+  });
+  await page.goto("/#/map");
+  await expect(page.locator(".leaflet-tile").first()).toBeVisible();
+  await expect(page.getByRole("link", { name: "OpenStreetMap" })).toBeVisible();
+  await page.getByRole("button", { name: "Select Top detergent" }).click();
+  await expect(
+    page.getByRole("button", { name: "Select Top detergent" }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("button", { name: "Zoom in" }).click();
+  await page.getByRole("button", { name: "Directions", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "Select Top detergent" }),
+  ).toHaveText("Pickup point");
 });

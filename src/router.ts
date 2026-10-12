@@ -37,7 +37,12 @@ export function routeLabel(path = currentPath()) {
                       ? "Create"
                       : "Home";
 }
-export function go(path: string, label?: string, replace = false) {
+export function go(
+  path: string,
+  label?: string,
+  replace = false,
+  flowState?: { holdDeadline: number; holdMethod: string },
+) {
   if (path === currentPath()) return;
   scrolls.set(
     history.state?.key,
@@ -45,6 +50,7 @@ export function go(path: string, label?: string, replace = false) {
   );
   history[replace ? "replaceState" : "pushState"](
     {
+      ...flowState,
       sharelah: true,
       key: crypto.randomUUID(),
       from: replace ? history.state?.from : currentPath(),

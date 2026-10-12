@@ -30,6 +30,7 @@
   --paper: #ffe9ce;
   --peach: #ffd2ab;
   --shadow: 0 4px 16px #2e1c0f0a;
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --display: "Bricolage Grotesque", Inter, sans-serif;
   line-height: 1.4;
   font-size: 17px;
@@ -84,6 +85,12 @@ button {
   color: inherit;
   background: none;
   padding: 0;
+}
+button {
+  transition:
+    transform 100ms var(--ease-out),
+    background-color 160ms ease;
+  -webkit-touch-callout: none;
 }
 button:active {
   transform: scale(0.985);
@@ -232,17 +239,20 @@ small,
 .page-scroll:has(.welcome) > .content {
   gap: 12px;
 }
+.top-header h1 {
+  font-size: 28px;
+}
 .top-header {
   flex: none;
-  height: 104px;
-  padding: 24px 20px 18px;
+  min-height: calc(60px + env(safe-area-inset-top, 0px));
+  padding: 6px 20px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-top: max(24px, env(safe-area-inset-top));
+  padding-top: calc(6px + env(safe-area-inset-top, 0px));
 }
 .wordmark {
-  font: 800 35px/1 var(--display);
+  font: 800 28px/1 var(--display);
   letter-spacing: -1.3px;
   color: var(--brand);
   display: flex;
@@ -251,8 +261,8 @@ small,
   white-space: nowrap;
 }
 .wordmark img {
-  width: 36px;
-  height: 36px;
+  width: 28px;
+  height: 28px;
 }
 .shortcuts {
   display: flex;
@@ -265,7 +275,7 @@ small,
   flex-direction: column;
   gap: 4px;
   min-width: 44px;
-  min-height: 56px;
+  min-height: 44px;
   color: var(--brand);
 }
 .shortcuts span:last-child {
@@ -283,13 +293,13 @@ small,
 }
 .page-header {
   flex: none;
-  height: 92px;
+  min-height: calc(60px + env(safe-area-inset-top, 0px));
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 24px 20px 12px;
-  padding-top: max(24px, env(safe-area-inset-top));
+  padding: 6px 20px;
+  padding-top: calc(6px + env(safe-area-inset-top, 0px));
 }
 .page-header > div {
   flex: 1;
@@ -384,7 +394,9 @@ small,
   font-weight: 600;
   line-height: 23px;
   text-align: center;
-  transition: background 0.15s ease-out;
+  transition:
+    background-color 160ms ease,
+    transform 100ms var(--ease-out);
 }
 .primary {
   background: var(--brand);
@@ -778,7 +790,7 @@ small,
   height: 328px;
   min-height: 328px;
   border-radius: 20px;
-  overflow: auto;
+  overflow: hidden;
   overscroll-behavior: contain;
   cursor: grab;
   position: relative;
@@ -789,36 +801,6 @@ small,
 }
 .map-viewport:active {
   cursor: grabbing;
-}
-.map-world {
-  width: 720px;
-  height: 660px;
-  position: relative;
-}
-.map-world > img {
-  width: 720px;
-  height: 660px;
-  display: block;
-  user-select: none;
-  pointer-events: none;
-}
-.map-pin {
-  position: absolute;
-  min-height: 44px;
-  padding: 9px 12px;
-  border: 2px solid white;
-  border-radius: 12px;
-  background: white;
-  box-shadow: 0 3px 10px #2b241d22;
-  font-weight: 600;
-  font-size: 14px;
-  color: var(--brand);
-  white-space: nowrap;
-}
-.map-pin.selected {
-  color: white;
-  background: var(--brand);
-  z-index: 1;
 }
 .map-selected .product-art {
   width: 64px;
@@ -835,30 +817,7 @@ small,
 .map-selected .product-line p {
   font-size: 13px;
 }
-.directions-map {
-  height: 260px;
-  overflow: hidden;
-  position: relative;
-  border-radius: 20px;
-  background: var(--paper);
-}
-.directions-map img {
-  position: absolute;
-  left: -150px;
-  top: -210px;
-}
-.directions-map > span {
-  position: absolute;
-  left: 25%;
-  top: 40%;
-  display: flex;
-  align-items: center;
-  background: var(--brand);
-  color: white;
-  padding: 10px;
-  border-radius: 12px;
-  font-size: 13px;
-}
+
 .segmented {
   display: flex;
   background: #f6efe6;
@@ -1269,7 +1228,7 @@ legend {
   color: var(--ink);
   box-shadow: 0 -8px 50px #2b241d15;
   overflow: auto;
-  animation: sheet-appear 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+  animation: sheet-appear 220ms var(--ease-out);
 }
 .sheet::backdrop {
   background: #2b241d66;
@@ -1541,12 +1500,12 @@ legend {
     padding-right: 16px;
   }
   .wordmark {
-    font-size: 31px;
+    font-size: 28px;
     gap: 6px;
   }
   .wordmark img {
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 28px;
   }
   .welcome h1 {
     font-size: 27px;
@@ -1607,4 +1566,217 @@ legend {
   .offer-card {
     border-color: #a99c90;
   }
+}
+
+.tile-map {
+  position: relative;
+}
+.tile-map .leaflet-container {
+  font-family: Inter, sans-serif;
+}
+.tile-map .leaflet-control-attribution {
+  font-size: 10px;
+  color: var(--ink);
+}
+.tile-map .leaflet-control-zoom a {
+  min-width: 44px;
+  min-height: 44px;
+  line-height: 44px;
+  color: var(--brand);
+}
+.tile-map .leaflet-control a {
+  touch-action: manipulation;
+}
+.price-marker {
+  background: transparent;
+  border: 0;
+}
+.map-pin {
+  min-height: 44px;
+  padding: 9px 12px;
+  border: 2px solid white;
+  border-radius: 12px;
+  background: white;
+  box-shadow: 0 3px 10px #2b241d22;
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--brand);
+  white-space: nowrap;
+}
+.map-pin.selected {
+  background: var(--brand);
+  color: white;
+}
+.map-error {
+  position: absolute;
+  z-index: 1000;
+  top: 12px;
+  right: 12px;
+  left: 64px;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--canvas);
+  font-size: 13px;
+  box-shadow: var(--shadow);
+}
+.map-error button {
+  min-height: 44px;
+  display: block;
+}
+.pickup-map .map-viewport {
+  height: 260px;
+  min-height: 260px;
+}
+.countdown-content {
+  padding-top: 24px;
+  gap: 20px;
+}
+.countdown-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  text-align: center;
+  animation: confirmation-appear 250ms var(--ease-out);
+}
+.countdown-hero p {
+  max-width: 340px;
+  font-size: 15px;
+}
+.countdown-dial {
+  width: 160px;
+  height: 160px;
+  position: relative;
+}
+.countdown-dial svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+.countdown-dial circle {
+  fill: none;
+  stroke-width: 8;
+}
+.countdown-track {
+  stroke: var(--tint);
+}
+.countdown-ring {
+  stroke: var(--brand);
+  stroke-linecap: round;
+  stroke-dasharray: 1;
+  transition: stroke-dashoffset 50ms linear;
+}
+.countdown-number {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font: 800 58px/1 var(--display);
+  font-variant-numeric: tabular-nums;
+  animation: countdown-tick 160ms var(--ease-out);
+}
+.countdown-number small {
+  margin-top: 6px;
+  font:
+    500 13px/1.4 Inter,
+    sans-serif;
+}
+.countdown-summary .row-card {
+  background: transparent;
+  border: 0;
+  padding: 12px 0;
+}
+.countdown-summary .row-card + .row-card {
+  border-top: 1px solid var(--border);
+  border-radius: 0;
+}
+@keyframes confirmation-appear {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes countdown-tick {
+  from {
+    opacity: 0.6;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .countdown-hero,
+  .countdown-number {
+    animation: gentle-appear 160ms ease !important;
+  }
+  .countdown-ring {
+    transition: none;
+  }
+}
+@keyframes gentle-appear {
+  from {
+    opacity: 0.6;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.status-hero {
+  transition:
+    opacity 200ms var(--ease-out),
+    transform 200ms var(--ease-out);
+  @starting-style {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .status-hero {
+    transform: none;
+  }
+}
+
+.sample-location-marker {
+  pointer-events: none;
+}
+.sample-location {
+  position: relative;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+}
+.sample-location-dot {
+  width: 18px;
+  height: 18px;
+  border: 3px solid white;
+  border-radius: 50%;
+  background: #2673df;
+  box-shadow:
+    0 0 0 6px #2673df26,
+    0 2px 6px #2b241d33;
+}
+.sample-location-label {
+  position: absolute;
+  top: 34px;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: white;
+  color: #1853a3;
+  font:
+    600 12px/1.4 Inter,
+    sans-serif;
+  box-shadow: 0 2px 8px #2b241d22;
 }
