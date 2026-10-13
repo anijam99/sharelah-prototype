@@ -62,7 +62,7 @@ BASE_URL=https://sharelah.your-domain.com npm run test:e2e
 - Home / Map / Create / Splits / Profile navigation, contextual Back labels and a four-step creation indicator.
 - Browse, search, category, distance, sorting, saved offers and neighbourhood changes.
 - Interactive Leaflet maps with OpenStreetMap tiles, clickable offer pins, zoom controls and a remembered map view. Pickup points and walking distances are sample data; “Near me” resets to the demo Bugis location rather than using GPS. Map tiles require internet access.
-- Consistent membership on Home, map pins and cards. Greek yoghurt starts in your splits and ready for pickup.
+- Consistent membership on Home, map pins and cards. Chobani blueberry Greek yoghurt starts in your splits and ready for pickup.
 - Offer details → reservation sheet → payment choice → animated five-second cancellation screen → held reservation. Cancelling during the countdown leaves availability and demo payment untouched. Refresh preserves the original deadline; navigating away abandons confirmation. Cancellation after confirmation and before purchase restores availability.
 - Ready pickup → live rear-camera QR scanner or uploaded QR image / manual six-digit code → explicit item check → completion and rating. A valid scan does not release payment by itself.
 - Problem reports retain the held payment and block pickup completion.
@@ -77,17 +77,17 @@ Payments, neighbour actions, notifications, ratings/history and support resoluti
 
 Use **Profile → Testing controls → Reset my demo** before a new participant uses the same browser. Separate browser profiles/devices start independently. Data remains until reset or the browser clears its storage. Private browsing may remove it when the session ends.
 
-The test controls let you rename the sample account, simulate a seeded host buying a reserved bundle, and add a sample neighbour to your own listing. Show a facilitator pickup code on another device or print it:
+The tester persona is fixed as Tom Chua. Jerry hosts every seeded split and is the demo neighbour who joins Tom’s listings. Test controls let you simulate Jerry buying a reserved bundle or joining your own listing. Show a facilitator pickup code on another device or print it:
 
 `https://your-domain/testing/pickup-codes.html`
 
 The same cards are available locally in `public/testing/pickup-codes.html`.
 
-| Item          | Initial state                                  | Pickup number |
-| ------------- | ---------------------------------------------- | ------------- |
-| Greek yoghurt | Ready for pickup                               | 482913        |
-| Top detergent | Available; reserve then simulate host purchase | 635271        |
-| Oat milk      | Available; reserve then simulate host purchase | 729418        |
+| Item                                 | Initial state                                  | Pickup number |
+| ------------------------------------ | ---------------------------------------------- | ------------- |
+| Chobani blueberry Greek yoghurt      | Ready for pickup                               | 482913        |
+| Carefree breathable unscented liners | Available; reserve then simulate host purchase | 635271        |
+| Samyang Buldak bowl noodles          | Available; reserve then simulate host purchase | 729418        |
 
 Before the study, test on the actual participant phones over HTTPS: allow/deny permission, capture and retake a shelf photo, upload an image, scan a printed code, enter a wrong number, complete pickup, and navigate away while the camera is running. Check the keyboard and map panning in Safari on iPhone and Chrome on Android. Read `VERIFICATION.md` for the checks completed during implementation and the remaining environment-dependent checks.
 
@@ -96,3 +96,13 @@ Before the study, test on the actual participant phones over HTTPS: allow/deny p
 `src/` contains the application, domain transitions, browser persistence, router and camera adapter. `public/assets/` contains original Figma artwork; `src/vendor/` contains the bundled QR JavaScript modules; `public/vendor/` contains the WASM binary served locally. `tests/` contains domain, DOM, lifecycle, QR and Playwright checks. `design-reference/` contains the Figma implementation references and is excluded from the Docker image.
 
 Third-party notices are in `THIRD_PARTY_NOTICES.md` and are included in the built app. The earlier `../prototype/` study app is separate from this implementation.
+
+### Supplied deal photos
+
+Home → Spotted deals → View all opens a searchable, category-filtered collection of 49 entries transcribed from the 12 supplied images. Each entry links to its source photo and keeps its advertised price or percentage promotion. Readable multibuys prefill the split form with the correct total, item count and one-item portion; offers with unknown prices or eligibility remain informational. Home search also finds these deals. The bundled collection appears in existing saved demos without a reset and remains after resetting user-created data. See `DEAL_PHOTO_REVIEW.md` for source coverage and reading decisions.
+
+Each deal has its own product/sign crop, plus an offer-detail crop where useful. Main splits use matching photo catalogue items and prices: Chobani blueberry yoghurt, Carefree liners, and Buldak noodles. Existing sample reservations keep their IDs and pickup codes when refreshed. Creating a split from a spotted deal carries its crop into the new listing.
+
+### Neighbour profiles and reviews
+
+The prototype uses only Jerry and Tom Chua. Existing saved products migrate to these personas without clearing progress. Tap the host row on an offer, a profile link in a split/chat, or Profile → Neighbour profiles to view a neighbour’s biography, ratings, written reviews and listings. Review-author names link to that author’s profile. After a split is completed, Rate your experience supports 1–5 stars and optional comments (up to 1,000 characters). Reviews persist locally, appear on Jerry’s profile, update the rating average, and can be edited without creating a duplicate. Sample reviews are labelled; there is no cross-device review service.

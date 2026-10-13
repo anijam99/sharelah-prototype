@@ -32,3 +32,19 @@ The app includes explicit receipt confirmation, guarded state transitions, conte
 - Manually checked the running development app in Zen at a 390px iframe width: compact headers, real OpenStreetMap tiles, price-pin selection, countdown ring and number, pinned cancel action, and automatic transition to the reservation. Cancelled the simulated reservation created by this check.
 - Playwright coverage was extended for compact headers, early cancellation, tile rendering, attribution, selection, zoom and pickup maps. The end-to-end suite could not run in this sandbox: opening the dev-server socket and launching headless Chromium are denied. These tests remain to be run outside the sandbox.
 - Real phone checks remain necessary for safe-area insets, Safari/Android touch panning, keyboard behavior and motion preferences. Tiles need an internet connection; pickup points and distances are demo data.
+
+## Supplied deal photo collection (13 October 2026)
+
+- Visually inspected all 12 source images, including enlarged shelf labels and secondary promotions. `DEAL_PHOTO_REVIEW.md` records 48 catalogue entries and uncertain or omitted details.
+- `npm run build` passes. `npm test`: 29 tests pass, including source-image coverage, linked asset existence, distinct offer IDs, multibuy arithmetic, catalogue search, split prefill, unpriced promotions and migration of older saved demos.
+- Manually checked Home → View all spotted deals, catalogue search for Carefree, source-image rendering, the 2-for-S$3.90 price, offer terms and the split action in the running Zen browser.
+- Optimized all 12 bundled images to about 4.4 MB combined. Images load lazily and work as static source photos throughout split creation.
+- Existing browser-test restrictions still apply; no automated end-to-end result is claimed for this change.
+
+## Two personas, written reviews and neighbour profiles (13 October 2026)
+
+- All seeded hosts and simulated neighbours are Jerry; the tester and their hosted listings use Tom. Older local state is normalized while preserving product IDs, reservations, saved items, messages and reviews.
+- Written review UI supports an optional 1,000-character comment alongside stars, saves only for completed splits, preserves the existing review when editing, and displays submissions in the neighbour’s aggregated profile.
+- `npm test`: 34 tests pass. New checks cover old-persona migration, profile navigation, full pickup → review → profile flow, reload persistence, review editing without duplication, rating validation, comment limits and combined rating arithmetic.
+- Manually verified the offer host row opens Jerry’s profile with biography, stats, sample written reviews and all three seeded listings in Zen. Review-author links and written review persistence are covered by app tests.
+- Browser-test sandbox restrictions still apply. Reviews are local to this prototype browser and seeded reviews are marked as samples.

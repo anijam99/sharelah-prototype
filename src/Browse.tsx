@@ -1,6 +1,7 @@
+import { DealRow, matchesDeal } from "./Deals";
 import { useState } from "react";
 import { MapPin, Navigation, Search, SlidersHorizontal } from "lucide-react";
-import { Art, Button, Card, Empty, Photo, Row, TopHeader } from "./ui";
+import { Art, Button, Card, Empty, TopHeader } from "./ui";
 import { go } from "./router";
 import { TileMap } from "./TileMap";
 import { useStore } from "./store";
@@ -25,6 +26,9 @@ export function Home({
   const products = saved
     ? state.products.filter((p) => state.saved.includes(p.id))
     : visibleProducts(state, search ? query : "", category);
+  const deals = state.deals.filter((d) =>
+    matchesDeal(d, search ? query : "", category),
+  );
   return (
     <>
       {!search && !saved && <TopHeader />}
@@ -71,19 +75,21 @@ export function Home({
           {!saved && (
             <>
               <div className="chips categories">
-                {["All", "Food & drinks", "Household"].map((c) => (
-                  <button
-                    key={c}
-                    className={"chip " + (category === c ? "selected" : "")}
-                    aria-pressed={category === c}
-                    onClick={() => {
-                      setCategory(c);
-                      sessionStorage.setItem("sharelah-category", c);
-                    }}
-                  >
-                    {c}
-                  </button>
-                ))}
+                {["All", "Food & drinks", "Personal care", "Household"].map(
+                  (c) => (
+                    <button
+                      key={c}
+                      className={"chip " + (category === c ? "selected" : "")}
+                      aria-pressed={category === c}
+                      onClick={() => {
+                        setCategory(c);
+                        sessionStorage.setItem("sharelah-category", c);
+                      }}
+                    >
+                      {c}
+                    </button>
+                  ),
+                )}
               </div>
               <button className="filter-bar" onClick={() => open("filters")}>
                 <SlidersHorizontal size={17} />
@@ -112,7 +118,7 @@ export function Home({
           {products.map((p) => (
             <Card key={p.id} p={p} />
           ))}
-          {!products.length && (
+          {!products.length && !(search && deals.length) && (
             <Empty
               title={
                 saved ? "Your good finds, saved here." : "No matching splits"
@@ -131,10 +137,10 @@ export function Home({
                 : "Try another search, category or distance."}
             </Empty>
           )}
-          {!search && !saved && (
+          {!saved && (
             <>
               <div className="section-heading">
-                <h2>Spotted by neighbours</h2>
+                <h2>{search ? "Matching deals" : "Spotted deals"}</h2>
                 <button
                   className="text-button"
                   onClick={() => go("/report-deal")}
@@ -142,30 +148,22 @@ export function Home({
                   Report a deal ›
                 </button>
               </div>
-              {state.deals.map((d) => (
-                <Row
-                  key={d.id}
-                  title={d.title}
-                  detail={d.store + " · " + money(d.priceCents)}
-                  onClick={() => go("/deal/" + d.id)}
-                >
-                  {d.photo && <Photo id={d.photo} className="deal-thumb" />}
-                </Row>
+              {!search && (
+                <p className="fine">
+                  Photographed shelf and online offers · check the store for
+                  current availability.
+                </p>
+              )}
+              {(search ? deals : deals.slice(0, 4)).map((d) => (
+                <DealRow key={d.id} deal={d} />
               ))}
-              {!state.deals.length && (
-                <div className="panel paper">
-                  <h3>Good deals travel by word of mouth.</h3>
-                  <p>
-                    Spotted a shelf offer? Share a photo and the price with your
-                    neighbourhood.
-                  </p>
-                  <button
-                    className="text-button"
-                    onClick={() => go("/report-deal")}
-                  >
-                    Be the first to share ›
-                  </button>
-                </div>
+              {!search && (
+                <Button kind="secondary" onClick={() => go("/deals")}>
+                  View all {state.deals.length} spotted deals
+                </Button>
+              )}
+              {search && !deals.length && (
+                <p className="muted">No matching spotted deals.</p>
               )}
             </>
           )}

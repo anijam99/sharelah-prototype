@@ -1,3 +1,5 @@
+import { hostPerson, profileSummary } from "./people";
+import { dealPrice } from "./dealCatalog";
 import { TileMap } from "./TileMap";
 import { useState, useEffect, useRef } from "react";
 import { Check, Send, Camera as CameraIcon } from "lucide-react";
@@ -18,7 +20,9 @@ import {
 import type { OpenModal } from "./Browse";
 export function Offer({ p, open }: { p: Product; open: OpenModal }) {
   const { state, update } = useStore(),
-    saved = state.saved.includes(p.id);
+    saved = state.saved.includes(p.id),
+    deal = state.deals.find((d) => d.id === p.sourceDealId),
+    host = profileSummary(state, hostPerson(p));
   return (
     <>
       <Header title={p.title} />
@@ -43,9 +47,16 @@ export function Offer({ p, open }: { p: Product; open: OpenModal }) {
           </div>
           <Row
             title={"Hosted by " + p.host}
-            detail="4.9 ★ · 12 completed splits"
-            onClick={() => go("/chat/" + p.id)}
+            detail={`${host.average} ★ · ${host.reviews} reviews · View profile`}
+            onClick={() => go("/neighbour/" + hostPerson(p))}
           />
+          {deal && (
+            <Row
+              title="View the photographed deal"
+              detail={dealPrice(deal) + " · " + deal.portion}
+              onClick={() => go("/deal/" + deal.id)}
+            />
+          )}
           <div className="panel">
             <h3>Just your portion.</h3>
             <p>
@@ -179,6 +190,11 @@ export function MySplit({ p, open }: { p: Product; open: OpenModal }) {
             </strong>
             <div className="shared-edge" />
           </div>
+          <Row
+            title={p.host + "’s profile"}
+            detail="View neighbour and reviews"
+            onClick={() => go("/neighbour/" + hostPerson(p))}
+          />
           {reported ? (
             <>
               <Row
@@ -200,10 +216,16 @@ export function MySplit({ p, open }: { p: Product; open: OpenModal }) {
                 <PriceRows p={p} />
                 <p className="fine">Paid with {r.method} · Demo payment</p>
               </div>
+              {r.rating && (
+                <div className="panel">
+                  <h3>Your review · {r.rating} / 5</h3>
+                  {r.reviewComment && (
+                    <p className="review-comment">{r.reviewComment}</p>
+                  )}
+                </div>
+              )}
               <Button onClick={() => open("rating:" + p.id)}>
-                {r.rating
-                  ? "Your rating: " + r.rating + " / 5"
-                  : "Rate your experience"}
+                {r.rating ? "Edit your review" : "Rate your experience"}
               </Button>
               <Button kind="secondary" onClick={() => go("/splits")}>
                 View my splits
@@ -529,9 +551,14 @@ export function Chat({ p }: { p: Product }) {
   }
   return (
     <>
-      <Header title={p.owner ? "Alex" : p.host} item={p.title} />
+      <Header title={p.owner ? "Jerry" : p.host} item={p.title} />
       <main className="page-scroll chat-scroll">
         <div className="content">
+          <Row
+            title={"View " + (p.owner ? "Jerry" : p.host) + "’s profile"}
+            detail="Read reviews from split partners"
+            onClick={() => go("/neighbour/jerry")}
+          />
           <Row title={p.title} detail={p.portion} />
           <p className="chat-demo">
             Demo conversation · messages stay on this device
@@ -684,10 +711,15 @@ export function Hosting({
           <Row title={p.place} detail={p.date + " · " + p.time} />
           {joined && (
             <Row
-              title="Alex · 1 portion"
+              title="Jerry · 1 portion"
               detail={p.purchased ? "Ready for pickup" : "Waiting for purchase"}
-              onClick={() => go("/chat/" + p.id)}
+              onClick={() => go("/neighbour/jerry")}
             />
+          )}
+          {joined && (
+            <Button kind="secondary" onClick={() => go("/chat/" + p.id)}>
+              Message Jerry
+            </Button>
           )}{" "}
           {!p.closed && p.purchased && (
             <div className="panel center">

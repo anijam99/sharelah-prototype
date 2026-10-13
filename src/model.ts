@@ -1,3 +1,4 @@
+import { seedDeals } from "./dealCatalog";
 export type Status =
   "reserved" | "ready" | "reported" | "completed" | "cancelled";
 export type Product = {
@@ -7,6 +8,7 @@ export type Product = {
   category: string;
   art: string;
   photo?: string;
+  sourceDealId?: string;
   store: string;
   bundleCount: number;
   bundleCents: number;
@@ -35,9 +37,16 @@ export type Reservation = {
   createdAt: string;
   report?: { reason: string; note: string };
   rating?: number;
+  reviewComment?: string;
+  reviewedAt?: string;
 };
 export type Message = { id: string; body: string; mine: boolean; time: string };
 export type Deal = {
+  priceLabel?: string;
+  terms?: string;
+  sourceFile?: string;
+  bundleCount?: number;
+  unitPortion?: string;
   id: string;
   title: string;
   store: string;
@@ -77,19 +86,28 @@ const common = {
   note: "Meet by the main entrance.",
   purchased: false,
 };
+function photographedSplit(dealId: string, retailCents: number) {
+  const d = seedDeals.find((d) => d.id === "photo-" + dealId)!;
+  return {
+    title: d.title,
+    portion: d.unitPortion!,
+    category: d.category,
+    photo: d.photo,
+    sourceDealId: d.id,
+    store: d.store,
+    bundleCount: d.bundleCount!,
+    bundleCents: d.priceCents,
+    itemCents: Math.floor(d.priceCents / d.bundleCount!),
+    retailCents,
+  };
+}
 export const seedProducts: Product[] = [
   {
     ...common,
+    ...photographedSplit("chobani-blueberry", 415),
     id: "yog",
-    title: "Greek yoghurt",
-    portion: "1 tub · 150 g",
-    category: "Food & drinks",
     art: "yog",
-    store: "FairPrice · Bugis",
-    bundleCents: 500,
-    itemCents: 167,
-    retailCents: 270,
-    host: "Priya",
+    host: "Jerry",
     purchased: true,
     available: 0,
     place: "Bugis+ · Level 1 entrance",
@@ -102,16 +120,9 @@ export const seedProducts: Product[] = [
   },
   {
     ...common,
+    ...photographedSplit("carefree", 315),
     id: "det",
-    title: "Top detergent",
-    portion: "1 bottle · 900 ml",
-    category: "Household",
-    art: "det",
-    store: "Sheng Siong · Rochor",
-    bundleCount: 2,
-    bundleCents: 1590,
-    itemCents: 795,
-    retailCents: 990,
+    art: "bag",
     host: "Jerry",
     place: "Bras Basah MRT · Exit A",
     address: "65 Bras Basah Road",
@@ -123,17 +134,10 @@ export const seedProducts: Product[] = [
   },
   {
     ...common,
+    ...photographedSplit("buldak", 470),
     id: "oat",
-    title: "Oat milk",
-    portion: "1 carton · 1 L",
-    category: "Food & drinks",
-    art: "oat",
-    store: "FairPrice · Bras Basah",
-    bundleCount: 2,
-    bundleCents: 600,
-    itemCents: 300,
-    retailCents: 420,
-    host: "Mei",
+    art: "bag",
+    host: "Jerry",
     place: "SMU · Li Ka Shing Library",
     address: "70 Stamford Road",
     time: "7:15–7:30 pm",
@@ -143,6 +147,41 @@ export const seedProducts: Product[] = [
     code: "729418",
   },
 ];
+// Keep stable IDs/codes and reservation progress when an existing demo loads.
+// Only the three bundled listings receive refreshed item/offer information.
+export function refreshSeedProducts(products: Product[]): Product[] {
+  return products.map((p) => {
+    const seed = !p.owner && seedProducts.find((seed) => seed.id === p.id);
+    if (!seed) return p;
+    const {
+      title,
+      portion,
+      category,
+      art,
+      photo,
+      sourceDealId,
+      store,
+      bundleCount,
+      bundleCents,
+      itemCents,
+      retailCents,
+    } = seed;
+    return {
+      ...p,
+      title,
+      portion,
+      category,
+      art,
+      photo,
+      sourceDealId,
+      store,
+      bundleCount,
+      bundleCents,
+      itemCents,
+      retailCents,
+    };
+  });
+}
 export function initialState(): State {
   return {
     version: 1,
@@ -157,7 +196,7 @@ export function initialState(): State {
     saved: [],
     messages: {},
     drafts: {},
-    deals: [],
+    deals: structuredClone(seedDeals),
     area: "Bugis",
     radius: 1000,
     sort: "Nearest first",
@@ -287,4 +326,31 @@ export function visibleProducts(s: State, query = "", category = "All") {
           ? b.retailCents - total(b) - (a.retailCents - total(a))
           : a.distance - b.distance,
     );
+}
+
+export function saveReview(
+  s: State,
+  id: string,
+  rating: number,
+  comment: string,
+): State {
+  if (
+    s.reservations[id]?.status !== "completed" ||
+    !Number.isInteger(rating) ||
+    rating < 1 ||
+    rating > 5
+  )
+    return s;
+  return {
+    ...s,
+    reservations: {
+      ...s.reservations,
+      [id]: {
+        ...s.reservations[id],
+        rating,
+        reviewComment: comment.trim().slice(0, 1000),
+        reviewedAt: new Date().toISOString(),
+      },
+    },
+  };
 }

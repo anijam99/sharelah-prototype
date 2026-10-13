@@ -14,7 +14,7 @@ describe("Reservation lifecycle", () => {
   it("starts with yoghurt in the tester’s splits", () => {
     const s = initialState();
     expect(s.reservations.yog.status).toBe("ready");
-    expect(total(s.products[0])).toBe(182);
+    expect(total(s.products[0])).toBe(380);
   });
   it("reserves once, reduces availability, and prevents a duplicate hold", () => {
     const s = reserve(initialState(), "det");
@@ -84,7 +84,7 @@ describe("Reservation lifecycle", () => {
   });
   it("filters the catalog by query, category, radius and neighbourhood", () => {
     const s = initialState();
-    expect(visibleProducts(s, "detergent").map((p) => p.id)).toEqual(["det"]);
+    expect(visibleProducts(s, "liners").map((p) => p.id)).toEqual(["det"]);
     expect(visibleProducts({ ...s, radius: 500 }).map((p) => p.id)).toEqual([
       "yog",
       "det",

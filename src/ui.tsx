@@ -2,6 +2,7 @@ import {
   useEffect,
   useRef,
   useState,
+  useId,
   type ReactNode,
   type ButtonHTMLAttributes,
 } from "react";
@@ -11,6 +12,7 @@ import { back, go } from "./router";
 import { readPhoto, useStore } from "./store";
 import { svgIcons } from "./icons";
 import { money, total, owned, statusLabel, type Product } from "./model";
+import { resolveDealPhoto } from "./dealPhotos";
 export function Button({
   children,
   kind = "primary",
@@ -37,13 +39,19 @@ export function Photo({
   id,
   alt = "Your deal photo",
   className = "",
+  detail = false,
 }: {
   id: string;
   alt?: string;
   className?: string;
+  detail?: boolean;
 }) {
   const [url, setURL] = useState("");
+  const clipId = useId();
+  const crop = resolveDealPhoto(id);
   useEffect(() => {
+    if (id.startsWith("/assets/deals/")) return;
+    setURL("");
     let active = true,
       url = "";
     readPhoto(id)
@@ -59,8 +67,35 @@ export function Photo({
       if (url) URL.revokeObjectURL(url);
     };
   }, [id]);
-  return url ? (
-    <img src={url} alt={alt} className={className} />
+  if (crop) {
+    const [x, y, width, height] = detail ? crop.detail : crop.thumbnail;
+    return (
+      <svg
+        className={"cropped-photo " + className}
+        viewBox={`${x} ${y} ${width} ${height}`}
+        width={width}
+        height={height}
+        role="img"
+        aria-label={alt}
+        preserveAspectRatio="xMidYMid meet"
+      >
+        <defs>
+          <clipPath id={clipId}>
+            <rect x={x} y={y} width={width} height={height} />
+          </clipPath>
+        </defs>
+        <image
+          href={crop.source}
+          width={crop.width}
+          height={crop.height}
+          clipPath={`url(#${clipId})`}
+        />
+      </svg>
+    );
+  }
+  const source = id.startsWith("/assets/deals/") ? id : url;
+  return source ? (
+    <img src={source} alt={alt} className={className} loading="lazy" />
   ) : (
     <span className={"photo-placeholder " + className}>
       <Package aria-label="Photo unavailable" />

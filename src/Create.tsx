@@ -34,6 +34,7 @@ export function Create({
     bundleCount: 2,
     shareCount: 1,
     photo: undefined,
+    sourceDealId: undefined,
     area: state.area,
     ...draft,
   };
@@ -142,7 +143,7 @@ export function Create({
         ...p,
         id,
         owner: true,
-        host: state.name.trim().split(" ")[0] || "You",
+        host: "Tom",
         itemCents: prices.itemCents,
         available: share,
         shareCount: share,
@@ -275,6 +276,7 @@ export function Create({
                             title: q.title,
                             portion: q.portion,
                             art: q.art,
+                            photo: q.photo,
                             category: q.category,
                             store: q.store,
                             bundleCents: q.bundleCents,
@@ -327,6 +329,9 @@ export function Create({
                     >
                       <option>Food &amp; drinks</option>
                       <option>Household</option>
+                      <option>Personal care</option>
+                      {mode === "deal" && <option>Dining</option>}
+                      {mode === "deal" && <option>Store offers</option>}
                     </select>
                   </label>
                   {mode === "deal" && (

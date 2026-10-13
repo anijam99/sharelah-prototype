@@ -620,10 +620,13 @@ small,
   background: var(--brand);
   color: white;
 }
-.categories .chip:nth-child(2) {
-  flex: 1;
+.categories {
+  overflow-x: auto;
+  scrollbar-width: none;
 }
 .categories .chip {
+  flex: none;
+  white-space: nowrap;
   padding: 11px 14px;
 }
 .filter-bar {
@@ -712,6 +715,16 @@ small,
   object-fit: cover;
   border-radius: 12px;
 }
+.cropped-photo {
+  display: block;
+  overflow: hidden;
+  background: white;
+}
+.product-art > .cropped-photo {
+  width: 100%;
+  height: 100%;
+  border-radius: 12px;
+}
 .product-art.large {
   width: 108px;
   height: 108px;
@@ -763,8 +776,8 @@ small,
   margin-top: 4px;
 }
 .deal-thumb {
-  width: 54px;
-  height: 54px;
+  width: 76px;
+  height: 76px;
   object-fit: cover;
   border-radius: 10px;
 }
@@ -1065,6 +1078,7 @@ small,
 }
 .reported-photo {
   width: 100%;
+  height: auto;
   max-height: 420px;
   object-fit: contain;
   background: white;
@@ -1181,7 +1195,8 @@ legend {
   gap: 12px;
   min-height: 132px;
 }
-.photo-entry > img {
+.photo-entry > img,
+.photo-entry > .cropped-photo {
   width: 140px;
   height: 120px;
   object-fit: cover;
@@ -1779,4 +1794,74 @@ legend {
     600 12px/1.4 Inter,
     sans-serif;
   box-shadow: 0 2px 8px #2b241d22;
+}
+
+.deal-search {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: white;
+  color: var(--muted);
+}
+.deal-search input {
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  padding-left: 0;
+  padding-right: 0;
+}
+.deal-thumb {
+  flex: none;
+}
+
+.neighbour-avatar {
+  flex: none;
+}
+.neighbour-card p {
+  font-size: 15px;
+  max-width: 340px;
+}
+.neighbour-stats > div {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 4px;
+}
+.neighbour-stats strong {
+  font: 800 26px/1.2 var(--display);
+}
+.neighbour-stats span {
+  font-size: 13px;
+  color: var(--muted);
+}
+.neighbour-review {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.review-byline {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+.review-byline button {
+  min-height: 44px;
+  text-align: left;
+}
+.review-stars {
+  display: flex;
+  gap: 3px;
+  color: var(--brand);
+  flex: none;
+}
+.review-comment {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }

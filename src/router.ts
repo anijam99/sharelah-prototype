@@ -17,25 +17,29 @@ export function currentPath() {
 export function routeLabel(path = currentPath()) {
   return path.startsWith("/map")
     ? "Map"
-    : path.startsWith("/splits")
-      ? "My splits"
-      : path.startsWith("/saved")
-        ? "Saved"
-        : path.startsWith("/search")
-          ? "Results"
-          : path.startsWith("/profile")
-            ? "Profile"
-            : path.startsWith("/messages")
-              ? "Messages"
-              : path.startsWith("/chat")
-                ? "Chat"
-                : path.startsWith("/offer")
-                  ? "Offer"
-                  : path.startsWith("/split")
-                    ? "My split"
-                    : path.startsWith("/create")
-                      ? "Create"
-                      : "Home";
+    : path.startsWith("/deals")
+      ? "Spotted deals"
+      : path.startsWith("/splits")
+        ? "My splits"
+        : path.startsWith("/saved")
+          ? "Saved"
+          : path.startsWith("/search")
+            ? "Results"
+            : path.startsWith("/neighbour")
+              ? "Neighbours"
+              : path.startsWith("/profile")
+                ? "Profile"
+                : path.startsWith("/messages")
+                  ? "Messages"
+                  : path.startsWith("/chat")
+                    ? "Chat"
+                    : path.startsWith("/offer")
+                      ? "Offer"
+                      : path.startsWith("/split")
+                        ? "My split"
+                        : path.startsWith("/create")
+                          ? "Create"
+                          : "Home";
 }
 export function go(
   path: string,

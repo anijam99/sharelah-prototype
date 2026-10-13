@@ -1,3 +1,5 @@
+import { normalizePersonas } from "./people";
+import { mergePhotoDeals } from "./dealCatalog";
 import {
   createContext,
   useContext,
@@ -6,7 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import { openDB } from "idb";
-import { initialState, type State } from "./model";
+import { initialState, refreshSeedProducts, type State } from "./model";
 const KEY = "sharelah-demo-v1";
 function load() {
   try {
@@ -37,7 +39,11 @@ function load() {
           Number.isFinite(p.itemCents),
       )
     )
-      return value as State;
+      return normalizePersonas({
+        ...(value as State),
+        deals: mergePhotoDeals(value.deals),
+        products: refreshSeedProducts(value.products),
+      });
   } catch {}
   return initialState();
 }

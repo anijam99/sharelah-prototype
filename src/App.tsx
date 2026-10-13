@@ -1,3 +1,8 @@
+import { NeighbourDirectory, NeighbourProfile } from "./NeighbourProfiles";
+import { profileSummary } from "./people";
+import { Deals } from "./Deals";
+import { dealPrice } from "./dealCatalog";
+import { photoSource } from "./dealPhotos";
 import { ReservationCountdown } from "./ReservationCountdown";
 import { useEffect, useState } from "react";
 import {
@@ -32,7 +37,14 @@ import {
 } from "./Journey";
 import { Create } from "./Create";
 import { finish, go, useRoute } from "./router";
-import { cancelReservation, money, owned, total, type Product } from "./model";
+import {
+  cancelReservation,
+  saveReview,
+  money,
+  owned,
+  total,
+  type Product,
+} from "./model";
 function Navigation({
   active,
   open,
@@ -209,7 +221,12 @@ function ReviewSheet({ p, close }: { p: Product; close: () => void }) {
 }
 function Modals({ type, close }: { type: string; close: () => void }) {
   const { state, update, reset } = useStore(),
-    [rating, setRating] = useState(0),
+    [rating, setRating] = useState(
+      () => state.reservations[type.split(":")[1]]?.rating || 0,
+    ),
+    [reviewComment, setReviewComment] = useState(
+      () => state.reservations[type.split(":")[1]]?.reviewComment || "",
+    ),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
   const [name, id] = type.split(":"),
@@ -350,7 +367,7 @@ function Modals({ type, close }: { type: string; close: () => void }) {
     body = (
       <p>
         {state.joinedHosts[p.id]
-          ? "Alex’s demo reservation will be cancelled."
+          ? "Jerry’s demo reservation will be cancelled."
           : "Neighbours will no longer be able to reserve this split."}
       </p>
     );
@@ -377,7 +394,7 @@ function Modals({ type, close }: { type: string; close: () => void }) {
     );
   }
   if (name === "rating" && p) {
-    title = "How was your split?";
+    title = "Review " + p.host;
     body = (
       <>
         <Row title={p.title} detail={"With " + p.host} />
@@ -396,23 +413,31 @@ function Modals({ type, close }: { type: string; close: () => void }) {
         <p className="center muted">
           {rating ? rating + " out of 5" : "Choose a rating"}
         </p>
+        <label>
+          Your comments (optional)
+          <textarea
+            value={reviewComment}
+            maxLength={1000}
+            rows={4}
+            placeholder="How was the pickup? Share your experience with this neighbour."
+            onChange={(e) => setReviewComment(e.target.value)}
+          />
+        </label>
+        <p className="fine">
+          {reviewComment.length}/1000 · Your review appears on {p.host}’s
+          profile in this demo.
+        </p>
       </>
     );
     footer = (
       <Button
-        disabled={!rating}
+        disabled={!rating || state.reservations[p.id]?.status !== "completed"}
         onClick={() => {
-          update((s) => ({
-            ...s,
-            reservations: {
-              ...s.reservations,
-              [p.id]: { ...s.reservations[p.id], rating },
-            },
-          }));
+          update((s) => saveReview(s, p.id, rating, reviewComment));
           close();
         }}
       >
-        Submit rating
+        {state.reservations[p.id]?.rating ? "Save review" : "Submit review"}
       </Button>
     );
   }
@@ -479,6 +504,8 @@ function Profile({
         (sum, p) => sum + Math.max(0, p.retailCents - total(p)),
         0,
       );
+  const summary = profileSummary(state, "tom");
+  if (section === "trust") return <NeighbourProfile id="tom" />;
   if (!section)
     return (
       <>
@@ -497,8 +524,8 @@ function Profile({
                 </span>
                 <h2>{state.name}</h2>
               </div>
-              <button onClick={() => go("/profile/trust")}>
-                4.9 ★ · Trusted neighbour ›
+              <button onClick={() => go("/neighbour/tom")}>
+                {summary.average} ★ · View your reviews ›
               </button>
               <img src="/assets/brand.svg" alt="" />
               <div className="shared-edge" />
@@ -518,6 +545,11 @@ function Profile({
                 <span>Completed splits</span>
               </button>
             </div>
+            <Row
+              title="Neighbour profiles"
+              detail="Meet Jerry and read neighbour reviews"
+              onClick={() => go("/neighbours")}
+            />
             <Row
               title="Saved splits"
               detail={state.saved.length + " saved for later"}
@@ -567,16 +599,10 @@ function Profile({
                 Only this browser is affected. These controls help explore the
                 host and pickup flows without another participant.
               </p>
-              <label>
-                Demo name
-                <input
-                  value={state.name}
-                  maxLength={40}
-                  onChange={(e) =>
-                    update((s) => ({ ...s, name: e.target.value }))
-                  }
-                />
-              </label>
+              <Row
+                title="Tester persona"
+                detail="Tom Chua · Jerry is your demo neighbour"
+              />
               <Button kind="secondary" onClick={() => open("reset")}>
                 <RotateCcw size={18} />
                 Reset my demo
@@ -632,7 +658,7 @@ function Profile({
                     }
                   >
                     <span className="brand-text">
-                      {state.joinedHosts[p.id] ? "✓" : "Add Alex"}
+                      {state.joinedHosts[p.id] ? "✓" : "Add Jerry"}
                     </span>
                   </Row>
                 ))}
@@ -662,26 +688,6 @@ function Profile({
                 </Row>
               ))}
             </>
-          ) : section === "trust" ? (
-            <>
-              <div className="status-hero">
-                <h2>4.9 out of 5</h2>
-                <p>Built one good pickup at a time.</p>
-              </div>
-              <Row
-                title="Keep your word"
-                detail="Arrive during the agreed pickup window."
-              />
-              <Row
-                title="Share sealed items"
-                detail="Keep the original packaging and check its condition."
-              />
-              <Row
-                title="Talk early"
-                detail="Message your neighbour if your plans change."
-              />
-              <p className="fine">Ratings and history are seeded demo data.</p>
-            </>
           ) : (
             <>
               <h2>A good eye for a good deal.</h2>
@@ -689,14 +695,16 @@ function Profile({
                 title="31 deals checked"
                 detail="Sample community contributions"
               />
-              {state.deals.map((d) => (
-                <Row
-                  title={d.title}
-                  detail={"Reported at " + d.store}
-                  key={d.id}
-                  onClick={() => go("/deal/" + d.id)}
-                />
-              ))}
+              {state.deals
+                .filter((d) => !d.sourceFile)
+                .map((d) => (
+                  <Row
+                    title={d.title}
+                    detail={"Reported at " + d.store}
+                    key={d.id}
+                    onClick={() => go("/deal/" + d.id)}
+                  />
+                ))}
             </>
           )}
         </div>
@@ -713,39 +721,69 @@ function DealPage({ id }: { id: string }) {
       {d ? (
         <main className="page-scroll">
           <div className="content">
-            <span className="eyebrow brand-text">DEAL REPORTED</span>
+            <span className="eyebrow brand-text">
+              {d.sourceFile ? "PHOTOGRAPHED OFFER" : "DEAL REPORTED"}
+            </span>
             <h2>{d.title}</h2>
-            {d.photo && <Photo id={d.photo} className="reported-photo" />}
-            <Row title={d.store} detail={d.area} />
+            {d.photo && (
+              <Photo
+                id={d.photo}
+                alt={d.title + " · source photo"}
+                className="reported-photo"
+                detail
+              />
+            )}
+            {d.sourceFile && (
+              <a
+                className="text-button"
+                href={d.photo ? photoSource(d.photo) : undefined}
+                target="_blank"
+                rel="noopener"
+              >
+                Open full photo to inspect the offer ↗
+              </a>
+            )}
+            <Row title={d.store} detail={d.sourceFile ? undefined : d.area} />
             <div className="checkout-total">
               <span>Advertised price</span>
-              <strong>{money(d.priceCents)}</strong>
+              <strong>{dealPrice(d)}</strong>
               <small>{d.portion}</small>
             </div>
+            {d.terms && (
+              <div className="panel">
+                <h3>Offer details</h3>
+                <p>{d.terms}</p>
+              </div>
+            )}
             <p className="notice">
-              Your deal is saved in this browser’s demo. Store prices and
-              availability haven’t been verified.
+              {d.sourceFile
+                ? "Price shown in the photo. Check the store for current price and availability."
+                : "Your deal is saved in this browser’s demo. Store prices and availability haven’t been verified."}
             </p>
-            <Button
-              onClick={() => {
-                update((s) => ({
-                  ...s,
-                  createDraft: {
-                    title: d.title,
-                    portion: d.portion,
-                    store: d.store,
-                    category: d.category,
-                    photo: d.photo,
-                    bundleCents: d.priceCents,
-                  },
-                }));
-                go("/create/1");
-              }}
-            >
-              Create a split from this deal
-            </Button>
-            <Button kind="secondary" onClick={() => go("/")}>
-              Browse nearby
+            {(!d.sourceFile || (d.bundleCount && d.priceCents > 0)) && (
+              <Button
+                onClick={() => {
+                  update((s) => ({
+                    ...s,
+                    createDraft: {
+                      title: d.title,
+                      portion: d.unitPortion || d.portion,
+                      bundleCount: d.bundleCount || 2,
+                      shareCount: 1,
+                      store: d.store,
+                      category: d.category,
+                      photo: d.photo,
+                      bundleCents: d.priceCents,
+                    },
+                  }));
+                  go("/create/1");
+                }}
+              >
+                Create a split from this deal
+              </Button>
+            )}
+            <Button kind="secondary" onClick={() => go("/deals")}>
+              Browse spotted deals
             </Button>
           </div>
         </main>
@@ -779,6 +817,8 @@ function Root() {
   if (!page) screen = <Home open={setModal} />;
   else if (page === "map") screen = <MapScreen open={setModal} />;
   else if (page === "splits") screen = <Splits />;
+  else if (page === "neighbours") screen = <NeighbourDirectory />;
+  else if (page === "neighbour") screen = <NeighbourProfile id={id} />;
   else if (page === "profile")
     screen = <Profile section={id} open={setModal} />;
   else if (page === "search" || page === "saved")
@@ -803,7 +843,7 @@ function Root() {
               .map((p) => (
                 <Row
                   key={p.id}
-                  title={p.owner ? "Alex" : p.host}
+                  title={p.owner ? "Jerry" : p.host}
                   detail={p.title}
                   onClick={() => go("/chat/" + p.id)}
                 />
@@ -828,6 +868,7 @@ function Root() {
         }
       />
     );
+  else if (page === "deals") screen = <Deals />;
   else if (page === "deal") screen = <DealPage id={id} />;
   else if (p) {
     if (page === "holding") screen = <ReservationCountdown key={p.id} p={p} />;

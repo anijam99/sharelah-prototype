@@ -13,6 +13,7 @@ import "fake-indexeddb/auto";
 import { Storage } from "happy-dom";
 import App from "../src/App";
 import { go, finish, back } from "../src/router";
+import { dealPhotos } from "../src/dealPhotos";
 
 // Camera permission is denied in this suite. QR arithmetic is tested separately
 // with the actual packaged JS encoder and WASM decoder.
@@ -63,16 +64,64 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
+it("shows individual product crops in main splits, deal cards and deal details", () => {
+  render(<App />);
+  const split = screen.getByRole("button", {
+    name: "Open Chobani blueberry Greek yoghurt",
+  });
+  const thumb = within(split).getByRole("img", {
+    name: "Chobani blueberry Greek yoghurt",
+  });
+  expect(thumb.getAttribute("viewBox")).toBe(
+    dealPhotos["chobani-blueberry"].thumbnail.join(" "),
+  );
+  expect(within(split).getByText("S$3.80 total")).toBeTruthy();
+  navigate("/deals");
+  const blueberry = screen.getByRole("img", {
+    name: "Chobani blueberry Greek yoghurt · source photo",
+  });
+  const strawberry = screen.getByRole("img", {
+    name: "Chobani strawberry Greek yoghurt · source photo",
+  });
+  expect(blueberry.getAttribute("viewBox")).not.toBe(
+    strawberry.getAttribute("viewBox"),
+  );
+  navigate("/deal/photo-chobani-blueberry");
+  expect(
+    screen
+      .getByRole("img", {
+        name: "Chobani blueberry Greek yoghurt · source photo",
+      })
+      .getAttribute("viewBox"),
+  ).toBe(dealPhotos["chobani-blueberry"].detail.join(" "));
+  expect(
+    screen.getByRole("link", { name: /Open full photo/ }).getAttribute("href"),
+  ).toBe("/assets/deals/IMG_2069.jpg");
+  click("Create a split from this deal");
+  expect(saved().createDraft.photo).toBe(
+    "/assets/deals/IMG_2069.jpg#deal=chobani-blueberry",
+  );
+  expect(
+    screen
+      .getByRole("img", { name: "Photographed price tag" })
+      .getAttribute("viewBox"),
+  ).toBe(dealPhotos["chobani-blueberry"].thumbnail.join(" "));
+});
+
 it("shows existing membership on Home and Map and opens the same ready split", () => {
   render(<App />);
   expect(
     within(
-      screen.getByRole("button", { name: "Open Greek yoghurt" }),
+      screen.getByRole("button", {
+        name: "Open Chobani blueberry Greek yoghurt",
+      }),
     ).getByText("In your splits"),
   ).toBeTruthy();
   click("Map");
   expect(
-    screen.getByRole("button", { name: "Select Greek yoghurt" }).textContent,
+    screen.getByRole("button", {
+      name: "Select Chobani blueberry Greek yoghurt",
+    }).textContent,
   ).toContain("Yours");
   expect(screen.getByText("In your splits")).toBeTruthy();
   click("View my split");
@@ -85,7 +134,7 @@ it("shows existing membership on Home and Map and opens the same ready split", (
 it("reserves via a sheet, saves the chosen payment, and cancels without leaving a stale checkout", () => {
   vi.useFakeTimers();
   render(<App />);
-  click("Open Top detergent");
+  click("Open Carefree breathable unscented liners");
   click("Reserve a portion");
   expect(
     screen.getByRole("dialog", { name: "Reserve your portion" }),
@@ -93,7 +142,7 @@ it("reserves via a sheet, saves the chosen payment, and cancels without leaving 
   click(/Payment method · Change/);
   click(/ShareLah wallet/);
   click("Use payment method");
-  click("Confirm & hold S$8.10");
+  click("Confirm & hold S$2.10");
   expect(screen.getByRole("timer").getAttribute("aria-label")).toBe(
     "Confirmation in 5 seconds",
   );
@@ -136,12 +185,12 @@ it("rejects a wrong pickup number and requires receipt confirmation before relea
   expect(
     (
       screen.getByRole("button", {
-        name: "Confirm & release S$1.82",
+        name: "Confirm & release S$3.80",
       }) as HTMLButtonElement
     ).disabled,
   ).toBe(true);
   fireEvent.click(screen.getByRole("checkbox"));
-  click("Confirm & release S$1.82");
+  click("Confirm & release S$3.80");
   expect(saved().reservations.yog.status).toBe("completed");
   expect(sessionStorage.getItem("sharelah-verified-yog")).toBeNull();
   click("My splits");
@@ -188,7 +237,7 @@ it("validates a new listing, computes its portions, publishes it, and resets onl
   click(/Enter details manually/);
   click("Set portions & price");
   expect(screen.getByRole("alert").textContent).toContain("Add an item");
-  click("Oat milk");
+  click("Samyang Buldak bowl noodles");
   click("Set portions & price");
   fireEvent.change(screen.getByLabelText("Bundle price (S$)"), {
     target: { value: "10.01" },
@@ -226,7 +275,7 @@ it("opens the camera for a deal report and offers a usable permission-denied fal
     expect.objectContaining({ audio: false }),
   );
   click("Continue without a photo");
-  click("Top detergent");
+  click("Carefree breathable unscented liners");
   fireEvent.change(screen.getByLabelText("Advertised price (S$)"), {
     target: { value: "12.50" },
   });
@@ -240,9 +289,9 @@ it("opens the camera for a deal report and offers a usable permission-denied fal
 it("cancels during the grace period without taking availability or holding payment", () => {
   vi.useFakeTimers();
   render(<App />);
-  click("Open Top detergent");
+  click("Open Carefree breathable unscented liners");
   click("Reserve a portion");
-  click("Confirm & hold S$8.10");
+  click("Confirm & hold S$2.10");
   act(() => vi.advanceTimersByTime(3000));
   click("Cancel reservation");
   expect(location.hash).toBe("#/offer/det");
@@ -254,9 +303,9 @@ it("cancels during the grace period without taking availability or holding payme
 it("keeps the original countdown deadline when the screen remounts", () => {
   vi.useFakeTimers();
   const view = render(<App />);
-  click("Open Top detergent");
+  click("Open Carefree breathable unscented liners");
   click("Reserve a portion");
-  click("Confirm & hold S$8.10");
+  click("Confirm & hold S$2.10");
   act(() => vi.advanceTimersByTime(2000));
   view.unmount();
   render(<App />);
@@ -275,8 +324,166 @@ it("abandons the countdown on navigation and rejects a direct countdown URL", ()
   navigate("/holding/det");
   expect(location.hash).toBe("#/offer/det");
   click("Reserve a portion");
-  click("Confirm & hold S$8.10");
+  click("Confirm & hold S$2.10");
   navigate("/");
   act(() => vi.advanceTimersByTime(6000));
   expect(saved().reservations.det).toBeUndefined();
+});
+
+it("shows photo deals in existing demos and searches separate offers in the same picture", () => {
+  render(<App />);
+  navigate("/deals");
+  fireEvent.change(
+    screen.getByRole("searchbox", { name: "Search spotted deals" }),
+    { target: { value: "Chobani" } },
+  );
+  expect(screen.getByRole("status").textContent).toBe("3 deals");
+  click(/Chobani blueberry Greek yoghurt Cold Storage/);
+  expect(screen.getByText("Any 2 for S$7.30")).toBeTruthy();
+  expect(
+    screen
+      .getByRole("img", { name: /source photo/ })
+      .querySelector("image")
+      ?.getAttribute("href"),
+  ).toBe("/assets/deals/IMG_2069.jpg");
+  click("Create a split from this deal");
+  expect(saved().createDraft.portion).toBe("1 tub · 160 g");
+  expect(saved().createDraft.bundleCount).toBe(2);
+  expect(saved().createDraft.bundleCents).toBe(730);
+  expect(saved().createDraft.photo).toBe(
+    "/assets/deals/IMG_2069.jpg#deal=chobani-blueberry",
+  );
+  click("Set portions & price");
+  expect(screen.getByLabelText("Bundle price (S$)").getAttribute("value")).toBe(
+    "7.3",
+  );
+});
+
+it("does not turn an unpriced percentage promotion into a free or priced split", () => {
+  render(<App />);
+  navigate("/deal/photo-clearance");
+  expect(screen.getByText("50% off or more")).toBeTruthy();
+  expect(screen.queryByText("S$0.00")).toBeNull();
+  expect(
+    screen.queryByRole("button", { name: "Create a split from this deal" }),
+  ).toBeNull();
+  expect(
+    screen.getByRole("link", { name: /Open full photo/ }).getAttribute("href"),
+  ).toBe("/assets/deals/IMG_2019.jpg");
+});
+
+it("adds the photo catalogue to an older saved demo without losing progress", () => {
+  render(<App />);
+  const previous = saved();
+  cleanup();
+  previous.deals = [
+    {
+      id: "my-deal",
+      title: "My own find",
+      store: "My store",
+      priceCents: 500,
+      portion: "2 packs",
+      category: "Food & drinks",
+      createdAt: "",
+      area: "Bugis",
+    },
+  ];
+  previous.saved = ["det"];
+  localStorage.setItem("sharelah-demo-v1", JSON.stringify(previous));
+  render(<App />);
+  expect(saved().saved).toEqual(["det"]);
+  expect(saved().deals[0].id).toBe("my-deal");
+  expect(
+    saved().deals.filter((d: any) => d.id === "photo-chobani-blueberry"),
+  ).toHaveLength(1);
+  cleanup();
+  render(<App />);
+  expect(
+    saved().deals.filter((d: any) => d.id === "photo-chobani-blueberry"),
+  ).toHaveLength(1);
+});
+
+it("saves a written review, shows it on Jerry's profile, and edits it without duplicating it", () => {
+  const view = render(<App />);
+  navigate("/code/yog");
+  fireEvent.change(screen.getByLabelText("6-digit pickup code"), {
+    target: { value: "482913" },
+  });
+  click("Find my portion");
+  fireEvent.click(screen.getByRole("checkbox"));
+  click("Confirm & release S$3.80");
+  click("Rate your experience");
+  click("5 stars");
+  fireEvent.change(screen.getByLabelText("Your comments (optional)"), {
+    target: { value: "Jerry was punctual and the tub was sealed." },
+  });
+  click("Submit review");
+  expect(saved().reservations.yog.reviewComment).toBe(
+    "Jerry was punctual and the tub was sealed.",
+  );
+  click(/Jerry’s profile/);
+  expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(
+    "Jerry’s profile",
+  );
+  expect(
+    screen.getByText("Jerry was punctual and the tub was sealed."),
+  ).toBeTruthy();
+  expect(screen.getByText("4 reviews")).toBeTruthy();
+  view.unmount();
+  render(<App />);
+  expect(
+    screen.getByText("Jerry was punctual and the tub was sealed."),
+  ).toBeTruthy();
+  navigate("/split/yog");
+  click("Edit your review");
+  expect(
+    (screen.getByLabelText("Your comments (optional)") as HTMLTextAreaElement)
+      .value,
+  ).toBe("Jerry was punctual and the tub was sealed.");
+  expect(
+    screen
+      .getByRole("button", { name: "5 stars" })
+      .getAttribute("aria-pressed"),
+  ).toBe("true");
+  click("4 stars");
+  fireEvent.change(screen.getByLabelText("Your comments (optional)"), {
+    target: { value: "Updated: clear messages and easy pickup." },
+  });
+  click("Save review");
+  navigate("/neighbour/jerry");
+  expect(
+    screen.getByText("Updated: clear messages and easy pickup."),
+  ).toBeTruthy();
+  expect(
+    screen.queryByText("Jerry was punctual and the tub was sealed."),
+  ).toBeNull();
+  expect(screen.getByText("4 reviews")).toBeTruthy();
+  fireEvent.click(
+    screen.getAllByRole("button", { name: "Tom Chua", exact: true })[0],
+  );
+  expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(
+    "Tom Chua’s profile",
+  );
+});
+
+it("migrates old personas while keeping reservations and always uses Jerry across splits", () => {
+  render(<App />);
+  const previous = saved();
+  cleanup();
+  previous.products[0].host = "Priya";
+  previous.products[2].host = "Mei";
+  previous.name = "Old tester";
+  localStorage.setItem("sharelah-demo-v1", JSON.stringify(previous));
+  render(<App />);
+  expect(saved().name).toBe("Tom Chua");
+  expect(saved().products.every((p: any) => p.host === "Jerry")).toBe(true);
+  expect(saved().reservations.yog.status).toBe("ready");
+  click("Open Samyang Buldak bowl noodles");
+  click(/Hosted by Jerry/);
+  expect(location.hash).toBe("#/neighbour/jerry");
+  expect(screen.getByText("Splits hosted by Jerry")).toBeTruthy();
+  navigate("/profile");
+  click(/Neighbour profiles/);
+  expect(screen.getByRole("button", { name: /^Jerry / })).toBeTruthy();
+  expect(screen.getByRole("button", { name: /^Tom Chua/ })).toBeTruthy();
 });
