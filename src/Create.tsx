@@ -1,3 +1,6 @@
+import { Pizza } from "./Pizza";
+import { dealCategories } from "./dealCatalog";
+import { CachedPhotos } from "./CachedPhotos";
 import { useState } from "react";
 import { Camera } from "./Camera";
 import { Art, Button, Header, Photo, PriceRows, Row } from "./ui";
@@ -21,7 +24,10 @@ export function Create({
   const { state, update } = useStore(),
     [error, setError] = useState(""),
     [saving, setSaving] = useState(false),
-    [camera, setCamera] = useState(mode === "camera" || mode === "deal");
+    [camera, setCamera] = useState(
+      (mode === "camera" || mode === "deal") && !state.createDraft.photo,
+    ),
+    [cachedPhotos, setCachedPhotos] = useState(false);
   const draft = state.createDraft;
   const p = {
     ...seedProducts[0],
@@ -163,14 +169,25 @@ export function Create({
   }
   return (
     <>
+      {cachedPhotos && (
+        <CachedPhotos
+          onClose={() => setCachedPhotos(false)}
+          onSelect={(photo) => {
+            change({ photo });
+            setCachedPhotos(false);
+            setCamera(false);
+            if (mode === "camera") go("/create/1", undefined, true);
+          }}
+        />
+      )}
       <Header
         title={
           camera
             ? "Photograph a price tag"
             : mode === "deal"
-              ? "Report a deal"
+              ? "Share a deal"
               : stage === 1
-                ? "Create a split"
+                ? "Share a split"
                 : stage === 2
                   ? "Allocate portions"
                   : stage === 3
@@ -198,6 +215,12 @@ export function Create({
                 Photograph the shelf label, then check and enter the item and
                 price.
               </p>
+              <button
+                className="text-button"
+                onClick={() => setCachedPhotos(true)}
+              >
+                Use a saved price-tag photo
+              </button>
               <Camera mode="photo" onPhoto={(blob) => void attach(blob)} />
               {saving && <p role="status">Saving your photo…</p>}
               {error && (
@@ -266,8 +289,14 @@ export function Create({
                       {p.photo ? "Retake photo" : "Add a price-tag photo"}
                     </button>
                   </div>
+                  <button
+                    className="text-button"
+                    onClick={() => setCachedPhotos(true)}
+                  >
+                    Use a saved price-tag photo
+                  </button>
                   <div className="chips wrap" aria-label="Use an example item">
-                    {seedProducts.map((q) => (
+                    {seedProducts.slice(0, 3).map((q) => (
                       <button
                         key={q.id}
                         className="chip"
@@ -327,11 +356,11 @@ export function Create({
                       value={p.category}
                       onChange={(e) => change({ category: e.target.value })}
                     >
-                      <option>Food &amp; drinks</option>
-                      <option>Household</option>
-                      <option>Personal care</option>
-                      {mode === "deal" && <option>Dining</option>}
-                      {mode === "deal" && <option>Store offers</option>}
+                      {dealCategories
+                        .filter((c) => c !== "All")
+                        .map((c) => (
+                          <option key={c}>{c}</option>
+                        ))}
                     </select>
                   </label>
                   {mode === "deal" && (
@@ -400,6 +429,7 @@ export function Create({
                       )}
                     </select>
                   </label>
+                  <Pizza count={count} taken={share} />
                   <div className="allocation">
                     <div>
                       <small>YOU KEEP</small>
@@ -537,9 +567,9 @@ export function Create({
             onClick={stage === 4 || mode === "deal" ? publish : next}
           >
             {mode === "deal"
-              ? "Post deal"
+              ? "Share deal"
               : stage === 4
-                ? "Publish split"
+                ? "Share split"
                 : stage === 1
                   ? "Set portions & price"
                   : stage === 2

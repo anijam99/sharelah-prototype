@@ -2,6 +2,7 @@ import { seedDeals } from "./dealCatalog";
 export type Status =
   "reserved" | "ready" | "reported" | "completed" | "cancelled";
 export type Product = {
+  demo?: boolean;
   id: string;
   title: string;
   portion: string;
@@ -42,6 +43,9 @@ export type Reservation = {
 };
 export type Message = { id: string; body: string; mine: boolean; time: string };
 export type Deal = {
+  demo?: boolean;
+  originalCents?: number;
+  offerType?: string;
   priceLabel?: string;
   terms?: string;
   sourceFile?: string;
@@ -89,6 +93,7 @@ const common = {
 function photographedSplit(dealId: string, retailCents: number) {
   const d = seedDeals.find((d) => d.id === "photo-" + dealId)!;
   return {
+    demo: d.demo,
     title: d.title,
     portion: d.unitPortion!,
     category: d.category,
@@ -120,7 +125,7 @@ export const seedProducts: Product[] = [
   },
   {
     ...common,
-    ...photographedSplit("carefree", 315),
+    ...photographedSplit("top-reference", 1490),
     id: "det",
     art: "bag",
     host: "Jerry",
@@ -147,13 +152,96 @@ export const seedProducts: Product[] = [
     code: "729418",
   },
 ];
+// Extra demo pickup listings use offers from the supplied photo collection.
+seedProducts.push(
+  {
+    ...seedProducts[1],
+    ...photographedSplit("diffuser", 1790),
+    id: "berry",
+    host: "Jerry",
+    place: "Bugis Junction · Main entrance",
+    address: "200 Victoria Street",
+    distance: 450,
+    code: "538214",
+  },
+  {
+    ...seedProducts[1],
+    ...photographedSplit("laurier", 607),
+    id: "laurier",
+    host: "Jerry",
+    place: "Rochor MRT · Exit A",
+    address: "1 Rochor Canal Road",
+    distance: 850,
+    code: "864219",
+  },
+  {
+    ...seedProducts[1],
+    ...photographedSplit("ribeye-bbq", 1390),
+    id: "ribeye",
+    host: "Jerry",
+    place: "Little India MRT · Exit A",
+    address: "60 Bukit Timah Road",
+    distance: 1400,
+    code: "975312",
+  },
+);
+
+// More sample categories and price points, with pickups spread across the map.
+const existingSources = new Set(seedProducts.map((p) => p.sourceDealId));
+seedDeals
+  .filter((d) => !existingSources.has(d.id))
+  .forEach((d, index) => {
+    const distances = [420, 580, 780, 920, 1100, 1300, 1600, 1900];
+    const pickupPoints = [
+      ["Bugis Junction · Fountain", "200 Victoria Street"],
+      ["Bugis+ · Main entrance", "201 Victoria Street"],
+      ["National Library · Lobby", "100 Victoria Street"],
+      ["Rochor MRT · Exit B", "1 Rochor Canal Road"],
+    ];
+    const [place, address] = pickupPoints[index % pickupPoints.length];
+    seedProducts.push({
+      ...seedProducts[1],
+      id: `sample-${d.id}`,
+      sourceDealId: d.id,
+      title: d.title,
+      portion: d.unitPortion!,
+      category: d.category,
+      photo: d.photo,
+      store: d.store,
+      bundleCount: d.bundleCount!,
+      bundleCents: d.priceCents,
+      itemCents: Math.floor(d.priceCents / d.bundleCount!),
+      retailCents: Math.floor(d.originalCents! / d.bundleCount!),
+      shareCount: d.bundleCount! - 1,
+      available: d.bundleCount! - 1,
+      demo: true,
+      place,
+      address,
+      distance: distances[index % distances.length],
+      date: index % 3 ? "Today" : "Tomorrow",
+      time: ["12:30–1:00 pm", "6:00–6:30 pm", "7:15–7:45 pm"][index % 3],
+      code: String(810000 + index),
+      note:
+        d.category === "Fashion"
+          ? "Message me your size or colour before I buy. Demo pickup."
+          : "Meet at the entrance. Sample pickup for the demo.",
+    });
+  });
+
 // Keep stable IDs/codes and reservation progress when an existing demo loads.
-// Only the three bundled listings receive refreshed item/offer information.
+// Sample listings refresh without deleting personal listings or reservation progress.
 export function refreshSeedProducts(products: Product[]): Product[] {
-  return products.map((p) => {
+  const all = [
+    ...products,
+    ...structuredClone(
+      seedProducts.filter((seed) => !products.some((p) => p.id === seed.id)),
+    ),
+  ];
+  return all.map((p) => {
     const seed = !p.owner && seedProducts.find((seed) => seed.id === p.id);
     if (!seed) return p;
     const {
+      demo,
       title,
       portion,
       category,
@@ -168,6 +256,7 @@ export function refreshSeedProducts(products: Product[]): Product[] {
     } = seed;
     return {
       ...p,
+      demo,
       title,
       portion,
       category,
@@ -352,5 +441,18 @@ export function saveReview(
         reviewedAt: new Date().toISOString(),
       },
     },
+  };
+}
+
+/** A demo neighbour claims one available portion, at most once per listing. */
+export function joinHostedDeal(s: State, id: string): State {
+  const p = s.products.find((q) => q.id === id);
+  if (!p?.owner || p.closed || p.available < 1 || s.joinedHosts[id]) return s;
+  return {
+    ...s,
+    products: s.products.map((q) =>
+      q.id === id ? { ...q, available: q.available - 1 } : q,
+    ),
+    joinedHosts: { ...s.joinedHosts, [id]: true },
   };
 }

@@ -81,7 +81,7 @@ it("shows individual product crops in main splits, deal cards and deal details",
     name: "Chobani blueberry Greek yoghurt · source photo",
   });
   const strawberry = screen.getByRole("img", {
-    name: "Chobani strawberry Greek yoghurt · source photo",
+    name: "TOP liquid laundry detergent · source photo",
   });
   expect(blueberry.getAttribute("viewBox")).not.toBe(
     strawberry.getAttribute("viewBox"),
@@ -97,7 +97,7 @@ it("shows individual product crops in main splits, deal cards and deal details",
   expect(
     screen.getByRole("link", { name: /Open full photo/ }).getAttribute("href"),
   ).toBe("/assets/deals/IMG_2069.jpg");
-  click("Create a split from this deal");
+  click("Share a split from this deal");
   expect(saved().createDraft.photo).toBe(
     "/assets/deals/IMG_2069.jpg#deal=chobani-blueberry",
   );
@@ -119,10 +119,12 @@ it("shows existing membership on Home and Map and opens the same ready split", (
   ).toBeTruthy();
   click("Map");
   expect(
-    screen.getByRole("button", {
-      name: "Select Chobani blueberry Greek yoghurt",
-    }).textContent,
-  ).toContain("Yours");
+    screen
+      .getByRole("button", {
+        name: "Select Chobani blueberry Greek yoghurt",
+      })
+      .getAttribute("aria-description"),
+  ).toContain("in your splits");
   expect(screen.getByText("In your splits")).toBeTruthy();
   click("View my split");
   expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(
@@ -134,7 +136,7 @@ it("shows existing membership on Home and Map and opens the same ready split", (
 it("reserves via a sheet, saves the chosen payment, and cancels without leaving a stale checkout", () => {
   vi.useFakeTimers();
   render(<App />);
-  click("Open Carefree breathable unscented liners");
+  click("Open TOP liquid laundry detergent");
   click("Reserve a portion");
   expect(
     screen.getByRole("dialog", { name: "Reserve your portion" }),
@@ -142,7 +144,7 @@ it("reserves via a sheet, saves the chosen payment, and cancels without leaving 
   click(/Payment method · Change/);
   click(/ShareLah wallet/);
   click("Use payment method");
-  click("Confirm & hold S$2.10");
+  click("Confirm & hold S$10.65");
   expect(screen.getByRole("timer").getAttribute("aria-label")).toBe(
     "Confirmation in 5 seconds",
   );
@@ -233,7 +235,7 @@ it("saves chat messages and restores them after the app is remounted", () => {
 
 it("validates a new listing, computes its portions, publishes it, and resets only local demo data", async () => {
   render(<App />);
-  click("Create");
+  click("Share");
   click(/Enter details manually/);
   click("Set portions & price");
   expect(screen.getByRole("alert").textContent).toContain("Add an item");
@@ -245,7 +247,7 @@ it("validates a new listing, computes its portions, publishes it, and resets onl
   click("Arrange pickup");
   click("Review listing");
   expect(screen.getByText("S$5.15")).toBeTruthy();
-  click("Publish split");
+  click("Share split");
   const p = saved().products.find((p: any) => p.owner);
   expect(p.itemCents).toBe(500);
   expect(p.bundleCents).toBe(1001);
@@ -259,7 +261,7 @@ it("validates a new listing, computes its portions, publishes it, and resets onl
     }),
   );
   await waitFor(() => expect(location.hash).toBe("#/"));
-  expect(saved().products).toHaveLength(3);
+  expect(saved().products).toHaveLength(23);
   expect(saved().reservations.yog.status).toBe("ready");
 });
 
@@ -275,11 +277,11 @@ it("opens the camera for a deal report and offers a usable permission-denied fal
     expect.objectContaining({ audio: false }),
   );
   click("Continue without a photo");
-  click("Carefree breathable unscented liners");
+  click("TOP liquid laundry detergent");
   fireEvent.change(screen.getByLabelText("Advertised price (S$)"), {
     target: { value: "12.50" },
   });
-  click("Post deal");
+  click("Share deal");
   expect(saved().deals[0].priceCents).toBe(1250);
   expect(
     screen.getByRole("heading", { name: "Neighbourhood find" }),
@@ -289,9 +291,9 @@ it("opens the camera for a deal report and offers a usable permission-denied fal
 it("cancels during the grace period without taking availability or holding payment", () => {
   vi.useFakeTimers();
   render(<App />);
-  click("Open Carefree breathable unscented liners");
+  click("Open TOP liquid laundry detergent");
   click("Reserve a portion");
-  click("Confirm & hold S$2.10");
+  click("Confirm & hold S$10.65");
   act(() => vi.advanceTimersByTime(3000));
   click("Cancel reservation");
   expect(location.hash).toBe("#/offer/det");
@@ -303,9 +305,9 @@ it("cancels during the grace period without taking availability or holding payme
 it("keeps the original countdown deadline when the screen remounts", () => {
   vi.useFakeTimers();
   const view = render(<App />);
-  click("Open Carefree breathable unscented liners");
+  click("Open TOP liquid laundry detergent");
   click("Reserve a portion");
-  click("Confirm & hold S$2.10");
+  click("Confirm & hold S$10.65");
   act(() => vi.advanceTimersByTime(2000));
   view.unmount();
   render(<App />);
@@ -324,7 +326,7 @@ it("abandons the countdown on navigation and rejects a direct countdown URL", ()
   navigate("/holding/det");
   expect(location.hash).toBe("#/offer/det");
   click("Reserve a portion");
-  click("Confirm & hold S$2.10");
+  click("Confirm & hold S$10.65");
   navigate("/");
   act(() => vi.advanceTimersByTime(6000));
   expect(saved().reservations.det).toBeUndefined();
@@ -337,16 +339,16 @@ it("shows photo deals in existing demos and searches separate offers in the same
     screen.getByRole("searchbox", { name: "Search spotted deals" }),
     { target: { value: "Chobani" } },
   );
-  expect(screen.getByRole("status").textContent).toBe("3 deals");
+  expect(screen.getByRole("status").textContent).toBe("1 deal");
   click(/Chobani blueberry Greek yoghurt Cold Storage/);
-  expect(screen.getByText("Any 2 for S$7.30")).toBeTruthy();
+  expect(screen.getAllByText("Any 2 for S$7.30").length).toBeGreaterThan(0);
   expect(
     screen
       .getByRole("img", { name: /source photo/ })
       .querySelector("image")
       ?.getAttribute("href"),
   ).toBe("/assets/deals/IMG_2069.jpg");
-  click("Create a split from this deal");
+  click("Share a split from this deal");
   expect(saved().createDraft.portion).toBe("1 tub · 160 g");
   expect(saved().createDraft.bundleCount).toBe(2);
   expect(saved().createDraft.bundleCents).toBe(730);
@@ -359,17 +361,11 @@ it("shows photo deals in existing demos and searches separate offers in the same
   );
 });
 
-it("does not turn an unpriced percentage promotion into a free or priced split", () => {
+it("removes the cluttered clearance offer from the curated catalogue", () => {
   render(<App />);
   navigate("/deal/photo-clearance");
-  expect(screen.getByText("50% off or more")).toBeTruthy();
+  expect(screen.getByText("Deal not found")).toBeTruthy();
   expect(screen.queryByText("S$0.00")).toBeNull();
-  expect(
-    screen.queryByRole("button", { name: "Create a split from this deal" }),
-  ).toBeNull();
-  expect(
-    screen.getByRole("link", { name: /Open full photo/ }).getAttribute("href"),
-  ).toBe("/assets/deals/IMG_2019.jpg");
 });
 
 it("adds the photo catalogue to an older saved demo without losing progress", () => {

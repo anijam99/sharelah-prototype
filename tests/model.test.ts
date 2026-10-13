@@ -84,15 +84,44 @@ describe("Reservation lifecycle", () => {
   });
   it("filters the catalog by query, category, radius and neighbourhood", () => {
     const s = initialState();
-    expect(visibleProducts(s, "liners").map((p) => p.id)).toEqual(["det"]);
-    expect(visibleProducts({ ...s, radius: 500 }).map((p) => p.id)).toEqual([
-      "yog",
-      "det",
-    ]);
-    expect(visibleProducts(s, "", "Food & drinks").map((p) => p.id)).toEqual([
-      "yog",
-      "oat",
-    ]);
+    expect(visibleProducts(s, "TOP liquid").map((p) => p.id)).toEqual(["det"]);
+    expect(
+      visibleProducts({ ...s, radius: 500 }).every((p) => p.distance <= 500),
+    ).toBe(true);
+    expect(
+      visibleProducts(s, "", "Food & drinks").every(
+        (p) => p.category === "Food & drinks",
+      ),
+    ).toBe(true);
+    expect(visibleProducts(s, "", "Fashion").length).toBeGreaterThan(0);
+    expect(visibleProducts({ ...s, radius: 3000 }, "", "Tech")).toHaveLength(2);
     expect(visibleProducts({ ...s, area: "Tampines" })).toEqual([]);
   });
+});
+
+it("Jerry claims exactly one hosted portion and cannot join a full or closed listing", async () => {
+  const { joinHostedDeal } = await import("../src/model");
+  const s = initialState();
+  s.products.push({
+    ...s.products[1],
+    id: "hosted",
+    owner: true,
+    shareCount: 2,
+    available: 2,
+  });
+  const joined = joinHostedDeal(s, "hosted");
+  expect(joined.joinedHosts.hosted).toBe(true);
+  expect(joined.products.find((p) => p.id === "hosted")?.available).toBe(1);
+  expect(joinHostedDeal(joined, "hosted")).toBe(joined);
+  expect(joinHostedDeal(s, "det")).toBe(s);
+  const closed = {
+    ...s,
+    products: s.products.map((p) => ({ ...p, closed: true })),
+  };
+  expect(joinHostedDeal(closed, "hosted")).toBe(closed);
+  const full = {
+    ...s,
+    products: s.products.map((p) => ({ ...p, available: 0 })),
+  };
+  expect(joinHostedDeal(full, "hosted")).toBe(full);
 });

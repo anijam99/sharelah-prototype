@@ -1,9 +1,14 @@
+import { DemoControls } from "./DemoControls";
+import { joinHostedDeal } from "./model";
 import { NeighbourDirectory, NeighbourProfile } from "./NeighbourProfiles";
 import { profileSummary } from "./people";
 import { Deals } from "./Deals";
-import { dealPrice } from "./dealCatalog";
+import { DealPrice } from "./DealPrice";
 import { photoSource } from "./dealPhotos";
-import { ReservationCountdown } from "./ReservationCountdown";
+import {
+  ReservationCountdown,
+  type ConfirmationVariant,
+} from "./ReservationCountdown";
 import { useEffect, useState } from "react";
 import {
   Check,
@@ -57,7 +62,7 @@ function Navigation({
       {[
         ["home", "Home", "/"],
         ["map", "Map", "/map"],
-        ["plus", "Create", ""],
+        ["plus", "Share", ""],
         ["splits", "Splits", "/splits"],
         ["profile", "Profile", "/profile"],
       ].map(([icon, label, path]) => (
@@ -242,7 +247,7 @@ function Modals({ type, close }: { type: string; close: () => void }) {
       <>
         <Row
           title="Scan a price tag"
-          detail="Photograph an offer and create a split"
+          detail="Photograph an offer and share a split"
           onClick={() => {
             close();
             go("/capture");
@@ -250,14 +255,14 @@ function Modals({ type, close }: { type: string; close: () => void }) {
         />
         <Row
           title="Enter details manually"
-          detail="Create a split from an offer you know"
+          detail="Share a split from an offer you know"
           onClick={() => {
             close();
             go("/create/1");
           }}
         />
         <Row
-          title="Report a deal"
+          title="Share a deal"
           detail="Share a shelf photo and the price"
           onClick={() => {
             close();
@@ -650,12 +655,7 @@ function Profile({
                         ? "Demo neighbour joined"
                         : "No neighbour yet"
                     }
-                    onClick={() =>
-                      update((s) => ({
-                        ...s,
-                        joinedHosts: { ...s.joinedHosts, [p.id]: true },
-                      }))
-                    }
+                    onClick={() => update((s) => joinHostedDeal(s, p.id))}
                   >
                     <span className="brand-text">
                       {state.joinedHosts[p.id] ? "✓" : "Add Jerry"}
@@ -700,7 +700,7 @@ function Profile({
                 .map((d) => (
                   <Row
                     title={d.title}
-                    detail={"Reported at " + d.store}
+                    detail={"Shared at " + d.store}
                     key={d.id}
                     onClick={() => go("/deal/" + d.id)}
                   />
@@ -722,7 +722,11 @@ function DealPage({ id }: { id: string }) {
         <main className="page-scroll">
           <div className="content">
             <span className="eyebrow brand-text">
-              {d.sourceFile ? "PHOTOGRAPHED OFFER" : "DEAL REPORTED"}
+              {d.demo
+                ? "DEMO OFFER"
+                : d.sourceFile
+                  ? "PHOTOGRAPHED OFFER"
+                  : "SHARED DEAL"}
             </span>
             <h2>{d.title}</h2>
             {d.photo && (
@@ -746,7 +750,7 @@ function DealPage({ id }: { id: string }) {
             <Row title={d.store} detail={d.sourceFile ? undefined : d.area} />
             <div className="checkout-total">
               <span>Advertised price</span>
-              <strong>{dealPrice(d)}</strong>
+              <DealPrice deal={d} />
               <small>{d.portion}</small>
             </div>
             {d.terms && (
@@ -756,9 +760,11 @@ function DealPage({ id }: { id: string }) {
               </div>
             )}
             <p className="notice">
-              {d.sourceFile
-                ? "Price shown in the photo. Check the store for current price and availability."
-                : "Your deal is saved in this browser’s demo. Store prices and availability haven’t been verified."}
+              {d.demo
+                ? "Sample offer for testing. Prices, stores and availability are illustrative."
+                : d.sourceFile
+                  ? "Price shown in the photo. Check the store for current price and availability."
+                  : "Your deal is saved in this browser’s demo. Store prices and availability haven’t been verified."}
             </p>
             {(!d.sourceFile || (d.bundleCount && d.priceCents > 0)) && (
               <Button
@@ -774,12 +780,16 @@ function DealPage({ id }: { id: string }) {
                       category: d.category,
                       photo: d.photo,
                       bundleCents: d.priceCents,
+                      sourceDealId: d.id,
+                      retailCents: d.originalCents
+                        ? Math.floor(d.originalCents / (d.bundleCount || 1))
+                        : 0,
                     },
                   }));
                   go("/create/1");
                 }}
               >
-                Create a split from this deal
+                Share a split from this deal
               </Button>
             )}
             <Button kind="secondary" onClick={() => go("/deals")}>
@@ -799,8 +809,21 @@ function Root() {
   const path = useRoute(),
     { state, storageError } = useStore(),
     [modal, setModal] = useState("");
+  const [variant, setVariant] = useState<ConfirmationVariant>(() =>
+    localStorage.getItem("sharelah-confirmation-variant") === "B" ? "B" : "A",
+  );
+  const [previewRun, setPreviewRun] = useState(0);
+  function selectVariant(value: ConfirmationVariant) {
+    setVariant(value);
+    localStorage.setItem("sharelah-confirmation-variant", value);
+    if (!path.startsWith("/holding/")) {
+      setModal("");
+      setPreviewRun((n) => n + 1);
+    }
+  }
   useEffect(() => {
     setModal("");
+    setPreviewRun(0);
   }, [path]);
   const [page, id, extra] = path.slice(1).split("/"),
     p = state.products.find((p) => p.id === id?.split("?")[0]);
@@ -871,7 +894,8 @@ function Root() {
   else if (page === "deals") screen = <Deals />;
   else if (page === "deal") screen = <DealPage id={id} />;
   else if (p) {
-    if (page === "holding") screen = <ReservationCountdown key={p.id} p={p} />;
+    if (page === "holding")
+      screen = <ReservationCountdown key={p.id} p={p} variant={variant} />;
     if (page === "offer") screen = <Offer p={p} open={setModal} />;
     if (page === "split") screen = <MySplit p={p} open={setModal} />;
     if (["scan", "code", "receipt"].includes(page))
@@ -896,29 +920,68 @@ function Root() {
   }
   return (
     <div className="app-layout">
-      <aside className="desktop-intro">
-        <a href="#/" className="wordmark">
-          <img src="/assets/brand.svg" width="36" height="36" alt="" />
-          sharelah.
-        </a>
-        <h2>
-          A little for you.
-          <br />
-          Better for everyone.
-        </h2>
-        <p>Good finds, shared close to home.</p>
-        <img src="/assets/bag.svg" width="132" height="110" alt="" />
-        <div className="desktop-note">
-          <span className="eyebrow">YOUR NEIGHBOURHOOD, SHARED</span>
-          <p>
-            Find a portion. Meet a neighbour.
-            <br />
-            Keep just what you need.
-          </p>
+      <aside className="experiment-panel" aria-label="Confirmation A/B testing">
+        <span className="eyebrow">PROTOTYPE LAB · OUTSIDE THE APP</span>
+        <h2>Confirmation A/B test</h2>
+        <div
+          className="experiment-options"
+          role="group"
+          aria-label="Confirmation variant"
+        >
+          <button
+            aria-pressed={variant === "A"}
+            onClick={() => selectVariant("A")}
+          >
+            A · Countdown
+          </button>
+          <button
+            aria-pressed={variant === "B"}
+            onClick={() => selectVariant("B")}
+          >
+            B · Receipt
+          </button>
         </div>
-        <button className="text-button" onClick={() => go("/profile/testing")}>
-          Prototype settings ›
-        </button>
+        <details className="experiment-rationale">
+          <summary>Why test these two?</summary>
+          <p>
+            <strong>A · Visible countdown.</strong> Makes the five-second
+            cancellation window explicit. Hypothesis: people understand exactly
+            when their reservation commits, but may feel rushed.
+          </p>
+          <p>
+            <strong>B · Receipt + undo.</strong> A receipt-first layout puts the
+            amount, payment protection and pickup steps upfront. A fixed undo
+            strip replaces the pizza and ticking number. Hypothesis: a concrete
+            summary builds more confidence than watching a countdown.
+          </p>
+          <p>
+            Compare confidence, understanding of the payment hold, and whether
+            people can find Undo. Timing and reservation rules are identical.
+          </p>
+        </details>
+        <p className="experiment-caption">
+          {page === "holding"
+            ? "Live flow: switching preserves the original deadline."
+            : previewRun
+              ? "Preview only · no saved data changes. Selecting A or B replays five seconds."
+              : "Select A or B to preview. Your selection also applies to the next real demo checkout."}
+        </p>
+        {previewRun > 0 && (
+          <div className="experiment-actions">
+            <button onClick={() => setPreviewRun((n) => n + 1)}>
+              Replay 5 seconds
+            </button>
+            <button onClick={() => setPreviewRun(0)}>Back to app</button>
+          </div>
+        )}
+        <DemoControls
+          locked={page === "holding"}
+          leavePreview={() => setPreviewRun(0)}
+          resetDemo={() => {
+            setPreviewRun(0);
+            setModal("reset");
+          }}
+        />
       </aside>
       <section className="app-frame">
         {storageError && (
@@ -926,18 +989,31 @@ function Root() {
             {storageError}
           </div>
         )}
-        {screen || (
-          <>
-            <Header title="Page not found" />
-            <Empty
-              title="Let’s head home."
-              action={<Button onClick={() => go("/")}>Go to Home</Button>}
-            >
-              This screen is no longer available.
-            </Empty>
-          </>
+        {previewRun > 0 ? (
+          <ReservationCountdown
+            key={`preview-${previewRun}`}
+            p={
+              state.products.find(
+                (q) => !q.owner && q.available > 0 && !q.closed,
+              ) || state.products[0]
+            }
+            variant={variant}
+            preview
+          />
+        ) : (
+          screen || (
+            <>
+              <Header title="Page not found" />
+              <Empty
+                title="Let’s head home."
+                action={<Button onClick={() => go("/")}>Go to Home</Button>}
+              >
+                This screen is no longer available.
+              </Empty>
+            </>
+          )
         )}
-        {tab && <Navigation active={active} open={setModal} />}
+        {tab && !previewRun && <Navigation active={active} open={setModal} />}
       </section>
       {modal && <Modals key={modal} type={modal} close={() => setModal("")} />}
     </div>

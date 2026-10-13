@@ -1,18 +1,19 @@
+import { DealPrice } from "./DealPrice";
 import { useState } from "react";
 import { Search } from "lucide-react";
-import { Header, Row, Photo, Empty, Button } from "./ui";
+import { Header, Photo, Empty, Button } from "./ui";
 import { useStore } from "./store";
 import { go } from "./router";
-import { dealPrice } from "./dealCatalog";
+import { dealPrice, dealCategories } from "./dealCatalog";
 import type { Deal } from "./model";
 
 export function DealRow({ deal }: { deal: Deal }) {
   return (
-    <Row
-      title={deal.title}
-      detail={deal.store + " · " + dealPrice(deal)}
-      onClick={() => go("/deal/" + deal.id)}
-    >
+    <button className="spotted-card" onClick={() => go("/deal/" + deal.id)}>
+      <span className="spotted-heading">
+        <strong>{deal.title}</strong>
+        <small>{deal.store}</small>
+      </span>
       {deal.photo && (
         <Photo
           id={deal.photo}
@@ -20,7 +21,8 @@ export function DealRow({ deal }: { deal: Deal }) {
           className="deal-thumb"
         />
       )}
-    </Row>
+      <DealPrice deal={deal} />
+    </button>
   );
 }
 export const matchesDeal = (d: Deal, query: string, category: string) =>
@@ -34,19 +36,17 @@ export function Deals() {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("All");
   const deals = state.deals.filter((d) => matchesDeal(d, query, category));
-  const categories = ["All", ...new Set(state.deals.map((d) => d.category))];
+  const categories = [
+    ...new Set([...dealCategories, ...state.deals.map((d) => d.category)]),
+  ];
   return (
     <>
       <Header title="Spotted deals" />
       <main className="page-scroll">
         <div className="content">
-          <span className="eyebrow brand-text">
-            SPOTTED ON SHELVES & ONLINE
-          </span>
-          <h2>Every offer, its own find.</h2>
-          <p className="muted">
-            Browse photographed offers and neighbours’ reports. Prices reflect
-            the pictures; check current availability with the store.
+          <p className="fine">
+            Good finds across everyday essentials, fashion and more. Sample
+            offers for the demo.
           </p>
           <label className="deal-search">
             <Search size={20} aria-hidden="true" />
@@ -58,7 +58,11 @@ export function Deals() {
               onChange={(e) => setQuery(e.target.value)}
             />
           </label>
-          <div className="chips wrap" role="group" aria-label="Deal categories">
+          <div
+            className="chips categories"
+            role="group"
+            aria-label="Deal categories"
+          >
             {categories.map((c) => (
               <button
                 key={c}

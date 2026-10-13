@@ -1,3 +1,5 @@
+import { dealCategories } from "./dealCatalog";
+import { SplitPrice } from "./DealPrice";
 import { DealRow, matchesDeal } from "./Deals";
 import { useState } from "react";
 import { MapPin, Navigation, Search, SlidersHorizontal } from "lucide-react";
@@ -35,21 +37,16 @@ export function Home({
       <main className="page-scroll">
         <div className="content">
           {!search && !saved && (
-            <div className="welcome">
-              <span className="eyebrow">GOOD THINGS, SHARED NEARBY</span>
-              <div className="welcome-line">
-                <h1 tabIndex={-1}>
-                  Good finds.
-                  <br />
-                  Better shared.
-                </h1>
-                <img src="/assets/bag.svg" width="92" height="77" alt="" />
-              </div>
-              <button onClick={() => open("area")}>
+            <>
+              <h1 className="sr-only" tabIndex={-1}>
+                Nearby deals
+              </h1>
+              <button className="home-location" onClick={() => open("area")}>
+                <MapPin size={17} aria-hidden="true" />
                 <strong>{state.area}</strong>
-                <small>Change area ›</small>
+                <span>Change area ›</span>
               </button>
-            </div>
+            </>
           )}
           {!saved &&
             (search ? (
@@ -75,21 +72,19 @@ export function Home({
           {!saved && (
             <>
               <div className="chips categories">
-                {["All", "Food & drinks", "Personal care", "Household"].map(
-                  (c) => (
-                    <button
-                      key={c}
-                      className={"chip " + (category === c ? "selected" : "")}
-                      aria-pressed={category === c}
-                      onClick={() => {
-                        setCategory(c);
-                        sessionStorage.setItem("sharelah-category", c);
-                      }}
-                    >
-                      {c}
-                    </button>
-                  ),
-                )}
+                {dealCategories.map((c) => (
+                  <button
+                    key={c}
+                    className={"chip " + (category === c ? "selected" : "")}
+                    aria-pressed={category === c}
+                    onClick={() => {
+                      setCategory(c);
+                      sessionStorage.setItem("sharelah-category", c);
+                    }}
+                  >
+                    {c}
+                  </button>
+                ))}
               </div>
               <button className="filter-bar" onClick={() => open("filters")}>
                 <SlidersHorizontal size={17} />
@@ -145,13 +140,12 @@ export function Home({
                   className="text-button"
                   onClick={() => go("/report-deal")}
                 >
-                  Report a deal ›
+                  Share a deal ›
                 </button>
               </div>
               {!search && (
                 <p className="fine">
-                  Photographed shelf and online offers · check the store for
-                  current availability.
+                  Demo offers · sample prices and pickup details.
                 </p>
               )}
               {(search ? deals : deals.slice(0, 4)).map((d) => (
@@ -210,6 +204,7 @@ export function MapScreen({ open }: { open: OpenModal }) {
             reservations={state.reservations}
             selected={p?.id}
             recenter={recenter}
+            radius={state.radius}
             remember
             onSelect={(id) => {
               setSelected(id);
@@ -233,6 +228,10 @@ export function MapScreen({ open }: { open: OpenModal }) {
                   </small>
                 </div>
               </div>
+              <SplitPrice
+                p={p}
+                offer={state.deals.find((d) => d.id === p.sourceDealId)}
+              />
               <div className="two-buttons">
                 <Button
                   onClick={() =>
@@ -352,12 +351,12 @@ export function Splits() {
                     tab === "Hosting" ? go("/create/1") : go("/")
                   }
                 >
-                  {tab === "Hosting" ? "Create a split" : "Explore nearby"}
+                  {tab === "Hosting" ? "Share a split" : "Explore nearby"}
                 </Button>
               }
             >
               {tab === "Hosting"
-                ? "Create a listing for an offer you’ve found."
+                ? "Share a listing for an offer you’ve found."
                 : "Browse nearby offers and keep only what you need."}
             </Empty>
           )}

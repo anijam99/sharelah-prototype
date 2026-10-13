@@ -50,7 +50,7 @@ export function Photo({
   const clipId = useId();
   const crop = resolveDealPhoto(id);
   useEffect(() => {
-    if (id.startsWith("/assets/deals/")) return;
+    if (id.startsWith("/assets/")) return;
     setURL("");
     let active = true,
       url = "";
@@ -93,7 +93,7 @@ export function Photo({
       </svg>
     );
   }
-  const source = id.startsWith("/assets/deals/") ? id : url;
+  const source = id.startsWith("/assets/") ? id : url;
   return source ? (
     <img src={source} alt={alt} className={className} loading="lazy" />
   ) : (
@@ -236,25 +236,32 @@ export function Card({ p }: { p: Product }) {
           {p.owner && <span className="membership">Your listing</span>}
         </div>
       </div>
-      <div className="price-ticket">
-        <strong>{money(total(p))} total</strong>
-        <span>
-          {p.owner
-            ? "Manage split"
-            : joined
-              ? r.status === "completed"
-                ? "View receipt"
-                : "View my split"
-              : "View details"}
-        </span>
+      <div className="compact-offer-type">
+        {state.deals.find((d) => d.id === p.sourceDealId)?.priceLabel ||
+          `${p.bundleCount} items for ${money(p.bundleCents)}`}
       </div>
-      <div className="pickup-preview">
-        <p>{p.place}</p>
+      <div className="compact-prices">
+        <strong>{money(total(p))} total</strong>
+        {p.retailCents > 0 ? (
+          <del>{money(p.retailCents)}</del>
+        ) : (
+          <small>Retail unknown</small>
+        )}
+        {p.retailCents > total(p) && (
+          <span>Save {money(p.retailCents - total(p))}</span>
+        )}
+        <ChevronRight size={16} aria-hidden="true" />
+      </div>
+      <div className="compact-pickup">
+        <span>{p.place}</span>
         <small>
           {p.date} · {p.time}
-          {joined ? " · " + statusLabel(r) : ""}
         </small>
       </div>
+      <span className="sr-only">
+        Per portion, including S$0.15 fee.{" "}
+        {joined ? statusLabel(r) : "View details"}
+      </span>
     </button>
   );
 }

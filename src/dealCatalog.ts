@@ -1,6 +1,21 @@
 import type { Deal } from "./model";
 import { dealPhoto } from "./dealPhotos";
 
+// Original prices use the same quantity as the advertised price.
+const originalPrices: Record<string, number> = {
+  "chobani-blueberry": 830,
+  "chobani-strawberry": 830,
+  "dairy-lemon": 750,
+  laurier: 1215,
+  buldak: 940,
+  chicken: 790,
+  "pork-ribs": 1400,
+  nissin: 275,
+  brownes: 1355,
+  diffuser: 1790,
+  "kirin-six": 2450,
+};
+
 // Transcribed from the supplied photos. Branches and capture dates are unknown.
 function deal(
   id: string,
@@ -16,6 +31,18 @@ function deal(
   unitPortion?: string,
 ): Deal {
   return {
+    originalCents: originalPrices[id],
+    offerType: bundleCount
+      ? `${bundleCount}-item bundle`
+      : /2nd/.test(priceLabel)
+        ? "Second-item discount"
+        : /cashback|rebate/i.test(priceLabel)
+          ? "Rewards offer"
+          : /%/.test(priceLabel)
+            ? "Percentage off"
+            : /delivery|voucher/i.test(priceLabel)
+              ? "Store offer"
+              : "Special price",
     id: "photo-" + id,
     title,
     store,
@@ -38,7 +65,7 @@ const food = "Food & drinks",
   dining = "Dining",
   promos = "Store offers";
 const supermarket = "Supermarket · store not shown";
-export const seedDeals: Deal[] = [
+const archivedDeals: Deal[] = [
   deal(
     "chobani-blueberry",
     "IMG_2069",
@@ -77,19 +104,6 @@ export const seedDeals: Deal[] = [
     "Lemon Cream flavour. Single tub shown at S$3.75.",
     2,
     "1 tub · 150 g",
-  ),
-  deal(
-    "carefree",
-    "IMG_1856",
-    "Carefree breathable unscented liners",
-    "Watsons · branch not shown",
-    care,
-    390,
-    "2 for S$3.90",
-    "2 packs · 40 liners each",
-    "Usual price S$3.15 each. While stocks last.",
-    2,
-    "1 pack · 40 liners",
   ),
   deal(
     "laurier",
@@ -612,12 +626,332 @@ export const seedDeals: Deal[] = [
   ),
 ];
 
+// Curated prototype catalogue. Photos are real references; prices and locations
+// below are illustrative fixtures, never claims about a current store promotion.
+function sample(
+  id: string,
+  price: number,
+  original: number,
+  count: number,
+  unit: string,
+  offer: string,
+  store: string,
+  category?: string,
+): Deal {
+  const source = archivedDeals.find((d) => d.id === "photo-" + id)!;
+  return {
+    ...source,
+    demo: true,
+    title:
+      id === "top-reference" ? "TOP liquid laundry detergent" : source.title,
+    priceCents: price,
+    originalCents: original,
+    bundleCount: count,
+    unitPortion: unit,
+    portion: `${count} × ${unit}`,
+    priceLabel: offer.includes("S$")
+      ? offer
+      : `${offer} · S$${(price / 100).toFixed(2)}`,
+    offerType: offer,
+    store,
+    category: category || source.category,
+    area: "Bugis",
+    terms:
+      "Illustrative demo offer using a supplied product photo. Prices, bundle sizes, store and availability are fictional for testing.",
+  };
+}
+function lifestyle(
+  id: string,
+  title: string,
+  category: string,
+  price: number,
+  original: number,
+  count: number,
+  unit: string,
+  offer: string,
+  store: string,
+): Deal {
+  return {
+    id: "demo-" + id,
+    title,
+    category,
+    demo: true,
+    priceCents: price,
+    originalCents: original,
+    bundleCount: count,
+    unitPortion: unit,
+    portion: `${count} × ${unit}`,
+    offerType: offer,
+    priceLabel: offer.includes("S$")
+      ? offer
+      : `${offer} · S$${(price / 100).toFixed(2)}`,
+    store,
+    photo: `/assets/demo/${id}.${id === "earbuds" ? "png" : "jpg"}`,
+    area: "Bugis",
+    createdAt: "",
+    terms:
+      "Fictional product, store and offer for prototype testing. Each neighbour receives one item; choose your size or colour together.",
+  };
+}
+export const seedDeals: Deal[] = [
+  sample(
+    "top-reference",
+    2100,
+    2980,
+    2,
+    "1 bottle · 2.3 kg",
+    "2 for S$21",
+    "FairPrice · Bugis Junction",
+  ),
+  lifestyle(
+    "sneakers",
+    "Everyday court sneakers",
+    "Fashion",
+    14400,
+    18000,
+    2,
+    "1 pair · sizes 36–45",
+    "Buy 2, get 20% off",
+    "Sole Society · Bugis+",
+  ),
+  sample(
+    "buldak",
+    640,
+    940,
+    2,
+    "1 bowl",
+    "2 for S$6.40",
+    "Cold Storage · Bugis Junction",
+  ),
+  lifestyle(
+    "tumbler",
+    "Everyday insulated tumbler",
+    "Lifestyle",
+    3600,
+    5000,
+    2,
+    "1 tumbler · 600 ml",
+    "2 for S$36",
+    "Daily Objects · Bugis+",
+  ),
+  sample(
+    "chobani-blueberry",
+    730,
+    830,
+    2,
+    "1 tub · 160 g",
+    "Any 2 for S$7.30",
+    "Cold Storage · Bugis Junction",
+  ),
+  sample(
+    "diffuser",
+    2500,
+    3580,
+    2,
+    "1 diffuser · Yuzu & Lime",
+    "2 for S$25",
+    "Guardian · Bugis Junction",
+  ),
+  lifestyle(
+    "tote",
+    "Weekend canvas tote",
+    "Fashion",
+    3600,
+    5400,
+    3,
+    "1 canvas tote",
+    "Buy 2, get 1 free",
+    "Thread & Co. · Bugis Street",
+  ),
+  sample(
+    "laurier",
+    640,
+    1215,
+    2,
+    "1 pack · 14 pads",
+    "2 for S$6.40",
+    "Watsons · Bugis Junction",
+  ),
+  lifestyle(
+    "charger",
+    "Pocket USB-C fast charger",
+    "Tech",
+    3000,
+    4400,
+    2,
+    "1 charger · 30 W",
+    "2 for S$30",
+    "Plug & Play · Sim Lim Square",
+  ),
+  sample(
+    "ribeye-bbq",
+    1990,
+    2780,
+    2,
+    "1 pack · 200 g",
+    "Any 2 for S$19.90",
+    "Cold Storage · Bugis Junction",
+  ),
+  sample(
+    "nissin",
+    550,
+    825,
+    3,
+    "1 cup",
+    "Buy 2, get 1 free",
+    "FairPrice · Rochor",
+  ),
+  lifestyle(
+    "socks",
+    "Cloud-soft everyday socks",
+    "Fashion",
+    1200,
+    1800,
+    3,
+    "1 pair · unisex",
+    "3 for S$12",
+    "Thread & Co. · Bugis Street",
+  ),
+  sample(
+    "avene-fluid",
+    7966,
+    11380,
+    2,
+    "1 sunscreen · 50 ml",
+    "Second item 60% off",
+    "Guardian · Bugis Junction",
+  ),
+  sample(
+    "kirin-six",
+    1790,
+    2450,
+    6,
+    "1 can · 350 ml",
+    "6 for S$17.90",
+    "Cold Storage · Bugis Junction",
+    "Drinks",
+  ),
+  lifestyle(
+    "earbuds",
+    "Pocket wireless earbuds",
+    "Tech",
+    6000,
+    9000,
+    2,
+    "1 pair + charging case",
+    "Buy 2, save S$30",
+    "Plug & Play · Sim Lim Square",
+  ),
+  sample(
+    "sukiyaki-rosu",
+    3200,
+    3980,
+    2,
+    "1 beef rice set",
+    "2 sets for S$32",
+    "Yakiniku Like · Bugis Junction",
+  ),
+  lifestyle(
+    "notebooks",
+    "Everyday dotted notebooks",
+    "Stationery",
+    1200,
+    1800,
+    3,
+    "1 notebook · A5",
+    "Buy 2, get 1 free",
+    "Paper Days · Bras Basah",
+  ),
+  sample(
+    "chicken",
+    1180,
+    1580,
+    2,
+    "1 whole roast chicken",
+    "2 for S$11.80",
+    "FairPrice · Bugis Junction",
+  ),
+  lifestyle(
+    "yoga",
+    "Everyday grip yoga mat",
+    "Lifestyle",
+    4800,
+    7000,
+    2,
+    "1 mat · 6 mm",
+    "2 for S$48",
+    "Move Studio · Rochor",
+  ),
+  sample(
+    "garage-lemon",
+    1090,
+    1800,
+    2,
+    "1 can · 500 ml",
+    "2 for S$10.90",
+    "Cold Storage · Bugis Junction",
+    "Drinks",
+  ),
+  sample(
+    "sukiyaki-wagyu",
+    4000,
+    4980,
+    2,
+    "1 wagyu rice set",
+    "2 sets for S$40",
+    "Yakiniku Like · Bugis Junction",
+  ),
+  {
+    ...sample(
+      "diffuser",
+      2400,
+      3580,
+      2,
+      "1 diffuser · Lavender",
+      "2 for S$24",
+      "Guardian · Bugis Junction",
+    ),
+    id: "demo-lavender",
+    title: "Lavender & Eucalyptus reed diffuser",
+    photo: dealPhoto("lavender"),
+  },
+  {
+    ...sample(
+      "laurier",
+      1290,
+      1980,
+      2,
+      "1 bottle · 1 L",
+      "2 for S$12.90",
+      "Watsons · Bugis Junction",
+    ),
+    id: "demo-bodywash",
+    title: "Shokubutsu body wash",
+    photo: dealPhoto("bodywash"),
+  },
+];
+export const dealCategories = [
+  "All",
+  "Food & drinks",
+  "Household",
+  "Personal care",
+  "Fashion",
+  "Tech",
+  "Lifestyle",
+  "Drinks",
+  "Dining",
+  "Stationery",
+];
 export const dealPrice = (d: Deal) =>
   d.priceLabel || `S$${(d.priceCents / 100).toFixed(2)}`;
 export function mergePhotoDeals(deals: Deal[]) {
-  const ids = new Set(seedDeals.map((d) => d.id));
+  const retired = new Set([
+    ...archivedDeals.map((d) => d.id),
+    "photo-carefree",
+    ...seedDeals.map((d) => d.id),
+  ]);
   return [
-    ...deals.filter((d) => !ids.has(d.id)),
+    ...deals.filter((d) => !retired.has(d.id)),
     ...structuredClone(seedDeals),
   ];
 }

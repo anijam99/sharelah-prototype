@@ -1,3 +1,4 @@
+import { Pizza } from "./Pizza";
 import { hostPerson, profileSummary } from "./people";
 import { dealPrice } from "./dealCatalog";
 import { TileMap } from "./TileMap";
@@ -163,7 +164,10 @@ export function MySplit({ p, open }: { p: Product; open: OpenModal }) {
       <main className="page-scroll">
         <div className="content">
           <div className="status-hero">
-            <img src="/assets/seal.svg" width="48" height="48" alt="" />
+            <Pizza
+              count={p.bundleCount}
+              taken={Math.max(1, p.shareCount - p.available)}
+            />
             <span className="eyebrow">
               {done
                 ? "NICE ONE, NEIGHBOUR"
@@ -688,7 +692,11 @@ export function Hosting({
       <main className="page-scroll">
         <div className="content">
           <div className="status-hero">
-            <img src="/assets/seal.svg" width="48" height="48" alt="" />
+            <Pizza
+              count={p.bundleCount}
+              taken={p.shareCount - p.available}
+              animate={published}
+            />
             <h2>
               {p.closed
                 ? "This listing is closed."
@@ -699,8 +707,7 @@ export function Hosting({
                     : "Your split is live."}
             </h2>
             <p>
-              {p.title} · {p.shareCount}{" "}
-              {p.shareCount === 1 ? "portion" : "portions"} to share
+              {p.title} · {p.available} of {p.shareCount} portions available
             </p>
             <div className="shared-edge" />
           </div>

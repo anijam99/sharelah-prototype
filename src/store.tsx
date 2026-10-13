@@ -42,7 +42,11 @@ function load() {
       return normalizePersonas({
         ...(value as State),
         deals: mergePhotoDeals(value.deals),
-        products: refreshSeedProducts(value.products),
+        products: refreshSeedProducts(value.products).map((p) =>
+          p.owner && value.joinedHosts[p.id] && p.available === p.shareCount
+            ? { ...p, available: Math.max(0, p.available - 1) }
+            : p,
+        ),
       });
   } catch {}
   return initialState();
@@ -99,4 +103,8 @@ export async function readPhoto(id: string) {
 }
 export async function removePhoto(id: string) {
   await (await photoDB()).delete("photos", id);
+}
+
+export async function cachedPhotoIds(): Promise<string[]> {
+  return (await (await photoDB()).getAllKeys("photos")).map(String);
 }

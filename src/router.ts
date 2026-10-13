@@ -38,7 +38,7 @@ export function routeLabel(path = currentPath()) {
                       : path.startsWith("/split")
                         ? "My split"
                         : path.startsWith("/create")
-                          ? "Create"
+                          ? "Share"
                           : "Home";
 }
 export function go(
