@@ -1,3 +1,4 @@
+import { Compare, CompareButton } from "./Compare";
 import { DemoControls } from "./DemoControls";
 import { joinHostedDeal } from "./model";
 import { NeighbourDirectory, NeighbourProfile } from "./NeighbourProfiles";
@@ -149,6 +150,10 @@ function ReviewSheet({ p, close }: { p: Product; close: () => void }) {
               go("/holding/" + p.id, undefined, true, {
                 holdDeadline: Date.now() + 5000,
                 holdMethod: state.payment,
+                holdVariant:
+                  localStorage.getItem("sharelah-confirmation-variant") === "B"
+                    ? "B"
+                    : "A",
               });
             }}
           >
@@ -753,19 +758,20 @@ function DealPage({ id }: { id: string }) {
               <DealPrice deal={d} />
               <small>{d.portion}</small>
             </div>
-            {d.terms && (
+            <CompareButton item={d} kind="deal" />
+            {d.terms && !d.demo && (
               <div className="panel">
                 <h3>Offer details</h3>
                 <p>{d.terms}</p>
               </div>
             )}
-            <p className="notice">
-              {d.demo
-                ? "Sample offer for testing. Prices, stores and availability are illustrative."
-                : d.sourceFile
+            {!d.demo && (
+              <p className="notice">
+                {d.sourceFile
                   ? "Price shown in the photo. Check the store for current price and availability."
                   : "Your deal is saved in this browser’s demo. Store prices and availability haven’t been verified."}
-            </p>
+              </p>
+            )}
             {(!d.sourceFile || (d.bundleCount && d.priceCents > 0)) && (
               <Button
                 onClick={() => {
@@ -812,18 +818,12 @@ function Root() {
   const [variant, setVariant] = useState<ConfirmationVariant>(() =>
     localStorage.getItem("sharelah-confirmation-variant") === "B" ? "B" : "A",
   );
-  const [previewRun, setPreviewRun] = useState(0);
   function selectVariant(value: ConfirmationVariant) {
     setVariant(value);
     localStorage.setItem("sharelah-confirmation-variant", value);
-    if (!path.startsWith("/holding/")) {
-      setModal("");
-      setPreviewRun((n) => n + 1);
-    }
   }
   useEffect(() => {
     setModal("");
-    setPreviewRun(0);
   }, [path]);
   const [page, id, extra] = path.slice(1).split("/"),
     p = state.products.find((p) => p.id === id?.split("?")[0]);
@@ -891,7 +891,13 @@ function Root() {
         }
       />
     );
-  else if (page === "deals") screen = <Deals />;
+  else if (page === "compare") {
+    const item =
+      id === "deal"
+        ? state.deals.find((d) => d.id === extra)
+        : state.products.find((p) => p.id === extra);
+    if (item) screen = <Compare key={id + extra} item={item} />;
+  } else if (page === "deals") screen = <Deals />;
   else if (page === "deal") screen = <DealPage id={id} />;
   else if (p) {
     if (page === "holding")
@@ -932,55 +938,40 @@ function Root() {
             aria-pressed={variant === "A"}
             onClick={() => selectVariant("A")}
           >
-            A · Countdown
+            A · Receipt countdown
           </button>
           <button
             aria-pressed={variant === "B"}
             onClick={() => selectVariant("B")}
           >
-            B · Receipt
+            B · Extra confirmation
           </button>
         </div>
         <details className="experiment-rationale">
           <summary>Why test these two?</summary>
           <p>
-            <strong>A · Visible countdown.</strong> Makes the five-second
-            cancellation window explicit. Hypothesis: people understand exactly
-            when their reservation commits, but may feel rushed.
+            <strong>A · Receipt countdown.</strong> Shows the amount and pickup
+            steps, then reserves automatically after five seconds. People can
+            undo or skip the wait. Test whether the pause gives enough time to
+            review without feeling slow.
           </p>
           <p>
-            <strong>B · Receipt + undo.</strong> A receipt-first layout puts the
-            amount, payment protection and pickup steps upfront. A fixed undo
-            strip replaces the pizza and ticking number. Hypothesis: a concrete
-            summary builds more confidence than watching a countdown.
+            <strong>B · Extra confirmation.</strong> Asks “Are you sure?” and
+            waits for an explicit decision. Test whether this gives people more
+            control or adds an unnecessary step.
           </p>
           <p>
-            Compare confidence, understanding of the payment hold, and whether
-            people can find Undo. Timing and reservation rules are identical.
+            Compare completion time, accidental reservations and confidence
+            about the payment hold.
           </p>
         </details>
         <p className="experiment-caption">
-          {page === "holding"
-            ? "Live flow: switching preserves the original deadline."
-            : previewRun
-              ? "Preview only · no saved data changes. Selecting A or B replays five seconds."
-              : "Select A or B to preview. Your selection also applies to the next real demo checkout."}
+          Sets your next checkout. Selecting an option does not play a preview
+          or change a confirmation already in progress.
         </p>
-        {previewRun > 0 && (
-          <div className="experiment-actions">
-            <button onClick={() => setPreviewRun((n) => n + 1)}>
-              Replay 5 seconds
-            </button>
-            <button onClick={() => setPreviewRun(0)}>Back to app</button>
-          </div>
-        )}
         <DemoControls
           locked={page === "holding"}
-          leavePreview={() => setPreviewRun(0)}
-          resetDemo={() => {
-            setPreviewRun(0);
-            setModal("reset");
-          }}
+          resetDemo={() => setModal("reset")}
         />
       </aside>
       <section className="app-frame">
@@ -989,31 +980,18 @@ function Root() {
             {storageError}
           </div>
         )}
-        {previewRun > 0 ? (
-          <ReservationCountdown
-            key={`preview-${previewRun}`}
-            p={
-              state.products.find(
-                (q) => !q.owner && q.available > 0 && !q.closed,
-              ) || state.products[0]
-            }
-            variant={variant}
-            preview
-          />
-        ) : (
-          screen || (
-            <>
-              <Header title="Page not found" />
-              <Empty
-                title="Let’s head home."
-                action={<Button onClick={() => go("/")}>Go to Home</Button>}
-              >
-                This screen is no longer available.
-              </Empty>
-            </>
-          )
+        {screen || (
+          <>
+            <Header title="Page not found" />
+            <Empty
+              title="Let’s head home."
+              action={<Button onClick={() => go("/")}>Go to Home</Button>}
+            >
+              This screen is no longer available.
+            </Empty>
+          </>
         )}
-        {tab && !previewRun && <Navigation active={active} open={setModal} />}
+        {tab && <Navigation active={active} open={setModal} />}
       </section>
       {modal && <Modals key={modal} type={modal} close={() => setModal("")} />}
     </div>

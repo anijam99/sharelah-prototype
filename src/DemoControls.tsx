@@ -6,11 +6,9 @@ import { go } from "./router";
 
 export function DemoControls({
   resetDemo,
-  leavePreview,
   locked,
 }: {
   resetDemo: () => void;
-  leavePreview: () => void;
   locked: boolean;
 }) {
   const { state, update } = useStore();
@@ -67,12 +65,17 @@ export function DemoControls({
           </label>
           <button
             onClick={() => {
-              leavePreview();
               setPhotos(true);
             }}
           >
             Saved price-tag photos
           </button>
+          <p className="demo-hint">
+            Price comparisons use fixed supermarket, online, distance and fare
+            scenarios for testing, not live quotes. Yoghurt and detergent
+            support same-product and other-brand comparisons; fares and delivery
+            fees are editable in the comparison.
+          </p>
           <h3>Hosting simulation</h3>
           {!hosted.length && (
             <p className="demo-hint">Share a split to invite Jerry.</p>
@@ -96,7 +99,6 @@ export function DemoControls({
               </button>
               <button
                 onClick={() => {
-                  leavePreview();
                   go("/hosting/" + p.id);
                 }}
               >
@@ -152,7 +154,7 @@ export function DemoControls({
         </fieldset>
         {locked && (
           <p className="demo-hint">
-            Finish or undo the active countdown to change demo data.
+            Finish or cancel the active confirmation to change demo data.
           </p>
         )}
         {message && (
@@ -167,7 +169,6 @@ export function DemoControls({
           onSelect={(photo) => {
             update((s) => ({ ...s, createDraft: { ...s.createDraft, photo } }));
             setPhotos(false);
-            leavePreview();
             go("/create/1");
           }}
         />

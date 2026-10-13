@@ -2,6 +2,14 @@ import { mkdir, readFile, writeFile, copyFile } from "node:fs/promises";
 await mkdir("public/licenses", { recursive: true });
 for (const name of ["react", "react-dom", "lucide-react", "idb", "leaflet"])
   await copyFile(`node_modules/${name}/LICENSE`, `public/licenses/${name}.txt`);
+await copyFile(
+  "node_modules/maplibre-gl/LICENSE.txt",
+  "public/licenses/maplibre-gl.txt",
+);
+await copyFile(
+  "node_modules/@maplibre/maplibre-gl-leaflet/LICENSE",
+  "public/licenses/maplibre-gl-leaflet.txt",
+);
 const mit = await readFile("node_modules/react/LICENSE", "utf8");
 for (const [name, copyright] of Object.entries({
   "zxing-wasm": "Copyright (c) 2023 Ze-Zheng Wu",

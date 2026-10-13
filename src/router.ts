@@ -15,37 +15,43 @@ export function currentPath() {
   return location.hash.slice(1) || "/";
 }
 export function routeLabel(path = currentPath()) {
-  return path.startsWith("/map")
-    ? "Map"
-    : path.startsWith("/deals")
-      ? "Spotted deals"
-      : path.startsWith("/splits")
-        ? "My splits"
-        : path.startsWith("/saved")
-          ? "Saved"
-          : path.startsWith("/search")
-            ? "Results"
-            : path.startsWith("/neighbour")
-              ? "Neighbours"
-              : path.startsWith("/profile")
-                ? "Profile"
-                : path.startsWith("/messages")
-                  ? "Messages"
-                  : path.startsWith("/chat")
-                    ? "Chat"
-                    : path.startsWith("/offer")
-                      ? "Offer"
-                      : path.startsWith("/split")
-                        ? "My split"
-                        : path.startsWith("/create")
-                          ? "Share"
-                          : "Home";
+  return path.startsWith("/compare")
+    ? "Compare prices"
+    : path.startsWith("/map")
+      ? "Map"
+      : path.startsWith("/deals")
+        ? "Spotted deals"
+        : path.startsWith("/splits")
+          ? "My splits"
+          : path.startsWith("/saved")
+            ? "Saved"
+            : path.startsWith("/search")
+              ? "Results"
+              : path.startsWith("/neighbour")
+                ? "Neighbours"
+                : path.startsWith("/profile")
+                  ? "Profile"
+                  : path.startsWith("/messages")
+                    ? "Messages"
+                    : path.startsWith("/chat")
+                      ? "Chat"
+                      : path.startsWith("/offer")
+                        ? "Offer"
+                        : path.startsWith("/split")
+                          ? "My split"
+                          : path.startsWith("/create")
+                            ? "Share"
+                            : "Home";
 }
 export function go(
   path: string,
   label?: string,
   replace = false,
-  flowState?: { holdDeadline: number; holdMethod: string },
+  flowState?: {
+    holdDeadline: number;
+    holdMethod: string;
+    holdVariant?: "A" | "B";
+  },
 ) {
   if (path === currentPath()) return;
   scrolls.set(

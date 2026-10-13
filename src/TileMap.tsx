@@ -5,7 +5,9 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { money, owned, total, type Product, type State } from "./model";
 
-const BUGIS: L.LatLngTuple = [1.2992, 103.852];
+const DEAL_ORIGIN: L.LatLngTuple = [1.2992, 103.852];
+// Campus Green, SMU: https://www.openstreetmap.org/way/1094090156
+const DEMO_LOCATION: L.LatLngTuple = [1.29572, 103.85096];
 // Sample pickup points, aligned to the seeded addresses rather than artwork pixels.
 const PICKUPS: Record<string, L.LatLngTuple> = {
   yog: [1.2998, 103.8543],
@@ -24,11 +26,11 @@ const position = (p: Product): L.LatLngTuple => {
     );
     const angle = ((hash % 360) * Math.PI) / 180;
     return [
-      BUGIS[0] + (Math.sin(angle) * p.distance) / 111320,
-      BUGIS[1] + (Math.cos(angle) * p.distance) / 111290,
+      DEAL_ORIGIN[0] + (Math.sin(angle) * p.distance) / 111320,
+      DEAL_ORIGIN[1] + (Math.cos(angle) * p.distance) / 111290,
     ];
   }
-  return BUGIS;
+  return DEAL_ORIGIN;
 };
 const reducedMotion = () =>
   window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
@@ -61,7 +63,7 @@ export function TileMap({
   >([]);
   const [zoomRevision, setZoomRevision] = useState(0);
   const [tileError, setTileError] = useState(false);
-  const tiles = useRef<L.TileLayer | null>(null);
+  const tiles = useRef<{ retry: () => void; remove: () => void } | null>(null);
   const initial = useRef({ products, remember, pickup });
 
   useEffect(() => {
@@ -70,7 +72,7 @@ export function TileMap({
     let center =
       config.pickup && config.products[0]
         ? position(config.products[0])
-        : BUGIS;
+        : DEMO_LOCATION;
     let zoom = config.pickup ? 17 : 16;
     if (config.remember) {
       try {
@@ -88,11 +90,13 @@ export function TileMap({
           zoom = saved.zoom;
         }
       } catch {
-        /* A corrupt remembered view falls back to Bugis. */
+        /* A corrupt remembered view falls back to SMU. */
       }
     }
     const instance = L.map(container.current, {
       scrollWheelZoom: false,
+      minZoom: 13,
+      maxZoom: 19,
       zoomAnimation: !reducedMotion(),
       fadeAnimation: !reducedMotion(),
       markerZoomAnimation: !reducedMotion(),
@@ -103,7 +107,10 @@ export function TileMap({
     const sampleLocation = document.createElement("div");
     sampleLocation.className = "sample-location";
     sampleLocation.setAttribute("role", "img");
-    sampleLocation.setAttribute("aria-label", "Your sample location in Bugis");
+    sampleLocation.setAttribute(
+      "aria-label",
+      "Your sample location at SMU Campus Green",
+    );
     const dot = document.createElement("span");
     dot.className = "sample-location-dot";
     dot.setAttribute("aria-hidden", "true");
@@ -111,7 +118,7 @@ export function TileMap({
     label.className = "sample-location-label";
     label.textContent = "You";
     sampleLocation.append(dot, label);
-    L.marker(BUGIS, {
+    L.marker(DEMO_LOCATION, {
       icon: L.divIcon({
         html: sampleLocation,
         className: "sample-location-marker",
@@ -123,19 +130,20 @@ export function TileMap({
       zIndexOffset: 500,
     }).addTo(instance);
     instance.attributionControl.setPrefix(false);
-    tiles.current = L.tileLayer(
-      `https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png${import.meta.env.VITE_STADIA_MAPS_KEY ? "?api_key=" + encodeURIComponent(import.meta.env.VITE_STADIA_MAPS_KEY) : ""}`,
-      {
-        attribution:
-          '&copy; <a href="https://stadiamaps.com/attribution/" target="_blank" rel="noopener">Stadia Maps</a> &copy; <a href="https://openmaptiles.org/" target="_blank" rel="noopener">OpenMapTiles</a> &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>',
-
-        maxZoom: 19,
-        minZoom: 13,
-        keepBuffer: 1,
-      },
-    )
-      .on("tileerror", () => setTileError(true))
-      .addTo(instance);
+    instance.attributionControl.addAttribution(
+      '<a href="https://openfreemap.org/" target="_blank" rel="noopener">OpenFreeMap</a> &copy; <a href="https://openmaptiles.org/" target="_blank" rel="noopener">OpenMapTiles</a> &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>',
+    );
+    let disposed = false;
+    import("./OpenFreeMap")
+      .then(({ addBasemap }) => {
+        if (!disposed)
+          tiles.current = addBasemap(instance, (failed) => {
+            if (!disposed) setTileError(failed);
+          });
+      })
+      .catch(() => {
+        if (!disposed) setTileError(true);
+      });
     instance.on("moveend", () => {
       if (config.remember) {
         const c = instance.getCenter();
@@ -148,7 +156,9 @@ export function TileMap({
     const observer = new ResizeObserver(() => instance.invalidateSize());
     observer.observe(container.current);
     return () => {
+      disposed = true;
       observer.disconnect();
+      tiles.current?.remove();
       instance.remove();
       map.current = null;
       tiles.current = null;
@@ -158,49 +168,8 @@ export function TileMap({
   useEffect(() => {
     if (!map.current) return;
     const layer = L.layerGroup().addTo(map.current);
-    const occupied: L.Point[] = [map.current.latLngToLayerPoint(BUGIS)];
     const targets: { product: Product; node: HTMLElement }[] = [];
     products.forEach((p) => {
-      const anchor = map.current!.latLngToLayerPoint(position(p));
-      let display = anchor.clone();
-      // Spread nearby product thumbnails while retaining a line to the true pickup point.
-      const offsets = [
-        [0, 0],
-        [0, -60],
-        [0, 60],
-        [-60, 0],
-        [60, 0],
-        [0, -120],
-        [0, 120],
-        [-60, -52],
-        [60, 52],
-      ];
-      for (const [x, y] of offsets) {
-        display = anchor.add([x, y]);
-        const screen = map.current!.layerPointToContainerPoint(display);
-        const size = map.current!.getSize();
-        if (
-          screen.x >= 28 &&
-          screen.x <= size.x - 28 &&
-          screen.y >= 58 &&
-          screen.y <= size.y - 8 &&
-          !occupied.some(
-            (point) =>
-              Math.abs(point.x - display.x) < 56 &&
-              Math.abs(point.y - display.y) < 58,
-          )
-        )
-          break;
-      }
-      occupied.push(display);
-      const displayPosition = map.current!.layerPointToLatLng(display);
-      if (!display.equals(anchor))
-        L.polyline([position(p), displayPosition], {
-          color: "#c44212",
-          weight: 1,
-          opacity: 0.5,
-          interactive: false,
-        }).addTo(layer);
       const button = document.createElement("button");
       button.className =
         "map-pin " +
@@ -223,7 +192,7 @@ export function TileMap({
       button.setAttribute("aria-pressed", String(p.id === selected));
       button.addEventListener("click", () => select.current?.(p.id));
       L.DomEvent.disableClickPropagation(button);
-      L.marker(displayPosition, {
+      L.marker(position(p), {
         icon: L.divIcon({
           html: button,
           className: "product-marker",
@@ -243,7 +212,7 @@ export function TileMap({
   useEffect(() => {
     if (!map.current || pickup) return;
     if (radius) {
-      const circle = L.circle(BUGIS, {
+      const circle = L.circle(DEMO_LOCATION, {
         radius,
         color: "#c44212",
         weight: 1,
@@ -261,7 +230,7 @@ export function TileMap({
       };
     }
     if (recenter > 0)
-      map.current.setView(BUGIS, 16, { animate: !reducedMotion() });
+      map.current.setView(DEMO_LOCATION, 16, { animate: !reducedMotion() });
   }, [radius, recenter, pickup]);
 
   return (
@@ -289,7 +258,7 @@ export function TileMap({
             className="text-button"
             onClick={() => {
               setTileError(false);
-              tiles.current?.redraw();
+              tiles.current?.retry();
             }}
           >
             Retry

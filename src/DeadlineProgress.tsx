@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-/** CSS drives each frame; the reservation's wall-clock deadline stays authoritative. */
+/** Two rotating semicircles drain smoothly, independently of React timer ticks. */
 export function DeadlineProgress({
   deadline,
   seconds,
@@ -13,15 +13,21 @@ export function DeadlineProgress({
   );
   return (
     <div
-      className="confirmation-progress"
+      className="receipt-countdown-clock"
       role="timer"
       aria-label={`Confirmation in ${seconds} seconds`}
     >
-      <span
-        className="deadline-fill"
-        style={{ animationDelay: `-${elapsed}ms` }}
-      />
-      <small className="reduced-deadline">{seconds} seconds to undo</small>
+      <div className="timer-track" aria-hidden="true" />
+      {(["right", "left"] as const).map((side) => (
+        <div key={side} className={`timer-half ${side}`} aria-hidden="true">
+          <span
+            className="timer-arc"
+            style={{ animationDelay: `-${elapsed}ms` }}
+          />
+        </div>
+      ))}
+      <strong>{seconds}</strong>
+      <span>seconds</span>
     </div>
   );
 }

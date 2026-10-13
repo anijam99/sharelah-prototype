@@ -1,6 +1,6 @@
 # ShareLah prototype third-party notices
 
-Original ShareLah logo, icons, map and product illustrations were exported from the user's Figma file `ak4IecsfKTbnzfkWYzbOnK`. They remain part of that project; no third-party stock artwork was added.
+Original ShareLah logo, icons, map and product illustrations were exported from the user's Figma file `ak4IecsfKTbnzfkWYzbOnK`. They remain part of that project; web-sourced demo product photo references are recorded in `docs/product-photo-sources.md`.
 
 Runtime dependency license texts are distributed in `/licenses/`:
 
@@ -22,4 +22,6 @@ Build/test dependencies remain governed by the licenses in their npm packages. N
 
 ## Leaflet and map data
 
-Leaflet 1.9.4, Copyright (c) 2010–2023 Vladimir Agafonkin and contributors, uses the BSD 2-Clause license, bundled in `public/licenses/leaflet.txt`. Map tiles © OpenStreetMap contributors, under ODbL: https://www.openstreetmap.org/copyright. Tiles are requested directly from https://tile.openstreetmap.org following https://operations.osmfoundation.org/policies/tiles/.
+Leaflet 1.9.4, Copyright (c) 2010–2023 Vladimir Agafonkin and contributors, uses the BSD 2-Clause license, bundled in `public/licenses/leaflet.txt`. Map tiles © OpenStreetMap contributors, under ODbL: https://www.openstreetmap.org/copyright. Tiles are requested from OpenFreeMap (https://openfreemap.org), using the OpenMapTiles schema and Positron style. Attribution is displayed on the map.
+
+MapLibre GL JS uses the BSD 3-Clause license; MapLibre GL Leaflet uses the ISC license. Full license texts are bundled in `/licenses/maplibre-gl.txt` and `/licenses/maplibre-gl-leaflet.txt`. Sources: https://github.com/maplibre/maplibre-gl-js and https://github.com/maplibre/maplibre-gl-leaflet.

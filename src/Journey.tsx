@@ -1,3 +1,4 @@
+import { CompareButton } from "./Compare";
 import { Pizza } from "./Pizza";
 import { hostPerson, profileSummary } from "./people";
 import { dealPrice } from "./dealCatalog";
@@ -46,6 +47,7 @@ export function Offer({ p, open }: { p: Product; open: OpenModal }) {
             <small>Includes S$0.15 service fee</small>
             <div className="shared-edge" />
           </div>
+          <CompareButton item={p} kind="offer" />
           <Row
             title={"Hosted by " + p.host}
             detail={`${host.average} ★ · ${host.reviews} reviews · View profile`}
@@ -194,6 +196,7 @@ export function MySplit({ p, open }: { p: Product; open: OpenModal }) {
             </strong>
             <div className="shared-edge" />
           </div>
+          <CompareButton item={p} kind="offer" />
           <Row
             title={p.host + "’s profile"}
             detail="View neighbour and reviews"

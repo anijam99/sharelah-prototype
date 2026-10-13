@@ -109,4 +109,12 @@ The prototype uses only Jerry and Tom Chua. Existing saved products migrate to t
 
 ### Quiet map tiles
 
-The map uses Stadia Maps **Alidade Smooth** with compact product-photo markers. It works on `localhost` / `127.0.0.1` without authentication. For a hosted site or phone accessing a LAN address, configure domain authentication in Stadia Maps, or set `VITE_STADIA_MAPS_KEY` in `.env.local` before running/building. This is a browser-visible tile key; apply provider domain restrictions. Attribution stays visible. See https://docs.stadiamaps.com/authentication/.
+The map uses [OpenFreeMap](https://openfreemap.org/quick_start/) **Positron** vector tiles through MapLibre's Leaflet binding, with compact product-photo markers. No API key is needed. OpenFreeMap, OpenMapTiles and OpenStreetMap attribution remains visible. The renderer loads only when a map is opened.
+
+The outside-app A/B selector only configures the next checkout. A shows a receipt with a five-second countdown, cancellation and “Looks good, proceed”. B asks for an explicit confirmation with no countdown. Each checkout stores its variant, payment method and deadline in browser history, so refresh or changing the selector cannot alter an active confirmation.
+
+The demo location marker, Near me control and radius circle are centred at SMU Campus Green (1.29572, 103.85096). Seeded pickup locations remain in place.
+
+### Price comparisons
+
+Chobani blueberry yoghurt and TOP detergent details expose Compare prices & travel, including from an existing split. Same-product matches can be expanded to other brands. Integer-cent calculations choose singles, multibuys or a mixture for the requested quantity, show any extra items, add one return-trip estimate or delivery charge, and apply free delivery only when the selected basket reaches the threshold. Pack-size-normalized totals include these costs. Scenario data lives in `src/comparison.ts`; comparison prices, destinations, transit times and fares are fixed demo fixtures, not live quotes. The outside-app demo tools explain this, while the comparison offers editable fare and delivery estimates.

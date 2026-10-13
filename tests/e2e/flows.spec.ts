@@ -1,5 +1,15 @@
 import { test, expect } from "@playwright/test";
 import { readFile } from "node:fs/promises";
+import { initialState } from "../../src/model";
+
+// Use a fixed radius for catalogue/flow fixtures, independent of the demo default.
+test.beforeEach(async ({ page }) => {
+  const state = { ...initialState(), radius: 1000 };
+  await page.addInitScript((state) => {
+    if (!localStorage.getItem("sharelah-demo-v1"))
+      localStorage.setItem("sharelah-demo-v1", JSON.stringify(state));
+  }, state);
+});
 
 test("browse, reserve, change payment, cancel, and reset", async ({ page }) => {
   await page.goto("/");
@@ -87,7 +97,7 @@ test("map restores selection and shows ownership", async ({ page }) => {
   await expect(page.getByLabel("Interactive neighbourhood map")).toBeVisible();
   await page
     .getByRole("button", { name: "Select Samyang Buldak bowl noodles" })
-    .click();
+    .press("Enter");
   await expect(
     page.getByRole("heading", {
       name: "Samyang Buldak bowl noodles",
@@ -104,9 +114,20 @@ test("map restores selection and shows ownership", async ({ page }) => {
   ).toBeVisible();
 
   await page.getByRole("button", { name: "Near me" }).click();
+  await expect(
+    page.getByRole("img", { name: "Your sample location at SMU Campus Green" }),
+  ).toBeVisible();
+  await expect
+    .poll(async () => {
+      const center = await page.evaluate(() =>
+        JSON.parse(sessionStorage.getItem("sharelah-map-view")!),
+      );
+      return Math.abs(center.lat - 1.29572) + Math.abs(center.lng - 103.85096);
+    })
+    .toBeLessThan(0.0001);
   await page
     .getByRole("button", { name: "Select Chobani blueberry Greek yoghurt" })
-    .click();
+    .press("Enter");
   await expect(page.getByText("In your splits", { exact: true })).toBeVisible();
   await page.screenshot({ path: "/tmp/sharelah-photo-map.png" });
 });
@@ -152,29 +173,35 @@ test("the tile map has accessible offer pins, attribution, zoom and pickup locat
   page,
 }) => {
   // Keep tests deterministic without requesting a community tile service.
-  await page.route("https://tiles.stadiamaps.com/**", async (route) => {
+  await page.route("https://tiles.openfreemap.org/**", async (route) => {
     await route.fulfill({
-      contentType: "image/png",
-      body: Buffer.from(
-        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRzUAAAAASUVORK5CYII=",
-        "base64",
-      ),
+      contentType: "application/json",
+      body: JSON.stringify({
+        version: 8,
+        sources: {},
+        layers: [
+          {
+            id: "background",
+            type: "background",
+            paint: { "background-color": "#f4f3ef" },
+          },
+        ],
+      }),
     });
   });
   await page.goto("/#/map");
-  await expect(page.locator(".leaflet-tile").first()).toBeVisible();
+  await expect(page.locator(".maplibregl-canvas").first()).toBeVisible();
   await expect(page.getByRole("link", { name: "OpenStreetMap" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Stadia Maps" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "OpenFreeMap" })).toBeVisible();
   const photoPins = page.locator(".photo-pin");
   expect(await photoPins.count()).toBeGreaterThan(2);
   await expect(photoPins.first().locator(".cropped-photo")).toBeVisible();
   await expect(photoPins.first()).toHaveText("");
   await expect(page.locator(".map-viewport")).not.toContainText("Yours");
+  // Keyboard selection remains available when geographically close pins overlap.
   await page
-    .getByRole("button", {
-      name: "Select TOP liquid laundry detergent",
-    })
-    .click();
+    .getByRole("button", { name: "Select TOP liquid laundry detergent" })
+    .press("Enter");
   await expect(
     page.getByRole("button", {
       name: "Select TOP liquid laundry detergent",
@@ -190,7 +217,9 @@ test("the tile map has accessible offer pins, attribution, zoom and pickup locat
 });
 
 test("radius changes zoom and deal availability", async ({ page }) => {
-  await page.route("https://tiles.stadiamaps.com/**", (route) => route.abort());
+  await page.route("https://tiles.openfreemap.org/**", (route) =>
+    route.abort(),
+  );
   await page.goto("/#/map");
   await page.getByRole("button", { name: "1 km radius" }).click();
   await page.getByRole("button", { name: "500 m", exact: true }).click();
@@ -219,88 +248,73 @@ test("radius changes zoom and deal availability", async ({ page }) => {
   await page.screenshot({ path: "/tmp/sharelah-home.png" });
 });
 
-test("A/B previews are replayable and never change reservations", async ({
+test("A/B selection only sets the next checkout and persists", async ({
   page,
 }) => {
   await page.goto("/");
   const before = await page.evaluate(() =>
     localStorage.getItem("sharelah-demo-v1"),
   );
-  const lab = page.getByRole("complementary", {
-    name: "Confirmation A/B testing",
-  });
-  await lab.getByRole("button", { name: "B · Receipt" }).click();
-  await expect(
-    page.getByRole("heading", { name: "Preparing your reservation" }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("button", { name: "Undo reservation", exact: true }),
-  ).toBeVisible();
-  const undoBounds = await page
-    .getByRole("button", { name: "Undo reservation", exact: true })
-    .boundingBox();
-  expect(undoBounds!.y + undoBounds!.height).toBeLessThanOrEqual(
-    await page.evaluate(() => window.innerHeight),
-  );
-  await page.screenshot({ path: "/tmp/sharelah-ab-mobile.png" });
-  await page
-    .getByRole("button", { name: "Undo reservation", exact: true })
-    .click();
-  await expect(page.getByRole("status")).toHaveText("Reservation undone.");
-  await lab.getByRole("button", { name: "A · Countdown" }).click();
-  await expect(
-    page.getByRole("heading", { name: "Confirming your split" }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("heading", { name: "Preview complete" }),
-  ).toBeVisible({ timeout: 7000 });
+  for (const name of [
+    "B · Extra confirmation",
+    "A · Receipt countdown",
+    "B · Extra confirmation",
+  ]) {
+    await page.getByRole("button", { name, exact: true }).click();
+    await expect(
+      page.getByRole("button", { name: "Open TOP liquid laundry detergent" }),
+    ).toBeVisible();
+    await expect(page.getByRole("timer")).toHaveCount(0);
+  }
   expect(
     await page.evaluate(() => localStorage.getItem("sharelah-demo-v1")),
   ).toBe(before);
-  await lab.getByRole("button", { name: "Replay 5 seconds" }).click();
-  await expect(page.getByRole("timer")).toBeVisible();
-  await lab.getByRole("button", { name: "Back to app" }).click();
+  await page.reload();
   await expect(
-    page.getByRole("button", {
-      name: "Open TOP liquid laundry detergent",
-    }),
-  ).toBeVisible();
-  await page.setViewportSize({ width: 1280, height: 950 });
-  await lab.getByRole("button", { name: "B · Receipt" }).click();
-  await lab.getByText("Why test these two?").click();
-  await page.screenshot({ path: "/tmp/sharelah-ab-desktop.png" });
+    page.getByRole("button", { name: "B · Extra confirmation" }),
+  ).toHaveAttribute("aria-pressed", "true");
 });
 
-test("switching variants during checkout preserves its deadline and commits once", async ({
+test("extra confirmation waits for a decision even after refresh and changing variants", async ({
   page,
 }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "B · Receipt" }).click();
-  await page.getByRole("button", { name: "Back to app" }).click();
-  await page.reload();
-  await expect(
-    page.getByRole("button", { name: "B · Receipt" }),
-  ).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("button", { name: "B · Extra confirmation" }).click();
   await page
-    .getByRole("button", {
-      name: "Open TOP liquid laundry detergent",
-    })
+    .getByRole("button", { name: "Open TOP liquid laundry detergent" })
     .click();
   await page.getByRole("button", { name: "Reserve a portion" }).click();
   await page.getByRole("button", { name: "Confirm & hold S$10.65" }).click();
   await expect(
-    page.getByRole("heading", { name: "Preparing your reservation" }),
+    page.getByRole("heading", { name: "Are you sure?" }),
   ).toBeVisible();
-  const deadline = await page.evaluate(() => history.state.holdDeadline);
-  await page.getByRole("button", { name: "A · Countdown" }).click();
+  await expect(page.getByRole("timer")).toHaveCount(0);
+  await page.getByRole("button", { name: "A · Receipt countdown" }).click();
+  await page.reload();
+  await page.waitForTimeout(5200);
   await expect(
-    page.getByRole("heading", { name: "Confirming your split" }),
+    page.getByRole("heading", { name: "Are you sure?" }),
   ).toBeVisible();
-  expect(await page.evaluate(() => history.state.holdDeadline)).toBe(deadline);
-  await page.getByRole("button", { name: "B · Receipt" }).click();
+  expect(
+    await page.evaluate(
+      () =>
+        JSON.parse(localStorage.getItem("sharelah-demo-v1")!).reservations.det,
+    ),
+  ).toBeUndefined();
+  await page.screenshot({ path: "/tmp/sharelah-confirm-b.png" });
+  await page.getByRole("button", { name: "Go back", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "Reserve a portion" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "B · Extra confirmation" }).click();
+  await page.getByRole("button", { name: "Reserve a portion" }).click();
+  await page.getByRole("button", { name: "Confirm & hold S$10.65" }).click();
+  await page
+    .getByRole("button", { name: "Yes, reserve & hold S$10.65" })
+    .click();
   await expect(
     page.getByRole("heading", { name: "My reservation" }),
-  ).toBeVisible({ timeout: 7000 });
+  ).toBeVisible();
   const state = await page.evaluate(() =>
     JSON.parse(localStorage.getItem("sharelah-demo-v1")!),
   );
@@ -308,6 +322,30 @@ test("switching variants during checkout preserves its deadline and commits once
     state.products.find((p: { id: string }) => p.id === "det").available,
   ).toBe(0);
   expect(state.reservations.det.status).toBe("reserved");
+});
+
+test("receipt countdown can skip the wait and changing variants does not interrupt it", async ({
+  page,
+}) => {
+  await page.goto("/#/offer/det");
+  await page.getByRole("button", { name: "Reserve a portion" }).click();
+  await page.getByRole("button", { name: "Confirm & hold S$10.65" }).click();
+  await page.getByRole("button", { name: "B · Extra confirmation" }).click();
+  await expect(page.getByRole("timer")).toBeVisible();
+  await expect(page.locator(".receipt-countdown-clock strong")).toBeVisible();
+  await page.screenshot({ path: "/tmp/sharelah-confirm-a.png" });
+  await page
+    .getByRole("button", { name: "Looks good, proceed", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "My reservation" }),
+  ).toBeVisible();
+  const state = await page.evaluate(() =>
+    JSON.parse(localStorage.getItem("sharelah-demo-v1")!),
+  );
+  expect(
+    state.products.find((p: { id: string }) => p.id === "det").available,
+  ).toBe(0);
 });
 
 test("outside demo controls let Jerry join once and reset the hosted split", async ({
@@ -358,7 +396,9 @@ test("outside demo controls let Jerry join once and reset the hosted split", asy
     .getByRole("button", { name: "Reset my demo" })
     .click();
   await expect(page).toHaveURL(/#\/$/);
-  await expect(lab.getByLabel("Demo radius")).toHaveValue("1000");
+  await expect(lab.getByLabel("Demo radius")).toHaveValue(
+    String(initialState().radius),
+  );
 });
 
 test("price-tag photos survive reload, can be reused, and are cleared by reset", async ({
@@ -435,8 +475,10 @@ test("receipt progress is a continuous browser animation and respects reduced mo
   page,
 }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "B · Receipt" }).click();
-  const fill = page.locator(".deadline-fill");
+  await page.goto("/#/offer/det");
+  await page.getByRole("button", { name: "Reserve a portion" }).click();
+  await page.getByRole("button", { name: "Confirm & hold S$10.65" }).click();
+  const fill = page.locator(".timer-half.right .timer-arc");
   const timing = await fill.evaluate((el) => {
     const animation = el.getAnimations()[0];
     return {
@@ -455,12 +497,9 @@ test("receipt progress is a continuous browser animation and respects reduced mo
     "rgb(196, 66, 18)",
   );
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.getByRole("button", { name: "Replay 5 seconds" }).click();
+
   await expect(fill).toHaveCSS("animation-name", "none");
-  await expect(page.locator(".reduced-deadline")).toBeVisible();
-  await page.getByRole("button", { name: "A · Countdown" }).click();
-  await expect(page.locator(".sharing-pizza .pepperoni")).toHaveCount(24);
-  await page.screenshot({ path: "/tmp/sharelah-pizza-detail.png" });
+  await expect(page.getByRole("timer")).toBeVisible();
 });
 
 test("varied demo categories, TOP photo and Share entry points work", async ({
@@ -505,7 +544,9 @@ test("varied demo categories, TOP photo and Share entry points work", async ({
 test("map product photos stay inside their slot beside the text", async ({
   page,
 }) => {
-  await page.route("https://tiles.stadiamaps.com/**", (route) => route.abort());
+  await page.route("https://tiles.openfreemap.org/**", (route) =>
+    route.abort(),
+  );
   await page.goto("/#/map");
   for (const title of [
     "Everyday court sneakers",
@@ -514,7 +555,7 @@ test("map product photos stay inside their slot beside the text", async ({
   ]) {
     await page
       .getByRole("button", { name: `Select ${title}`, exact: true })
-      .click();
+      .press("Enter");
     const panel = page.locator(".map-selected");
     const photo = panel.locator(".product-art img");
     await expect(photo).toBeVisible();
@@ -531,4 +572,91 @@ test("map product photos stay inside their slot beside the text", async ({
   }
   await page.locator(".map-selected").scrollIntoViewIfNeeded();
   await page.screenshot({ path: "/tmp/sharelah-real-photo-map.png" });
+});
+
+test("map pins keep their geographic anchors when selection changes after pan and zoom", async ({
+  page,
+}) => {
+  await page.route("https://tiles.openfreemap.org/**", (route) =>
+    route.abort(),
+  );
+  await page.goto("/#/map");
+  await page.getByRole("button", { name: "Zoom in", exact: true }).click();
+  await page.locator(".map-viewport").press("ArrowRight");
+  await expect
+    .poll(() => page.locator(".leaflet-pan-anim, .leaflet-zoom-anim").count())
+    .toBe(0);
+  const pins = () =>
+    page.locator(".product-marker").evaluateAll((nodes) =>
+      nodes.map((node) => ({
+        label: node.querySelector("button")?.getAttribute("aria-label"),
+        transform: (node as HTMLElement).style.transform,
+      })),
+    );
+  const before = await pins();
+  await page
+    .getByRole("button", { name: "Select TOP liquid laundry detergent" })
+    .press("Enter");
+  await expect(page.locator(".map-selected h3")).toHaveText(
+    "TOP liquid laundry detergent",
+  );
+  expect(await pins()).toEqual(before);
+  await page
+    .getByRole("button", { name: "Select Chobani blueberry Greek yoghurt" })
+    .press("Enter");
+  await expect(page.locator(".map-selected h3")).toHaveText(
+    "Chobani blueberry Greek yoghurt",
+  );
+  expect(await pins()).toEqual(before);
+});
+
+test("compares brands, quantities, return travel and delivery fees", async ({
+  page,
+}) => {
+  await page.goto("/#/deal/photo-chobani-blueberry");
+  await expect(
+    page.getByText(
+      "Sample offer for testing. Prices, stores and availability are illustrative.",
+    ),
+  ).toHaveCount(0);
+  await page.getByRole("button", { name: "Compare prices & travel" }).click();
+  await expect(page.locator(".compare-card")).toHaveCount(3);
+  await page.getByLabel("Items needed").selectOption("2");
+  await page.getByRole("button", { name: "Bus", exact: true }).click();
+  const fairprice = page
+    .locator(".compare-card")
+    .filter({
+      has: page.getByRole("heading", { name: "FairPrice · City Square Mall" }),
+    });
+  await expect(fairprice.locator(".compare-total strong")).toHaveText("S$9.70");
+  const online = page
+    .locator(".compare-card")
+    .filter({
+      has: page.getByRole("heading", { name: "Cold Storage · Online" }),
+    });
+  await expect(online.locator(".compare-total strong")).toHaveText("S$11.99");
+  await page
+    .getByLabel("Estimated delivery fee for Cold Storage · Online")
+    .fill("0");
+  await expect(online.locator(".compare-total strong")).toHaveText("S$7.00");
+  await expect(online).toContainText("Lowest total");
+  await page.getByRole("button", { name: "Include other brands" }).click();
+  await expect(page.locator(".compare-card")).toHaveCount(5);
+  await expect(
+    page.getByText("Different brand · different pack size"),
+  ).toBeVisible();
+  await page.screenshot({ path: "/tmp/sharelah-compare.png" });
+  await page.goto("/#/offer/det");
+  await page.getByRole("button", { name: "Compare prices & travel" }).click();
+  await expect(
+    page.getByRole("region", { name: "Current split comparison" }),
+  ).toContainText("S$10.65");
+  await page.getByLabel("Items needed").selectOption("6");
+  const detergentOnline = page
+    .locator(".compare-card")
+    .filter({ has: page.getByRole("heading", { name: "FairPrice · Online" }) });
+  await expect(detergentOnline.locator(".compare-total strong")).toHaveText(
+    "S$65.40",
+  );
+  await expect(detergentOnline).toContainText("applied");
 });

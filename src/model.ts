@@ -287,7 +287,7 @@ export function initialState(): State {
     drafts: {},
     deals: structuredClone(seedDeals),
     area: "Bugis",
-    radius: 1000,
+    radius: 500,
     sort: "Nearest first",
     payment: "Visa •••• 4242",
     notify: false,

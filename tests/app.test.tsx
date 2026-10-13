@@ -466,6 +466,7 @@ it("migrates old personas while keeping reservations and always uses Jerry acros
   render(<App />);
   const previous = saved();
   cleanup();
+  previous.radius = 1000; // Include the noodle split in this persona migration fixture.
   previous.products[0].host = "Priya";
   previous.products[2].host = "Mei";
   previous.name = "Old tester";
