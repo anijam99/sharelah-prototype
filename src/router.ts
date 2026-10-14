@@ -50,7 +50,7 @@ export function go(
   flowState?: {
     holdDeadline: number;
     holdMethod: string;
-    holdVariant?: "A" | "B";
+    holdVariant?: "A" | "B" | "C";
   },
 ) {
   if (path === currentPath()) return;

@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
 import {
   initialState,
+  addDemoHistory,
+  completedSavings,
   reserve,
   cancelReservation,
   complete,
@@ -11,6 +13,27 @@ import {
   total,
 } from "../src/model";
 describe("Reservation lifecycle", () => {
+  it("backs demo savings with closed completed history and preserves edits on reload", () => {
+    const s = initialState();
+    const past = s.products.filter(
+      (p) => s.reservations[p.id]?.status === "completed",
+    );
+    expect(past).toHaveLength(4);
+    expect(completedSavings(s)).toBe(1420);
+    expect(
+      past.every((p) => p.closed && p.purchased && p.available === 0),
+    ).toBe(true);
+    expect(
+      visibleProducts({ ...s, radius: 3000 }).some((p) => past.includes(p)),
+    ).toBe(false);
+    s.reservations[past[0].id].rating = 5;
+    s.reservations[past[0].id].reviewComment = "Easy pickup";
+    const migrated = addDemoHistory(reserve(s, "det"));
+    expect(migrated.products).toHaveLength(s.products.length);
+    expect(migrated.reservations[past[0].id].reviewComment).toBe("Easy pickup");
+    expect(migrated.reservations.det.status).toBe("reserved");
+    expect(completedSavings(complete(migrated, "yog", true))).toBe(1455);
+  });
   it("starts with yoghurt in the tester’s splits", () => {
     const s = initialState();
     expect(s.reservations.yog.status).toBe("ready");

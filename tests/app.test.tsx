@@ -261,7 +261,7 @@ it("validates a new listing, computes its portions, publishes it, and resets onl
     }),
   );
   await waitFor(() => expect(location.hash).toBe("#/"));
-  expect(saved().products).toHaveLength(23);
+  expect(saved().products).toHaveLength(27);
   expect(saved().reservations.yog.status).toBe("ready");
 });
 
@@ -288,37 +288,51 @@ it("opens the camera for a deal report and offers a usable permission-denied fal
   ).toBeTruthy();
 });
 
-it("cancels during the grace period without taking availability or holding payment", () => {
-  vi.useFakeTimers();
-  render(<App />);
-  click("Open TOP liquid laundry detergent");
-  click("Reserve a portion");
-  click("Confirm & hold S$10.65");
-  act(() => vi.advanceTimersByTime(3000));
-  click("Cancel reservation");
-  expect(location.hash).toBe("#/offer/det");
-  act(() => vi.advanceTimersByTime(6000));
-  expect(saved().reservations.det).toBeUndefined();
-  expect(saved().products.find((p: any) => p.id === "det").available).toBe(1);
-});
+it.each(["A", "C"])(
+  "confirmation %s cancels during the grace period without taking availability or holding payment",
+  (variant) => {
+    vi.useFakeTimers();
+    localStorage.setItem("sharelah-confirmation-variant", variant);
+    render(<App />);
+    click("Open TOP liquid laundry detergent");
+    click("Reserve a portion");
+    click("Confirm & hold S$10.65");
+    act(() => vi.advanceTimersByTime(3000));
+    click(variant === "C" ? "Go back" : "Cancel reservation");
+    expect(location.hash).toBe("#/offer/det");
+    act(() => vi.advanceTimersByTime(6000));
+    expect(saved().reservations.det).toBeUndefined();
+    expect(saved().products.find((p: any) => p.id === "det").available).toBe(1);
+  },
+);
 
-it("keeps the original countdown deadline when the screen remounts", () => {
-  vi.useFakeTimers();
-  const view = render(<App />);
-  click("Open TOP liquid laundry detergent");
-  click("Reserve a portion");
-  click("Confirm & hold S$10.65");
-  act(() => vi.advanceTimersByTime(2000));
-  view.unmount();
-  render(<App />);
-  expect(screen.getByRole("timer").getAttribute("aria-label")).toBe(
-    "Confirmation in 3 seconds",
-  );
-  act(() => vi.advanceTimersByTime(3000));
-  expect(location.hash).toBe("#/split/det");
-  expect(saved().reservations.det.status).toBe("reserved");
-  expect(saved().products.find((p: any) => p.id === "det").available).toBe(0);
-});
+it.each(["A", "C"])(
+  "confirmation %s keeps its original screen and countdown deadline when remounted",
+  (variant) => {
+    vi.useFakeTimers();
+    localStorage.setItem("sharelah-confirmation-variant", variant);
+    const view = render(<App />);
+    click("Open TOP liquid laundry detergent");
+    click("Reserve a portion");
+    click("Confirm & hold S$10.65");
+    act(() => vi.advanceTimersByTime(2000));
+    click("B · Extra confirmation");
+    view.unmount();
+    render(<App />);
+    expect(
+      screen.getByRole("heading", {
+        name: variant === "C" ? "Are you sure?" : "Review your reservation",
+      }),
+    ).toBeTruthy();
+    expect(screen.getByRole("timer").getAttribute("aria-label")).toBe(
+      "Confirmation in 3 seconds",
+    );
+    act(() => vi.advanceTimersByTime(3000));
+    expect(location.hash).toBe("#/split/det");
+    expect(saved().reservations.det.status).toBe("reserved");
+    expect(saved().products.find((p: any) => p.id === "det").available).toBe(0);
+  },
+);
 
 it("abandons the countdown on navigation and rejects a direct countdown URL", () => {
   vi.useFakeTimers();
@@ -397,6 +411,39 @@ it("adds the photo catalogue to an older saved demo without losing progress", ()
   expect(
     saved().deals.filter((d: any) => d.id === "photo-chobani-blueberry"),
   ).toHaveLength(1);
+});
+
+it("backfills completed demo splits into Past and itemizes the existing savings", () => {
+  render(<App />);
+  const previous = saved();
+  cleanup();
+  previous.products = previous.products.filter(
+    (p: any) => !p.id.startsWith("past-demo-"),
+  );
+  previous.reservations = { yog: previous.reservations.yog };
+  localStorage.setItem("sharelah-demo-v1", JSON.stringify(previous));
+  render(<App />);
+  navigate("/splits");
+  click("Past");
+  const cards = document.querySelectorAll(".offer-card");
+  expect(cards).toHaveLength(4);
+  expect(screen.getByText("S$14.20")).toBeTruthy();
+  expect(screen.queryByText("Your shared wins will live here.")).toBeNull();
+  click("Open TOP liquid laundry detergent");
+  expect(
+    screen.getByRole("heading", { name: "Split complete", level: 1 }),
+  ).toBeTruthy();
+  expect(screen.getByText("S$10.65 released")).toBeTruthy();
+  navigate("/profile/savings");
+  expect(screen.getByRole("heading", { name: "S$14.20" })).toBeTruthy();
+  expect(screen.queryByText("Previous demo savings")).toBeNull();
+  click(/Cloud-soft everyday socks 7 Oct 2026/);
+  expect(screen.getByText("S$4.15 released")).toBeTruthy();
+  cleanup();
+  render(<App />);
+  navigate("/splits");
+  expect(document.querySelectorAll(".offer-card")).toHaveLength(4);
+  expect(saved().reservations.yog.status).toBe("ready");
 });
 
 it("saves a written review, shows it on Jerry's profile, and edits it without duplicating it", () => {

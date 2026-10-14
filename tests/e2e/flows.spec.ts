@@ -248,7 +248,7 @@ test("radius changes zoom and deal availability", async ({ page }) => {
   await page.screenshot({ path: "/tmp/sharelah-home.png" });
 });
 
-test("A/B selection only sets the next checkout and persists", async ({
+test("confirmation A/B/C selection only sets the next checkout and persists", async ({
   page,
 }) => {
   await page.goto("/");
@@ -258,7 +258,7 @@ test("A/B selection only sets the next checkout and persists", async ({
   for (const name of [
     "B · Extra confirmation",
     "A · Receipt countdown",
-    "B · Extra confirmation",
+    "C · Confirm + countdown",
   ]) {
     await page.getByRole("button", { name, exact: true }).click();
     await expect(
@@ -271,7 +271,7 @@ test("A/B selection only sets the next checkout and persists", async ({
   ).toBe(before);
   await page.reload();
   await expect(
-    page.getByRole("button", { name: "B · Extra confirmation" }),
+    page.getByRole("button", { name: "C · Confirm + countdown" }),
   ).toHaveAttribute("aria-pressed", "true");
 });
 
@@ -289,7 +289,7 @@ test("extra confirmation waits for a decision even after refresh and changing va
     page.getByRole("heading", { name: "Are you sure?" }),
   ).toBeVisible();
   await expect(page.getByRole("timer")).toHaveCount(0);
-  await page.getByRole("button", { name: "A · Receipt countdown" }).click();
+  await page.getByRole("button", { name: "C · Confirm + countdown" }).click();
   await page.reload();
   await page.waitForTimeout(5200);
   await expect(
@@ -346,6 +346,62 @@ test("receipt countdown can skip the wait and changing variants does not interru
   expect(
     state.products.find((p: { id: string }) => p.id === "det").available,
   ).toBe(0);
+});
+
+test("confirmation C shows B's question with a top-right countdown and can cancel or proceed early", async ({
+  page,
+}) => {
+  const now = new Date("2026-10-14T12:00:00Z");
+  await page.clock.install({ time: now });
+  await page.clock.pauseAt(now);
+  await page.goto("/#/offer/det");
+  await page.getByRole("button", { name: "C · Confirm + countdown" }).click();
+  await page.getByRole("button", { name: "Reserve a portion" }).click();
+  await page.getByRole("button", { name: "Confirm & hold S$10.65" }).click();
+  const heading = page.getByRole("heading", { name: "Are you sure?" });
+  const timer = page.getByRole("timer");
+  await expect(heading).toBeVisible();
+  await expect(timer).toHaveAttribute(
+    "aria-label",
+    "Confirmation in 5 seconds",
+  );
+  await expect(
+    page.getByText("Reserves automatically when the timer ends.", {
+      exact: false,
+    }),
+  ).toBeVisible();
+  const clockBounds = (await timer.boundingBox())!;
+  const headingBounds = (await heading.boundingBox())!;
+  expect(clockBounds.x).toBeGreaterThan(headingBounds.x + headingBounds.width);
+  expect(clockBounds.y).toBeLessThan(headingBounds.y);
+  await page.screenshot({ path: "/tmp/sharelah-confirm-c.png" });
+  await page.getByRole("button", { name: "B · Extra confirmation" }).click();
+  await expect(timer).toBeVisible();
+  await page.getByRole("button", { name: "Go back", exact: true }).click();
+  await page.clock.runFor(6000);
+  expect(
+    await page.evaluate(
+      () =>
+        JSON.parse(localStorage.getItem("sharelah-demo-v1")!).reservations.det,
+    ),
+  ).toBeUndefined();
+  await page.getByRole("button", { name: "C · Confirm + countdown" }).click();
+  await page.getByRole("button", { name: "Reserve a portion" }).click();
+  await page.getByRole("button", { name: "Confirm & hold S$10.65" }).click();
+  await page
+    .getByRole("button", { name: "Yes, reserve & hold S$10.65" })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "My reservation" }),
+  ).toBeVisible();
+  await page.clock.runFor(6000);
+  const state = await page.evaluate(() =>
+    JSON.parse(localStorage.getItem("sharelah-demo-v1")!),
+  );
+  expect(
+    state.products.find((p: { id: string }) => p.id === "det").available,
+  ).toBe(0);
+  expect(state.reservations.det.status).toBe("reserved");
 });
 
 test("outside demo controls let Jerry join once and reset the hosted split", async ({
@@ -623,17 +679,13 @@ test("compares brands, quantities, return travel and delivery fees", async ({
   await expect(page.locator(".compare-card")).toHaveCount(3);
   await page.getByLabel("Items needed").selectOption("2");
   await page.getByRole("button", { name: "Bus", exact: true }).click();
-  const fairprice = page
-    .locator(".compare-card")
-    .filter({
-      has: page.getByRole("heading", { name: "FairPrice · City Square Mall" }),
-    });
+  const fairprice = page.locator(".compare-card").filter({
+    has: page.getByRole("heading", { name: "FairPrice · City Square Mall" }),
+  });
   await expect(fairprice.locator(".compare-total strong")).toHaveText("S$9.70");
-  const online = page
-    .locator(".compare-card")
-    .filter({
-      has: page.getByRole("heading", { name: "Cold Storage · Online" }),
-    });
+  const online = page.locator(".compare-card").filter({
+    has: page.getByRole("heading", { name: "Cold Storage · Online" }),
+  });
   await expect(online.locator(".compare-total strong")).toHaveText("S$11.99");
   await page
     .getByLabel("Estimated delivery fee for Cold Storage · Online")
@@ -659,4 +711,157 @@ test("compares brands, quantities, return travel and delivery fees", async ({
     "S$65.40",
   );
   await expect(detergentOnline).toContainText("applied");
+});
+
+test("home layouts A, B and C preserve the feed while changing map placement", async ({
+  page,
+}) => {
+  await page.route("https://tiles.openfreemap.org/**", (route) =>
+    route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({
+        version: 8,
+        sources: {},
+        layers: [
+          {
+            id: "background",
+            type: "background",
+            paint: { "background-color": "#f4f3ef" },
+          },
+        ],
+      }),
+    }),
+  );
+  await page.goto("/");
+  const navigation = page.getByRole("navigation", { name: "Main navigation" });
+  const map = page.getByRole("region", {
+    name: "Nearby splits map",
+    exact: true,
+  });
+  const feed = () =>
+    page
+      .locator(".offer-card")
+      .evaluateAll((cards) =>
+        cards.map((card) => card.getAttribute("aria-label")),
+      );
+  const original = await feed();
+  await expect(map).toHaveCount(0);
+  await expect(
+    navigation.getByRole("button", { name: "Map", exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "B · Map first", exact: true })
+    .click();
+  await expect(map).toBeVisible();
+  await expect(
+    navigation.getByRole("button", { name: "Map", exact: true }),
+  ).toHaveCount(0);
+  expect(await feed()).toEqual(original);
+  expect(
+    await map.evaluate(
+      (el) =>
+        !!(
+          el.compareDocumentPosition(document.querySelector(".offer-card")!) &
+          Node.DOCUMENT_POSITION_FOLLOWING
+        ),
+    ),
+  ).toBe(true);
+  await page.screenshot({ path: "/tmp/sharelah-home-b.png" });
+  await page.getByRole("button", { name: "Fashion", exact: true }).click();
+  const filtered = await page.locator(".offer-card").count();
+  await expect(page.locator(".home-map .photo-pin")).toHaveCount(filtered);
+  await page.getByRole("button", { name: "All", exact: true }).click();
+  await page
+    .getByRole("button", { name: "C · List first", exact: true })
+    .click();
+  expect(await feed()).toEqual(original);
+  const beforeMap = await map.evaluate(
+    (el) =>
+      [...document.querySelectorAll(".offer-card")].filter(
+        (card) =>
+          !!(
+            el.compareDocumentPosition(card) & Node.DOCUMENT_POSITION_PRECEDING
+          ),
+      ).length,
+  );
+  expect(beforeMap).toBe(3);
+  const bounds = (await map.boundingBox())!;
+  const viewport = (await page
+    .locator(".app-frame .page-scroll")
+    .boundingBox())!;
+  expect(bounds.y).toBeGreaterThanOrEqual(viewport.y + viewport.height);
+  await page.screenshot({ path: "/tmp/sharelah-home-c-top.png" });
+  await map.scrollIntoViewIfNeeded();
+  await expect(map).toBeInViewport();
+  await page
+    .getByRole("button", {
+      name: "Select TOP liquid laundry detergent",
+      exact: true,
+    })
+    .press("Enter");
+  await expect(
+    page.getByRole("button", {
+      name: "View selected split: TOP liquid laundry detergent",
+    }),
+  ).toBeVisible();
+  await page.screenshot({ path: "/tmp/sharelah-home-c-map.png" });
+  await page.reload();
+  await expect(
+    page.getByRole("button", { name: "C · List first" }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator('[data-home-layout="C"]')).toBeVisible();
+  await page.getByRole("button", { name: "A · Separate", exact: true }).click();
+  await expect(map).toHaveCount(0);
+  await navigation.getByRole("button", { name: "Map", exact: true }).click();
+  await page
+    .getByRole("button", { name: "B · Map first", exact: true })
+    .click();
+  await expect(page).toHaveURL(/#\/$/);
+  await expect(map).toBeVisible();
+});
+
+test("home layout settings stay independent of an active confirmation", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page
+    .getByRole("button", { name: "B · Extra confirmation", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "B · Map first", exact: true })
+    .click();
+  await page
+    .getByRole("button", {
+      name: "Open TOP liquid laundry detergent",
+      exact: true,
+    })
+    .click();
+  await page
+    .getByRole("button", { name: "Reserve a portion", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Confirm & hold S$10.65", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Are you sure?" }),
+  ).toBeVisible();
+  const path = page.url();
+  await page
+    .getByRole("button", { name: "C · List first", exact: true })
+    .click();
+  expect(page.url()).toBe(path);
+  await expect(
+    page.getByRole("heading", { name: "Are you sure?" }),
+  ).toBeVisible();
+  await expect(page.getByRole("timer")).toHaveCount(0);
+  await page.reload();
+  await expect(
+    page.getByRole("button", { name: "B · Extra confirmation" }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await expect(
+    page.getByRole("button", { name: "C · List first" }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("button", { name: "Go back", exact: true }).click();
+  await page.goto("/");
+  await expect(page.locator('[data-home-layout="C"]')).toBeVisible();
 });

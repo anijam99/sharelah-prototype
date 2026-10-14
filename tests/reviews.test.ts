@@ -31,7 +31,7 @@ it("combines reviews across Jerry's splits and replaces an edited review", () =>
   );
   expect(reviewsFor(state, "jerry")).toHaveLength(4);
   expect(profileSummary(state, "jerry").average).toBe("4.8");
-  expect(profileSummary(state, "tom").completed).toBe(20);
+  expect(profileSummary(state, "tom").completed).toBe(24);
   state = saveReview(state, "yog", 1, "Changed comment");
   expect(reviewsFor(state, "jerry")).toHaveLength(4);
   expect(profileSummary(state, "jerry").average).toBe("3.8");

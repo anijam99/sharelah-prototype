@@ -271,8 +271,72 @@ export function refreshSeedProducts(products: Product[]): Product[] {
     };
   });
 }
+// Historical offers are snapshots: their prices stay separate from live listings.
+const demoHistory = [
+  {
+    source: "det",
+    id: "past-demo-detergent",
+    date: "11 Oct 2026",
+    at: "2026-10-11T11:00:00.000Z",
+  },
+  {
+    source: "sample-demo-tumbler",
+    id: "past-demo-tumbler",
+    date: "9 Oct 2026",
+    at: "2026-10-09T10:30:00.000Z",
+  },
+  {
+    source: "sample-demo-socks",
+    id: "past-demo-socks",
+    date: "7 Oct 2026",
+    at: "2026-10-07T11:15:00.000Z",
+  },
+  {
+    source: "oat",
+    id: "past-demo-noodles",
+    date: "5 Oct 2026",
+    at: "2026-10-05T11:30:00.000Z",
+    itemCents: 330,
+    bundleCents: 660,
+  },
+];
+
+/** Backfill the demo history once while preserving all existing local progress. */
+export function addDemoHistory(state: State): State {
+  const products = [...state.products];
+  const reservations = { ...state.reservations };
+  for (const entry of demoHistory) {
+    if (!products.some((p) => p.id === entry.id)) {
+      const source = seedProducts.find((p) => p.id === entry.source)!;
+      products.push({
+        ...structuredClone(source),
+        id: entry.id,
+        demo: true,
+        sourceDealId: undefined,
+        date: entry.date,
+        ...(entry.itemCents !== undefined
+          ? { itemCents: entry.itemCents, bundleCents: entry.bundleCents! }
+          : {}),
+        available: 0,
+        purchased: true,
+        closed: true,
+        note: "Collected and payment released.",
+      });
+    }
+    if (!reservations[entry.id]) {
+      reservations[entry.id] = {
+        status: "completed",
+        method:
+          entry.id === "past-demo-socks" ? "ShareLah wallet" : "Visa •••• 4242",
+        createdAt: entry.at,
+      };
+    }
+  }
+  return { ...state, products, reservations };
+}
+
 export function initialState(): State {
-  return {
+  return addDemoHistory({
     version: 1,
     products: structuredClone(seedProducts),
     reservations: {
@@ -295,10 +359,19 @@ export function initialState(): State {
     joinedHosts: {},
     createDraft: {},
     started: false,
-  };
+  });
 }
 export const money = (cents: number) => "S$" + (cents / 100).toFixed(2);
 export const total = (p: Product) => p.itemCents + 15;
+export const completedSavings = (s: State) =>
+  s.products.reduce(
+    (sum, p) =>
+      sum +
+      (s.reservations[p.id]?.status === "completed"
+        ? Math.max(0, p.retailCents - total(p))
+        : 0),
+    0,
+  );
 export const owned = (r?: Reservation) => !!r && r.status !== "cancelled";
 export function statusLabel(r?: Reservation) {
   return r?.status === "completed"

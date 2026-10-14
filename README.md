@@ -111,10 +111,16 @@ The prototype uses only Jerry and Tom Chua. Existing saved products migrate to t
 
 The map uses [OpenFreeMap](https://openfreemap.org/quick_start/) **Positron** vector tiles through MapLibre's Leaflet binding, with compact product-photo markers. No API key is needed. OpenFreeMap, OpenMapTiles and OpenStreetMap attribution remains visible. The renderer loads only when a map is opened.
 
-The outside-app A/B selector only configures the next checkout. A shows a receipt with a five-second countdown, cancellation and “Looks good, proceed”. B asks for an explicit confirmation with no countdown. Each checkout stores its variant, payment method and deadline in browser history, so refresh or changing the selector cannot alter an active confirmation.
+The outside-app confirmation A/B/C selector only configures the next checkout. A shows a receipt with a five-second countdown, cancellation and “Looks good, proceed”. B asks for an explicit confirmation with no countdown. C uses B’s “Are you sure?” screen with A’s circular five-second countdown in the top right; users can confirm immediately or go back before it reserves automatically. Each checkout stores its variant, payment method and deadline in browser history, so refresh or changing the selector cannot alter an active confirmation.
 
 The demo location marker, Near me control and radius circle are centred at SMU Campus Green (1.29572, 103.85096). Seeded pickup locations remain in place.
 
 ### Price comparisons
 
 Chobani blueberry yoghurt and TOP detergent details expose Compare prices & travel, including from an existing split. Same-product matches can be expanded to other brands. Integer-cent calculations choose singles, multibuys or a mixture for the requested quantity, show any extra items, add one return-trip estimate or delivery charge, and apply free delivery only when the selected basket reaches the threshold. Pack-size-normalized totals include these costs. Scenario data lives in `src/comparison.ts`; comparison prices, destinations, transit times and fares are fixed demo fixtures, not live quotes. The outside-app demo tools explain this, while the comparison offers editable fare and delivery estimates.
+
+### Home/map layout experiment
+
+The separate outside-app A/B/C selector persists under `sharelah-home-variant`. A preserves the Home feed and standalone Map tab. B combines them with the map above search, filters and listings. C shows three filtered listings, then the same map, followed by the remaining listings. B/C use one Home tab; the map and list share category/radius filters. A map selection reveals a compact pickup preview without reordering the feed. Layout changes on detail or confirmation screens apply upon returning Home and leave the independent confirmation A/B/C setting intact.
+
+The demo includes four completed October splits (TOP detergent, a tumbler, socks and noodles) in Splits → Past. Their recorded prices, including service fees, account for the initial S$14.20 savings; savings totals now come entirely from completed reservations. These closed listings are excluded from discovery, open into completed receipts, and are added to older saved demos without resetting existing progress or duplicating history.

@@ -8,6 +8,7 @@ import { DealPrice } from "./DealPrice";
 import { photoSource } from "./dealPhotos";
 import {
   ReservationCountdown,
+  confirmationVariant,
   type ConfirmationVariant,
 } from "./ReservationCountdown";
 import { useEffect, useState } from "react";
@@ -31,7 +32,7 @@ import {
   Row,
   Sheet,
 } from "./ui";
-import { Home, MapScreen, Splits } from "./Browse";
+import { Home, MapScreen, Splits, type HomeVariant } from "./Browse";
 import {
   Chat,
   Directions,
@@ -45,6 +46,7 @@ import { Create } from "./Create";
 import { finish, go, useRoute } from "./router";
 import {
   cancelReservation,
+  completedSavings,
   saveReview,
   money,
   owned,
@@ -54,9 +56,11 @@ import {
 function Navigation({
   active,
   open,
+  combinedHome = false,
 }: {
   active: string;
   open: (s: string) => void;
+  combinedHome?: boolean;
 }) {
   return (
     <nav className="bottom-nav" aria-label="Main navigation">
@@ -66,22 +70,24 @@ function Navigation({
         ["plus", "Share", ""],
         ["splits", "Splits", "/splits"],
         ["profile", "Profile", "/profile"],
-      ].map(([icon, label, path]) => (
-        <button
-          key={label}
-          onClick={() => (path ? go(path) : open("create"))}
-          className={
-            (active === icon ? "active " : "") +
-            (icon === "plus" ? "create-nav" : "")
-          }
-          aria-current={active === icon ? "page" : undefined}
-        >
-          <span>
-            <Icon name={icon} />
-          </span>
-          <small>{label}</small>
-        </button>
-      ))}
+      ]
+        .filter(([icon]) => !combinedHome || icon !== "map")
+        .map(([icon, label, path]) => (
+          <button
+            key={label}
+            onClick={() => (path ? go(path) : open("create"))}
+            className={
+              (active === icon ? "active " : "") +
+              (icon === "plus" ? "create-nav" : "")
+            }
+            aria-current={active === icon ? "page" : undefined}
+          >
+            <span>
+              <Icon name={icon} />
+            </span>
+            <small>{label}</small>
+          </button>
+        ))}
     </nav>
   );
 }
@@ -150,10 +156,9 @@ function ReviewSheet({ p, close }: { p: Product; close: () => void }) {
               go("/holding/" + p.id, undefined, true, {
                 holdDeadline: Date.now() + 5000,
                 holdMethod: state.payment,
-                holdVariant:
-                  localStorage.getItem("sharelah-confirmation-variant") === "B"
-                    ? "B"
-                    : "A",
+                holdVariant: confirmationVariant(
+                  localStorage.getItem("sharelah-confirmation-variant"),
+                ),
               });
             }}
           >
@@ -508,12 +513,7 @@ function Profile({
     completed = state.products.filter(
       (p) => state.reservations[p.id]?.status === "completed",
     ),
-    savings =
-      1420 +
-      completed.reduce(
-        (sum, p) => sum + Math.max(0, p.retailCents - total(p)),
-        0,
-      );
+    savings = completedSavings(state);
   const summary = profileSummary(state, "tom");
   if (section === "trust") return <NeighbourProfile id="tom" />;
   if (!section)
@@ -681,14 +681,13 @@ function Profile({
                 <p>Total saved through sharing</p>
                 <div className="shared-edge" />
               </div>
-              <Row
-                title="Previous demo savings"
-                detail="19 earlier sample splits"
-              >
-                {money(1420)}
-              </Row>
               {completed.map((p) => (
-                <Row key={p.id} title={p.title} detail="Completed in this demo">
+                <Row
+                  key={p.id}
+                  title={p.title}
+                  detail={p.date + " · Collected"}
+                  onClick={() => go("/split/" + p.id)}
+                >
                   {money(Math.max(0, p.retailCents - total(p)))}
                 </Row>
               ))}
@@ -816,8 +815,17 @@ function Root() {
     { state, storageError } = useStore(),
     [modal, setModal] = useState("");
   const [variant, setVariant] = useState<ConfirmationVariant>(() =>
-    localStorage.getItem("sharelah-confirmation-variant") === "B" ? "B" : "A",
+    confirmationVariant(localStorage.getItem("sharelah-confirmation-variant")),
   );
+  const [homeVariant, setHomeVariant] = useState<HomeVariant>(() => {
+    const stored = localStorage.getItem("sharelah-home-variant");
+    return stored === "B" || stored === "C" ? stored : "A";
+  });
+  function selectHomeVariant(value: HomeVariant) {
+    setHomeVariant(value);
+    localStorage.setItem("sharelah-home-variant", value);
+    if (path === "/map" && value !== "A") go("/", undefined, true);
+  }
   function selectVariant(value: ConfirmationVariant) {
     setVariant(value);
     localStorage.setItem("sharelah-confirmation-variant", value);
@@ -830,14 +838,15 @@ function Root() {
   const tab = ["", "map", "splits", "profile"].includes(page) && !id;
   let screen;
   let active =
-    page === "map"
+    page === "map" && homeVariant === "A"
       ? "map"
       : page === "splits"
         ? "splits"
         : page === "profile"
           ? "profile"
           : "home";
-  if (!page) screen = <Home open={setModal} />;
+  if (!page || (page === "map" && homeVariant !== "A"))
+    screen = <Home key={homeVariant} open={setModal} layout={homeVariant} />;
   else if (page === "map") screen = <MapScreen open={setModal} />;
   else if (page === "splits") screen = <Splits />;
   else if (page === "neighbours") screen = <NeighbourDirectory />;
@@ -926,11 +935,14 @@ function Root() {
   }
   return (
     <div className="app-layout">
-      <aside className="experiment-panel" aria-label="Confirmation A/B testing">
+      <aside
+        className="experiment-panel"
+        aria-label="Prototype testing controls"
+      >
         <span className="eyebrow">PROTOTYPE LAB · OUTSIDE THE APP</span>
-        <h2>Confirmation A/B test</h2>
+        <h2>Confirmation A/B/C test</h2>
         <div
-          className="experiment-options"
+          className="experiment-options confirmation-options"
           role="group"
           aria-label="Confirmation variant"
         >
@@ -946,9 +958,15 @@ function Root() {
           >
             B · Extra confirmation
           </button>
+          <button
+            aria-pressed={variant === "C"}
+            onClick={() => selectVariant("C")}
+          >
+            C · Confirm + countdown
+          </button>
         </div>
         <details className="experiment-rationale">
-          <summary>Why test these two?</summary>
+          <summary>Why test these confirmations?</summary>
           <p>
             <strong>A · Receipt countdown.</strong> Shows the amount and pickup
             steps, then reserves automatically after five seconds. People can
@@ -961,6 +979,12 @@ function Root() {
             control or adds an unnecessary step.
           </p>
           <p>
+            <strong>C · Confirm + countdown.</strong> Uses B’s “Are you sure?”
+            screen with A’s five-second countdown. People can confirm now or go
+            back before it reserves automatically. Test how the time limit
+            changes their decision on the same confirmation screen.
+          </p>
+          <p>
             Compare completion time, accidental reservations and confidence
             about the payment hold.
           </p>
@@ -969,6 +993,61 @@ function Root() {
           Sets your next checkout. Selecting an option does not play a preview
           or change a confirmation already in progress.
         </p>
+        <section
+          className="home-layout-experiment"
+          aria-label="Home and map A/B/C testing"
+        >
+          <h2>Home &amp; map A/B/C test</h2>
+          <div
+            className="experiment-options"
+            role="group"
+            aria-label="Home and map layout"
+          >
+            <button
+              aria-pressed={homeVariant === "A"}
+              onClick={() => selectHomeVariant("A")}
+            >
+              A · Separate
+            </button>
+            <button
+              aria-pressed={homeVariant === "B"}
+              onClick={() => selectHomeVariant("B")}
+            >
+              B · Map first
+            </button>
+            <button
+              aria-pressed={homeVariant === "C"}
+              onClick={() => selectHomeVariant("C")}
+            >
+              C · List first
+            </button>
+          </div>
+          <details className="experiment-rationale">
+            <summary>Why test these layouts?</summary>
+            <p>
+              <strong>A · Separate pages.</strong> The current Home feed and Map
+              tab. Compare how often people switch between them.
+            </p>
+            <p>
+              <strong>B · Map first.</strong> The map leads the combined Home
+              page, followed by filters and listings. Test whether location
+              helps people choose a deal.
+            </p>
+            <p>
+              <strong>C · List first.</strong> Three listings lead into the map,
+              followed by the remaining listings. Test whether seeing products
+              first helps people start browsing.
+            </p>
+            <p>
+              Compare time to find a suitable split, use of the map, and
+              scrolling. This selection is independent of the confirmation test.
+            </p>
+          </details>
+          <p className="experiment-caption">
+            Changes Home immediately; on other screens it applies when you
+            return Home.
+          </p>
+        </section>
         <DemoControls
           locked={page === "holding"}
           resetDemo={() => setModal("reset")}
@@ -991,7 +1070,13 @@ function Root() {
             </Empty>
           </>
         )}
-        {tab && <Navigation active={active} open={setModal} />}
+        {tab && (
+          <Navigation
+            active={active}
+            open={setModal}
+            combinedHome={homeVariant !== "A"}
+          />
+        )}
       </section>
       {modal && <Modals key={modal} type={modal} close={() => setModal("")} />}
     </div>

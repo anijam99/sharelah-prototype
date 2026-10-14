@@ -1,22 +1,33 @@
 import { dealCategories } from "./dealCatalog";
 import { SplitPrice } from "./DealPrice";
 import { DealRow, matchesDeal } from "./Deals";
-import { useState } from "react";
+import { Fragment, useState } from "react";
+import { HomeMap } from "./HomeMap";
 import { MapPin, Navigation, Search, SlidersHorizontal } from "lucide-react";
 import { Art, Button, Card, Empty, TopHeader } from "./ui";
 import { go } from "./router";
 import { TileMap } from "./TileMap";
 import { useStore } from "./store";
-import { money, owned, statusLabel, total, visibleProducts } from "./model";
+import {
+  completedSavings,
+  money,
+  owned,
+  statusLabel,
+  total,
+  visibleProducts,
+} from "./model";
+export type HomeVariant = "A" | "B" | "C";
 export type OpenModal = (type: string) => void;
 export function Home({
   open,
   search = false,
   saved = false,
+  layout = "A",
 }: {
   open: OpenModal;
   search?: boolean;
   saved?: boolean;
+  layout?: HomeVariant;
 }) {
   const { state } = useStore(),
     [category, setCategory] = useState(
@@ -25,6 +36,7 @@ export function Home({
     [query, setQuery] = useState(
       sessionStorage.getItem("sharelah-search") || "",
     );
+  const combined = layout !== "A" && !search && !saved;
   const products = saved
     ? state.products.filter((p) => state.saved.includes(p.id))
     : visibleProducts(state, search ? query : "", category);
@@ -34,7 +46,7 @@ export function Home({
   return (
     <>
       {!search && !saved && <TopHeader />}
-      <main className="page-scroll">
+      <main className="page-scroll" data-home-layout={layout}>
         <div className="content">
           {!search && !saved && (
             <>
@@ -48,6 +60,7 @@ export function Home({
               </button>
             </>
           )}
+          {combined && layout === "B" && <HomeMap products={products} />}
           {!saved &&
             (search ? (
               <label className="search-box">
@@ -110,8 +123,13 @@ export function Home({
               </button>
             )}
           </div>
-          {products.map((p) => (
-            <Card key={p.id} p={p} />
+          {products.map((p, index) => (
+            <Fragment key={p.id}>
+              <Card p={p} />
+              {combined && layout === "C" && index === 2 && (
+                <HomeMap products={products} />
+              )}
+            </Fragment>
           ))}
           {!products.length && !(search && deals.length) && (
             <Empty
@@ -131,6 +149,9 @@ export function Home({
                 ? "Save an offer to come back to it later."
                 : "Try another search, category or distance."}
             </Empty>
+          )}
+          {combined && layout === "C" && products.length < 3 && (
+            <HomeMap products={products} />
           )}
           {!saved && (
             <>
@@ -297,16 +318,7 @@ export function Splits() {
         : owned(state.reservations[p.id]) &&
           state.reservations[p.id].status !== "completed",
   );
-  const saved =
-    1420 +
-    state.products.reduce(
-      (v, p) =>
-        v +
-        (state.reservations[p.id]?.status === "completed"
-          ? Math.max(0, p.retailCents - total(p))
-          : 0),
-      0,
-    );
+  const saved = completedSavings(state);
   return (
     <>
       <TopHeader title="Splits" />

@@ -6,7 +6,10 @@ import { useStore } from "./store";
 import { go } from "./router";
 import { money, owned, reserve, total, type Product } from "./model";
 
-export type ConfirmationVariant = "A" | "B";
+export type ConfirmationVariant = "A" | "B" | "C";
+export function confirmationVariant(value: unknown): ConfirmationVariant {
+  return value === "B" || value === "C" ? value : "A";
+}
 export function ReservationCountdown({
   p,
   variant = "A",
@@ -18,7 +21,7 @@ export function ReservationCountdown({
   const [pending] = useState(() => ({
     deadline: Number(history.state?.holdDeadline) || 0,
     method: history.state?.holdMethod as string | undefined,
-    variant: (history.state?.holdVariant || variant) as ConfirmationVariant,
+    variant: confirmationVariant(history.state?.holdVariant || variant),
   }));
   const [remaining, setRemaining] = useState(() =>
     Math.max(0, pending.deadline - Date.now()),
@@ -63,7 +66,7 @@ export function ReservationCountdown({
 
   function cancel() {
     if (settled.current) return;
-    if (pending.variant === "A" && Date.now() >= pending.deadline) {
+    if (pending.variant !== "B" && Date.now() >= pending.deadline) {
       complete();
       return;
     }
@@ -191,17 +194,34 @@ export function ReservationCountdown({
       <Header title="Confirm reservation" label="Back" onBack={cancel} />
       <main className="page-scroll">
         <div className="content confirmation-question">
-          <ShieldCheck size={48} className="brand-text" aria-hidden="true" />
-          <h2>
-            {unavailable
-              ? "This portion is no longer available."
-              : "Are you sure?"}
-          </h2>
+          <div className="confirmation-question-heading">
+            <div>
+              <ShieldCheck
+                size={48}
+                className="brand-text"
+                aria-hidden="true"
+              />
+              <h2>
+                {unavailable
+                  ? "This portion is no longer available."
+                  : "Are you sure?"}
+              </h2>
+            </div>
+            {pending.variant === "C" && !unavailable && (
+              <DeadlineProgress deadline={pending.deadline} seconds={seconds} />
+            )}
+          </div>
           <p className="muted">
             {unavailable
               ? "No demo payment was held. Try another split."
               : `Reserve one portion and hold ${money(total(p))} using ${pending.method}?`}
           </p>
+          {pending.variant === "C" && !unavailable && (
+            <p className="fine">
+              Reserves automatically when the timer ends. Confirm now or go
+              back.
+            </p>
+          )}
           <div className="panel countdown-summary">
             <div className="product-line">
               <Art p={p} />

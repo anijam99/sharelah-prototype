@@ -2662,7 +2662,18 @@ legend {
   padding-top: 36px;
   gap: 20px;
 }
-.confirmation-question > h2 {
+.confirmation-question-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+.confirmation-question-heading > div:first-child {
+  display: grid;
+  gap: 20px;
+  min-width: 0;
+}
+.confirmation-question-heading h2 {
   font-size: 32px;
 }
 .confirmation-actions {
@@ -2891,4 +2902,86 @@ legend {
 }
 .compare-reference > p {
   font-size: 12px;
+}
+
+/* A separate experiment controls the home/map layout. */
+.home-layout-experiment {
+  border-top: 1px solid var(--border);
+  margin-top: 18px;
+  padding-top: 14px;
+}
+.home-layout-experiment h2 {
+  font-size: 18px;
+  margin: 0 0 12px;
+}
+.home-layout-experiment .experiment-options button,
+.confirmation-options button {
+  padding: 10px 5px;
+  font-size: 11px;
+}
+.home-map {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  margin: 4px 0 12px;
+}
+.home-map .map-heading h2 {
+  color: var(--ink);
+  font-size: 18px;
+}
+.home-map .map-viewport {
+  height: 260px;
+  min-height: 260px;
+  border-radius: 18px;
+}
+.home-map-preview {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px;
+  text-align: left;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: white;
+}
+.home-map-preview .product-art {
+  width: 48px;
+  height: 48px;
+}
+.home-map-preview > span {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+.home-map-preview strong {
+  font-size: 14px;
+}
+.home-map-preview small {
+  font-size: 11px;
+  color: var(--muted);
+}
+.home-map-preview b {
+  font-size: 13px;
+  color: var(--brand);
+}
+.home-map-preview > svg {
+  flex: none;
+  color: var(--brand);
+}
+@media (max-width: 899px) {
+  .home-layout-experiment {
+    margin-top: 8px;
+    padding-top: 8px;
+  }
+  .home-layout-experiment h2 {
+    display: block;
+    font-size: 11px;
+    margin-bottom: 6px;
+  }
+  .home-layout-experiment .experiment-options button {
+    min-height: 36px;
+    padding: 6px 5px;
+  }
 }

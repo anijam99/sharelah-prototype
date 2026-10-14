@@ -8,7 +8,12 @@ import {
   type ReactNode,
 } from "react";
 import { openDB } from "idb";
-import { initialState, refreshSeedProducts, type State } from "./model";
+import {
+  addDemoHistory,
+  initialState,
+  refreshSeedProducts,
+  type State,
+} from "./model";
 const KEY = "sharelah-demo-v1";
 function load() {
   try {
@@ -39,15 +44,17 @@ function load() {
           Number.isFinite(p.itemCents),
       )
     )
-      return normalizePersonas({
-        ...(value as State),
-        deals: mergePhotoDeals(value.deals),
-        products: refreshSeedProducts(value.products).map((p) =>
-          p.owner && value.joinedHosts[p.id] && p.available === p.shareCount
-            ? { ...p, available: Math.max(0, p.available - 1) }
-            : p,
-        ),
-      });
+      return normalizePersonas(
+        addDemoHistory({
+          ...(value as State),
+          deals: mergePhotoDeals(value.deals),
+          products: refreshSeedProducts(value.products).map((p) =>
+            p.owner && value.joinedHosts[p.id] && p.available === p.shareCount
+              ? { ...p, available: Math.max(0, p.available - 1) }
+              : p,
+          ),
+        }),
+      );
   } catch {}
   return initialState();
 }
