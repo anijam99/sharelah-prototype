@@ -6,21 +6,37 @@ import { go } from "./router";
 
 export function DemoControls({
   resetDemo,
+  freshAccount,
   locked,
 }: {
   resetDemo: () => void;
+  freshAccount: () => void;
   locked: boolean;
 }) {
   const { state, update } = useStore();
   const [photos, setPhotos] = useState(false);
   const [message, setMessage] = useState("");
   const hosted = state.products.filter((p) => p.owner && !p.closed);
-  const joined = state.products.filter((p) => owned(state.reservations[p.id]));
+  const joined = state.products.filter(
+    (p) =>
+      owned(state.reservations[p.id]) &&
+      state.reservations[p.id].status !== "completed",
+  );
   return (
     <>
       <details className="demo-controls">
         <summary>Demo settings & tools</summary>
         <fieldset disabled={locked}>
+          <h3>Account setup</h3>
+          <p className="demo-hint">
+            {state.accountMode === "fresh" ? "Fresh account" : "Seeded demo"} ·
+            Tom Chua
+          </p>
+          <button onClick={freshAccount}>Start fresh account</button>
+          <p className="demo-hint">
+            Start with no reviews, savings, completed splits, saved items or
+            messages. Nearby deals stay available to explore.
+          </p>
           <label>
             Demo neighbourhood
             <select

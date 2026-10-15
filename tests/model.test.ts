@@ -2,6 +2,8 @@ import { describe, it, expect } from "vitest";
 import {
   initialState,
   addDemoHistory,
+  addDemoExtras,
+  conversationStatus,
   completedSavings,
   reserve,
   cancelReservation,
@@ -13,6 +15,34 @@ import {
   total,
 } from "../src/model";
 describe("Reservation lifecycle", () => {
+  it("keeps fresh accounts empty across migrations while retaining browsable deals", () => {
+    const s = initialState("fresh");
+    expect(addDemoExtras(addDemoHistory(s))).toBe(s);
+    expect(s.reservations).toEqual({});
+    expect(s.saved).toEqual([]);
+    expect(s.messages).toEqual({});
+    expect(completedSavings(s)).toBe(0);
+    expect(visibleProducts(s).length).toBeGreaterThan(0);
+    expect(reserve(s, "yog").reservations.yog.status).toBe("ready");
+  });
+  it("seeds saved items and threads once without restoring removed saves", () => {
+    const s = initialState();
+    expect(s.saved).toHaveLength(2);
+    expect(
+      s.saved.every((id) => s.products.some((p) => p.id === id && !p.closed)),
+    ).toBe(true);
+    expect(Object.keys(s.messages)).toHaveLength(3);
+    expect(
+      Object.keys(s.messages).every((id) =>
+        conversationStatus(
+          s,
+          s.products.find((p) => p.id === id)!,
+        ),
+      ),
+    ).toBe(true);
+    s.saved = [];
+    expect(addDemoExtras(s).saved).toEqual([]);
+  });
   it("backs demo savings with closed completed history and preserves edits on reload", () => {
     const s = initialState();
     const past = s.products.filter(

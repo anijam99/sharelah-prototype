@@ -1,6 +1,7 @@
 import { Compare, CompareButton } from "./Compare";
-import { DemoControls } from "./DemoControls";
-import { joinHostedDeal } from "./model";
+import { PrototypeLab, useMobileLayout } from "./PrototypeLab";
+import { Inbox } from "./Inbox";
+import type { ReactNode } from "react";
 import { NeighbourDirectory, NeighbourProfile } from "./NeighbourProfiles";
 import { profileSummary } from "./people";
 import { Deals } from "./Deals";
@@ -456,12 +457,16 @@ function Modals({ type, close }: { type: string; close: () => void }) {
       </Button>
     );
   }
-  if (name === "reset") {
-    title = "Start a fresh demo?";
+  if (name === "reset" || name === "fresh-account") {
+    const fresh = name === "fresh-account";
+    title = fresh ? "Start with a fresh account?" : "Restore the seeded demo?";
     body = (
       <p>
-        This clears this browser’s reservations, messages, saved items, listings
-        and photos. Other testers are unaffected.
+        {fresh
+          ? "Start with no reviews, savings, completed splits, saved items or conversations. Nearby deals remain available."
+          : "Restore the sample account with savings, completed splits, reviews and saved items."}{" "}
+        This replaces this browser’s progress and clears cached photos. Other
+        testers are unaffected.
       </p>
     );
     footer = (
@@ -472,7 +477,7 @@ function Modals({ type, close }: { type: string; close: () => void }) {
           onClick={async () => {
             setBusy(true);
             try {
-              await reset();
+              await reset(fresh ? "fresh" : "seeded");
               Object.keys(sessionStorage)
                 .filter((k) => k.startsWith("sharelah-"))
                 .forEach((k) => sessionStorage.removeItem(k));
@@ -487,7 +492,11 @@ function Modals({ type, close }: { type: string; close: () => void }) {
             }
           }}
         >
-          {busy ? "Resetting…" : "Reset my demo"}
+          {busy
+            ? "Resetting…"
+            : fresh
+              ? "Start fresh account"
+              : "Reset my demo"}
         </Button>
         {error && <p role="alert">{error}</p>}
         <Button kind="secondary" onClick={close}>
@@ -505,7 +514,9 @@ function Modals({ type, close }: { type: string; close: () => void }) {
 function Profile({
   section,
   open,
+  testingControls,
 }: {
+  testingControls?: ReactNode;
   section?: string;
   open: (s: string) => void;
 }) {
@@ -535,7 +546,9 @@ function Profile({
                 <h2>{state.name}</h2>
               </div>
               <button onClick={() => go("/neighbour/tom")}>
-                {summary.average} ★ · View your reviews ›
+                {summary.reviews
+                  ? `${summary.average} ★ · View your reviews ›`
+                  : "No reviews yet · View your profile ›"}
               </button>
               <img src="/assets/brand.svg" alt="" />
               <div className="shared-edge" />
@@ -551,7 +564,7 @@ function Profile({
                   go("/splits");
                 }}
               >
-                <strong>{19 + completed.length}</strong>
+                <strong>{summary.completed}</strong>
                 <span>Completed splits</span>
               </button>
             </div>
@@ -571,7 +584,11 @@ function Profile({
               onClick={() => go("/messages")}
             />
             <Row
-              title="31 deals checked"
+              title={
+                state.accountMode === "fresh"
+                  ? "Your shared deals"
+                  : "31 deals checked"
+              }
               detail="Your contribution to the neighbourhood"
               onClick={() => go("/profile/activity")}
             />
@@ -604,22 +621,17 @@ function Profile({
         <div className="content">
           {section === "testing" ? (
             <>
-              <h2>A fresh start, whenever you need.</h2>
-              <p className="muted">
-                Only this browser is affected. These controls help explore the
-                host and pickup flows without another participant.
-              </p>
-              <Row
-                title="Tester persona"
-                detail="Tom Chua · Jerry is your demo neighbour"
-              />
+              {testingControls}
               <Button kind="secondary" onClick={() => open("reset")}>
-                <RotateCcw size={18} />
-                Reset my demo
+                <RotateCcw size={18} /> Reset my demo
               </Button>
               <h3>Pickup codes</h3>
               {state.products
-                .filter((p) => owned(state.reservations[p.id]))
+                .filter((p) =>
+                  ["reserved", "ready", "reported"].includes(
+                    state.reservations[p.id]?.status,
+                  ),
+                )
                 .map((p) => (
                   <div className="panel" key={p.id}>
                     <h3>{p.title}</h3>
@@ -647,25 +659,6 @@ function Profile({
                       </Button>
                     )}
                   </div>
-                ))}
-              <h3>Hosted listings</h3>
-              {state.products
-                .filter((p) => p.owner && !p.closed)
-                .map((p) => (
-                  <Row
-                    key={p.id}
-                    title={p.title}
-                    detail={
-                      state.joinedHosts[p.id]
-                        ? "Demo neighbour joined"
-                        : "No neighbour yet"
-                    }
-                    onClick={() => update((s) => joinHostedDeal(s, p.id))}
-                  >
-                    <span className="brand-text">
-                      {state.joinedHosts[p.id] ? "✓" : "Add Jerry"}
-                    </span>
-                  </Row>
                 ))}
               <p className="fine">
                 Messages, reservations and photographs are stored locally.
@@ -696,7 +689,11 @@ function Profile({
             <>
               <h2>A good eye for a good deal.</h2>
               <Row
-                title="31 deals checked"
+                title={
+                  state.accountMode === "fresh"
+                    ? "Your shared deals"
+                    : "31 deals checked"
+                }
                 detail="Sample community contributions"
               />
               {state.deals
@@ -811,6 +808,7 @@ function DealPage({ id }: { id: string }) {
   );
 }
 function Root() {
+  const mobile = useMobileLayout();
   const path = useRoute(),
     { state, storageError } = useStore(),
     [modal, setModal] = useState("");
@@ -836,6 +834,19 @@ function Root() {
   const [page, id, extra] = path.slice(1).split("/"),
     p = state.products.find((p) => p.id === id?.split("?")[0]);
   const tab = ["", "map", "splits", "profile"].includes(page) && !id;
+  const testingPage = page === "profile" && id === "testing";
+  const lab = (
+    <PrototypeLab
+      variant={variant}
+      selectVariant={selectVariant}
+      homeVariant={homeVariant}
+      selectHomeVariant={selectHomeVariant}
+      open={setModal}
+      locked={page === "holding"}
+      embedded={testingPage}
+    />
+  );
+
   let screen;
   let active =
     page === "map" && homeVariant === "A"
@@ -852,7 +863,13 @@ function Root() {
   else if (page === "neighbours") screen = <NeighbourDirectory />;
   else if (page === "neighbour") screen = <NeighbourProfile id={id} />;
   else if (page === "profile")
-    screen = <Profile section={id} open={setModal} />;
+    screen = (
+      <Profile
+        section={id}
+        open={setModal}
+        testingControls={testingPage ? lab : undefined}
+      />
+    );
   else if (page === "search" || page === "saved")
     screen = (
       <>
@@ -864,26 +881,7 @@ function Root() {
         />
       </>
     );
-  else if (page === "messages")
-    screen = (
-      <>
-        <Header title="Messages" />
-        <main className="page-scroll">
-          <div className="content">
-            {state.products
-              .filter((p) => !p.owner || state.joinedHosts[p.id])
-              .map((p) => (
-                <Row
-                  key={p.id}
-                  title={p.owner ? "Jerry" : p.host}
-                  detail={p.title}
-                  onClick={() => go("/chat/" + p.id)}
-                />
-              ))}
-          </div>
-        </main>
-      </>
-    );
+  else if (page === "messages") screen = <Inbox />;
   else if (page === "create" || page === "capture" || page === "report-deal")
     screen = (
       <Create
@@ -935,124 +933,7 @@ function Root() {
   }
   return (
     <div className="app-layout">
-      <aside
-        className="experiment-panel"
-        aria-label="Prototype testing controls"
-      >
-        <span className="eyebrow">PROTOTYPE LAB · OUTSIDE THE APP</span>
-        <h2>Confirmation A/B/C test</h2>
-        <div
-          className="experiment-options confirmation-options"
-          role="group"
-          aria-label="Confirmation variant"
-        >
-          <button
-            aria-pressed={variant === "A"}
-            onClick={() => selectVariant("A")}
-          >
-            A · Receipt countdown
-          </button>
-          <button
-            aria-pressed={variant === "B"}
-            onClick={() => selectVariant("B")}
-          >
-            B · Extra confirmation
-          </button>
-          <button
-            aria-pressed={variant === "C"}
-            onClick={() => selectVariant("C")}
-          >
-            C · Confirm + countdown
-          </button>
-        </div>
-        <details className="experiment-rationale">
-          <summary>Why test these confirmations?</summary>
-          <p>
-            <strong>A · Receipt countdown.</strong> Shows the amount and pickup
-            steps, then reserves automatically after five seconds. People can
-            undo or skip the wait. Test whether the pause gives enough time to
-            review without feeling slow.
-          </p>
-          <p>
-            <strong>B · Extra confirmation.</strong> Asks “Are you sure?” and
-            waits for an explicit decision. Test whether this gives people more
-            control or adds an unnecessary step.
-          </p>
-          <p>
-            <strong>C · Confirm + countdown.</strong> Uses B’s “Are you sure?”
-            screen with A’s five-second countdown. People can confirm now or go
-            back before it reserves automatically. Test how the time limit
-            changes their decision on the same confirmation screen.
-          </p>
-          <p>
-            Compare completion time, accidental reservations and confidence
-            about the payment hold.
-          </p>
-        </details>
-        <p className="experiment-caption">
-          Sets your next checkout. Selecting an option does not play a preview
-          or change a confirmation already in progress.
-        </p>
-        <section
-          className="home-layout-experiment"
-          aria-label="Home and map A/B/C testing"
-        >
-          <h2>Home &amp; map A/B/C test</h2>
-          <div
-            className="experiment-options"
-            role="group"
-            aria-label="Home and map layout"
-          >
-            <button
-              aria-pressed={homeVariant === "A"}
-              onClick={() => selectHomeVariant("A")}
-            >
-              A · Separate
-            </button>
-            <button
-              aria-pressed={homeVariant === "B"}
-              onClick={() => selectHomeVariant("B")}
-            >
-              B · Map first
-            </button>
-            <button
-              aria-pressed={homeVariant === "C"}
-              onClick={() => selectHomeVariant("C")}
-            >
-              C · List first
-            </button>
-          </div>
-          <details className="experiment-rationale">
-            <summary>Why test these layouts?</summary>
-            <p>
-              <strong>A · Separate pages.</strong> The current Home feed and Map
-              tab. Compare how often people switch between them.
-            </p>
-            <p>
-              <strong>B · Map first.</strong> The map leads the combined Home
-              page, followed by filters and listings. Test whether location
-              helps people choose a deal.
-            </p>
-            <p>
-              <strong>C · List first.</strong> Three listings lead into the map,
-              followed by the remaining listings. Test whether seeing products
-              first helps people start browsing.
-            </p>
-            <p>
-              Compare time to find a suitable split, use of the map, and
-              scrolling. This selection is independent of the confirmation test.
-            </p>
-          </details>
-          <p className="experiment-caption">
-            Changes Home immediately; on other screens it applies when you
-            return Home.
-          </p>
-        </section>
-        <DemoControls
-          locked={page === "holding"}
-          resetDemo={() => setModal("reset")}
-        />
-      </aside>
+      {!mobile && !testingPage && lab}
       <section className="app-frame">
         {storageError && (
           <div className="storage-error" role="alert">

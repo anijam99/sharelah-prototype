@@ -227,10 +227,86 @@ it("saves chat messages and restores them after the app is remounted", () => {
     target: { value: "I am at the entrance." },
   });
   click("Send message");
-  expect(saved().messages.yog[0].body).toBe("I am at the entrance.");
+  expect(saved().messages.yog.at(-1).body).toBe("I am at the entrance.");
   first.unmount();
   render(<App />);
   expect(screen.getByText("I am at the entrance.")).toBeTruthy();
+});
+
+it("starts a fresh account, preserves it after reload and restores seeded data on reset", async () => {
+  render(<App />);
+  navigate("/profile/testing");
+  fireEvent.click(screen.getByText("Demo settings & tools"));
+  click("Start fresh account");
+  fireEvent.click(
+    within(screen.getByRole("dialog")).getByRole("button", {
+      name: "Start fresh account",
+    }),
+  );
+  await waitFor(() => expect(location.hash).toBe("#/"));
+  expect(saved().accountMode).toBe("fresh");
+  expect(saved().reservations).toEqual({});
+  expect(saved().saved).toEqual([]);
+  expect(saved().messages).toEqual({});
+  navigate("/profile");
+  expect(
+    screen.getByRole("button", { name: "0 Completed splits" }),
+  ).toBeTruthy();
+  expect(
+    screen.getByRole("button", { name: "S$0.00 Total saved" }),
+  ).toBeTruthy();
+  expect(screen.getByText("No reviews yet · View your profile ›")).toBeTruthy();
+  navigate("/neighbour/tom");
+  expect(document.querySelectorAll(".neighbour-review")).toHaveLength(0);
+  expect(screen.queryByText(/NaN/)).toBeNull();
+  cleanup();
+  render(<App />);
+  navigate("/splits");
+  click("Past");
+  expect(screen.getByText("Your shared wins will live here.")).toBeTruthy();
+  navigate("/messages");
+  expect(screen.getByText("No conversations yet")).toBeTruthy();
+  expect(saved().reservations).toEqual({});
+  navigate("/profile/testing");
+  click("Reset my demo");
+  fireEvent.click(
+    within(screen.getByRole("dialog")).getByRole("button", {
+      name: "Reset my demo",
+    }),
+  );
+  await waitFor(() => expect(location.hash).toBe("#/"));
+  expect(saved().accountMode).toBe("seeded");
+  expect(saved().saved).toHaveLength(2);
+  expect(saved().reservations["past-demo-detergent"].status).toBe("completed");
+});
+
+it("shows only split conversations and labels current and completed threads", () => {
+  render(<App />);
+  const previous = saved();
+  cleanup();
+  previous.messages.det = [
+    {
+      id: "orphan",
+      body: "Unrelated offer enquiry",
+      mine: true,
+      time: new Date().toISOString(),
+    },
+  ];
+  localStorage.setItem("sharelah-demo-v1", JSON.stringify(previous));
+  render(<App />);
+  navigate("/messages");
+  expect(document.querySelectorAll(".inbox-group .row-card")).toHaveLength(3);
+  expect(screen.getByText("Current split · Ready for pickup")).toBeTruthy();
+  expect(screen.getByText("Completed split · 11 Oct 2026")).toBeTruthy();
+  expect(screen.queryByText("Unrelated offer enquiry")).toBeNull();
+  click(/Jerry · TOP liquid laundry detergent/);
+  expect(screen.getByText("Completed split · 11 Oct 2026")).toBeTruthy();
+  expect(screen.getByText("Collected, thank you for sharing!")).toBeTruthy();
+  expect(
+    screen.queryByText(
+      "Hi! We can meet at the pickup point shown in your split.",
+    ),
+  ).toBeNull();
 });
 
 it("validates a new listing, computes its portions, publishes it, and resets only local demo data", async () => {

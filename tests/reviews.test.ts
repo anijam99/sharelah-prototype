@@ -22,6 +22,31 @@ it("accepts reviews only for completed splits with a valid star rating", () => {
   ).toHaveLength(1000);
 });
 
+it("starts fresh profiles with no reviews, rating or completed split count", () => {
+  const state = initialState("fresh");
+  expect(reviewsFor(state, "tom")).toEqual([]);
+  expect(profileSummary(state, "tom")).toEqual({
+    average: "—",
+    reviews: 0,
+    completed: 0,
+  });
+  const completed = complete(
+    {
+      ...state,
+      reservations: {
+        yog: {
+          status: "ready",
+          method: state.payment,
+          createdAt: new Date().toISOString(),
+        },
+      },
+    },
+    "yog",
+    true,
+  );
+  expect(profileSummary(completed, "tom").completed).toBe(1);
+});
+
 it("combines reviews across Jerry's splits and replaces an edited review", () => {
   let state = saveReview(
     complete(initialState(), "yog", true),

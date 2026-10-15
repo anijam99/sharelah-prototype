@@ -10,6 +10,7 @@ import { Camera } from "./Camera";
 import { back, finish, go } from "./router";
 import { useStore } from "./store";
 import {
+  conversationStatus,
   complete,
   money,
   owned,
@@ -566,14 +567,20 @@ export function Chat({ p }: { p: Product }) {
             detail="Read reviews from split partners"
             onClick={() => go("/neighbour/jerry")}
           />
-          <Row title={p.title} detail={p.portion} />
+          <Row
+            title={p.title}
+            detail={
+              conversationStatus(state, p) === "Completed split"
+                ? `Completed split · ${p.date}`
+                : `Current split · ${p.portion}`
+            }
+          />
           <p className="chat-demo">
             Demo conversation · messages stay on this device
           </p>
-          <div className="bubble">
-            <p>Hi! We can meet at the pickup point shown in your split.</p>
-            <small>Today · 5:42 pm</small>
-          </div>
+          {!messages.length && (
+            <p className="muted">No messages yet. Arrange your pickup here.</p>
+          )}
           {messages.map((m) => (
             <div className={"bubble " + (m.mine ? "mine" : "")} key={m.id}>
               <p>{m.body}</p>

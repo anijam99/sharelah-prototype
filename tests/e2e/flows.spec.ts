@@ -251,6 +251,7 @@ test("radius changes zoom and deal availability", async ({ page }) => {
 test("confirmation A/B/C selection only sets the next checkout and persists", async ({
   page,
 }) => {
+  await page.setViewportSize({ width: 1280, height: 664 });
   await page.goto("/");
   const before = await page.evaluate(() =>
     localStorage.getItem("sharelah-demo-v1"),
@@ -278,6 +279,7 @@ test("confirmation A/B/C selection only sets the next checkout and persists", as
 test("extra confirmation waits for a decision even after refresh and changing variants", async ({
   page,
 }) => {
+  await page.setViewportSize({ width: 1280, height: 664 });
   await page.goto("/");
   await page.getByRole("button", { name: "B · Extra confirmation" }).click();
   await page
@@ -327,6 +329,7 @@ test("extra confirmation waits for a decision even after refresh and changing va
 test("receipt countdown can skip the wait and changing variants does not interrupt it", async ({
   page,
 }) => {
+  await page.setViewportSize({ width: 1280, height: 664 });
   await page.goto("/#/offer/det");
   await page.getByRole("button", { name: "Reserve a portion" }).click();
   await page.getByRole("button", { name: "Confirm & hold S$10.65" }).click();
@@ -351,6 +354,7 @@ test("receipt countdown can skip the wait and changing variants does not interru
 test("confirmation C shows B's question with a top-right countdown and can cancel or proceed early", async ({
   page,
 }) => {
+  await page.setViewportSize({ width: 1280, height: 664 });
   const now = new Date("2026-10-14T12:00:00Z");
   await page.clock.install({ time: now });
   await page.clock.pauseAt(now);
@@ -407,6 +411,7 @@ test("confirmation C shows B's question with a top-right countdown and can cance
 test("outside demo controls let Jerry join once and reset the hosted split", async ({
   page,
 }) => {
+  await page.setViewportSize({ width: 1280, height: 664 });
   await page.goto("/");
   await page.evaluate(() => {
     const state = JSON.parse(localStorage.getItem("sharelah-demo-v1")!);
@@ -460,6 +465,7 @@ test("outside demo controls let Jerry join once and reset the hosted split", asy
 test("price-tag photos survive reload, can be reused, and are cleared by reset", async ({
   page,
 }) => {
+  await page.setViewportSize({ width: 1280, height: 664 });
   await page.goto("/#/report-deal");
   await page
     .locator('input[type="file"]')
@@ -716,6 +722,7 @@ test("compares brands, quantities, return travel and delivery fees", async ({
 test("home layouts A, B and C preserve the feed while changing map placement", async ({
   page,
 }) => {
+  await page.setViewportSize({ width: 1280, height: 664 });
   await page.route("https://tiles.openfreemap.org/**", (route) =>
     route.fulfill({
       contentType: "application/json",
@@ -823,6 +830,7 @@ test("home layouts A, B and C preserve the feed while changing map placement", a
 test("home layout settings stay independent of an active confirmation", async ({
   page,
 }) => {
+  await page.setViewportSize({ width: 1280, height: 664 });
   await page.goto("/");
   await page
     .getByRole("button", { name: "B · Extra confirmation", exact: true })
@@ -864,4 +872,103 @@ test("home layout settings stay independent of an active confirmation", async ({
   await page.getByRole("button", { name: "Go back", exact: true }).click();
   await page.goto("/");
   await expect(page.locator('[data-home-layout="C"]')).toBeVisible();
+});
+
+test("mobile testing controls live in Profile and fresh accounts stay empty after reload", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await expect(page.getByRole("complementary")).toHaveCount(0);
+  const frame = (await page.locator(".app-frame").boundingBox())!;
+  expect(frame.y).toBe(0);
+  expect(frame.height).toBe(page.viewportSize()!.height);
+  await page.screenshot({ path: "/tmp/sharelah-mobile-full-home.png" });
+  await page
+    .getByRole("navigation")
+    .getByRole("button", { name: "Profile", exact: true })
+    .click();
+  await page.getByRole("button", { name: /Testing controls/ }).click();
+  const lab = page.getByRole("complementary", {
+    name: "Prototype testing controls",
+  });
+  await expect(lab).toBeVisible();
+  await expect(page.locator(".app-frame .testing-lab")).toHaveCount(1);
+  await page
+    .getByRole("button", { name: "C · Confirm + countdown", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "B · Map first", exact: true })
+    .click();
+  await expect(page.getByRole("timer")).toHaveCount(0);
+  await lab.getByText("Demo settings & tools", { exact: true }).click();
+  await page.screenshot({ path: "/tmp/sharelah-mobile-testing.png" });
+  await lab
+    .getByRole("button", { name: "Start fresh account", exact: true })
+    .click();
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Start fresh account", exact: true })
+    .click();
+  await expect(page).toHaveURL(/#\/$/);
+  await page.reload();
+  const state = await page.evaluate(() =>
+    JSON.parse(localStorage.getItem("sharelah-demo-v1")!),
+  );
+  expect(state.accountMode).toBe("fresh");
+  expect(state.reservations).toEqual({});
+  expect(state.saved).toEqual([]);
+  expect(state.messages).toEqual({});
+  expect(
+    await page.evaluate(() =>
+      localStorage.getItem("sharelah-confirmation-variant"),
+    ),
+  ).toBe("C");
+  expect(
+    await page.evaluate(() => localStorage.getItem("sharelah-home-variant")),
+  ).toBe("B");
+  await page.goto("/#/profile");
+  await expect(
+    page.getByRole("button", { name: "0 Completed splits", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "S$0.00 Total saved", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("No reviews yet · View your profile ›"),
+  ).toBeVisible();
+  await page.screenshot({ path: "/tmp/sharelah-mobile-fresh-profile.png" });
+  await page.goto("/#/messages");
+  await expect(
+    page.getByRole("heading", { name: "No conversations yet" }),
+  ).toBeVisible();
+  await page.goto("/#/profile/testing");
+  await page
+    .getByRole("button", { name: "Reset my demo", exact: true })
+    .click();
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Reset my demo", exact: true })
+    .click();
+  await expect(page).toHaveURL(/#\/$/);
+  await page.goto("/#/saved");
+  await expect(page.locator(".offer-card")).toHaveCount(2);
+  await page.goto("/#/messages");
+  await expect(page.locator(".inbox-group .row-card")).toHaveCount(3);
+  await expect(
+    page
+      .getByRole("region", { name: "Current conversations" })
+      .getByRole("button"),
+  ).toHaveCount(1);
+  await expect(
+    page
+      .getByRole("region", { name: "Completed conversations" })
+      .getByRole("button"),
+  ).toHaveCount(2);
+  await page.screenshot({ path: "/tmp/sharelah-mobile-inbox.png" });
+  await page
+    .getByRole("button", { name: /Jerry · TOP liquid laundry detergent/ })
+    .click();
+  await expect(
+    page.getByText("Completed split · 11 Oct 2026", { exact: true }),
+  ).toBeVisible();
 });

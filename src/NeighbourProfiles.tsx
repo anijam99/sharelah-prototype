@@ -87,6 +87,11 @@ export function NeighbourProfile({ id }: { id: string }) {
             <h2>Reviews</h2>
             <span className="fine">From split partners</span>
           </div>
+          {!reviews.length && (
+            <p className="muted">
+              No reviews yet. Reviews appear after completed splits.
+            </p>
+          )}
           {reviews.map((r) => (
             <article key={r.id} className="panel neighbour-review">
               <div className="review-byline">

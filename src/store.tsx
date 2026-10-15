@@ -10,6 +10,7 @@ import {
 import { openDB } from "idb";
 import {
   addDemoHistory,
+  addDemoExtras,
   initialState,
   refreshSeedProducts,
   type State,
@@ -45,15 +46,17 @@ function load() {
       )
     )
       return normalizePersonas(
-        addDemoHistory({
-          ...(value as State),
-          deals: mergePhotoDeals(value.deals),
-          products: refreshSeedProducts(value.products).map((p) =>
-            p.owner && value.joinedHosts[p.id] && p.available === p.shareCount
-              ? { ...p, available: Math.max(0, p.available - 1) }
-              : p,
-          ),
-        }),
+        addDemoExtras(
+          addDemoHistory({
+            ...(value as State),
+            deals: mergePhotoDeals(value.deals),
+            products: refreshSeedProducts(value.products).map((p) =>
+              p.owner && value.joinedHosts[p.id] && p.available === p.shareCount
+                ? { ...p, available: Math.max(0, p.available - 1) }
+                : p,
+            ),
+          }),
+        ),
       );
   } catch {}
   return initialState();
@@ -62,7 +65,7 @@ const Context = createContext<null | {
   state: State;
   update: (fn: (s: State) => State) => void;
   storageError: string;
-  reset: () => Promise<void>;
+  reset: (mode?: "seeded" | "fresh") => Promise<void>;
 }>(null);
 export function Provider({ children }: { children: ReactNode }) {
   const [state, setState] = useState(load),
@@ -80,10 +83,10 @@ export function Provider({ children }: { children: ReactNode }) {
   function update(fn: (s: State) => State) {
     setState(fn);
   }
-  async function reset() {
+  async function reset(mode: "seeded" | "fresh" = "seeded") {
     if (typeof indexedDB !== "undefined")
       await (await photoDB()).clear("photos");
-    update(() => initialState());
+    update(() => initialState(mode));
   }
   return (
     <Context value={{ state, update, storageError, reset }}>{children}</Context>

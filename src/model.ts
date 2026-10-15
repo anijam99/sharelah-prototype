@@ -63,6 +63,8 @@ export type Deal = {
 };
 export type State = {
   version: 1;
+  accountMode?: "seeded" | "fresh";
+  demoExtrasAdded?: boolean;
   products: Product[];
   reservations: Record<string, Reservation>;
   saved: string[];
@@ -303,6 +305,7 @@ const demoHistory = [
 
 /** Backfill the demo history once while preserving all existing local progress. */
 export function addDemoHistory(state: State): State {
+  if (state.accountMode === "fresh") return state;
   const products = [...state.products];
   const reservations = { ...state.reservations };
   for (const entry of demoHistory) {
@@ -335,31 +338,85 @@ export function addDemoHistory(state: State): State {
   return { ...state, products, reservations };
 }
 
-export function initialState(): State {
-  return addDemoHistory({
-    version: 1,
-    products: structuredClone(seedProducts),
-    reservations: {
-      yog: {
-        status: "ready",
-        method: "Visa •••• 4242",
-        createdAt: new Date().toISOString(),
-      },
-    },
-    saved: [],
-    messages: {},
-    drafts: {},
-    deals: structuredClone(seedDeals),
-    area: "Bugis",
-    radius: 500,
-    sort: "Nearest first",
-    payment: "Visa •••• 4242",
-    notify: false,
-    name: "Tom Chua",
-    joinedHosts: {},
-    createDraft: {},
-    started: false,
-  });
+/** Add seeded saves and split threads once, without restoring removed saves. */
+export function addDemoExtras(state: State): State {
+  if (state.accountMode === "fresh" || state.demoExtrasAdded) return state;
+  const thread = (
+    id: string,
+    date: string,
+    first: string,
+    reply: string,
+  ): Message[] => [
+    { id: `demo-${id}-1`, body: first, mine: false, time: date },
+    { id: `demo-${id}-2`, body: reply, mine: true, time: date },
+  ];
+  const messages = { ...state.messages };
+  const seeds = {
+    yog: thread(
+      "yog",
+      "2026-10-15T09:42:00.000Z",
+      "Your yoghurt is ready! Meet at the Bugis+ entrance at 6:30?",
+      "Sounds good, see you there!",
+    ),
+    "past-demo-detergent": thread(
+      "det",
+      "2026-10-11T11:00:00.000Z",
+      "I’m at Bras Basah Exit A with your sealed bottle.",
+      "Collected, thank you for sharing!",
+    ),
+    "past-demo-tumbler": thread(
+      "tumbler",
+      "2026-10-09T10:30:00.000Z",
+      "I have your tumbler. I’ll wait by the Bugis+ entrance.",
+      "Got it—thanks Jerry!",
+    ),
+  };
+  for (const [id, items] of Object.entries(seeds)) {
+    if (!messages[id]) messages[id] = items;
+  }
+  return {
+    ...state,
+    demoExtrasAdded: true,
+    saved: [...new Set([...state.saved, "det", "sample-demo-tumbler"])],
+    messages,
+  };
+}
+
+export function initialState(
+  accountMode: "seeded" | "fresh" = "seeded",
+): State {
+  return addDemoExtras(
+    addDemoHistory({
+      version: 1,
+      accountMode,
+      products: structuredClone(seedProducts).map((p) =>
+        accountMode === "fresh" && p.id === "yog" ? { ...p, available: 1 } : p,
+      ),
+      reservations:
+        accountMode === "fresh"
+          ? {}
+          : {
+              yog: {
+                status: "ready",
+                method: "Visa •••• 4242",
+                createdAt: new Date().toISOString(),
+              },
+            },
+      saved: [],
+      messages: {},
+      drafts: {},
+      deals: structuredClone(seedDeals),
+      area: "Bugis",
+      radius: 500,
+      sort: "Nearest first",
+      payment: "Visa •••• 4242",
+      notify: false,
+      name: "Tom Chua",
+      joinedHosts: {},
+      createDraft: {},
+      started: false,
+    }),
+  );
 }
 export const money = (cents: number) => "S$" + (cents / 100).toFixed(2);
 export const total = (p: Product) => p.itemCents + 15;
@@ -373,6 +430,14 @@ export const completedSavings = (s: State) =>
     0,
   );
 export const owned = (r?: Reservation) => !!r && r.status !== "cancelled";
+export function conversationStatus(s: State, p: Product) {
+  const r = s.reservations[p.id];
+  if (r?.status === "completed" || (p.owner && p.closed && s.joinedHosts[p.id]))
+    return "Completed split";
+  if (owned(r) || (p.owner && !p.closed && s.joinedHosts[p.id]))
+    return "Current split";
+  return null;
+}
 export function statusLabel(r?: Reservation) {
   return r?.status === "completed"
     ? "Completed"

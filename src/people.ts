@@ -47,7 +47,7 @@ const sampleReviews: NeighbourReview[] = [
     rating: 5,
     comment:
       "Clear messages and the sealed pack we agreed on. Would split with Jerry again.",
-    split: "Carefree breathable unscented liners",
+    split: "TOP liquid laundry detergent",
     date: "2026-10-09T11:00:00.000Z",
     sample: true,
   },
@@ -121,21 +121,28 @@ export function reviewsFor(state: State, person: PersonId): NeighbourReview[] {
   });
   return [
     ...submitted,
-    ...sampleReviews.filter((r) => r.subject === person),
+    ...sampleReviews.filter(
+      (r) => r.subject === person && state.accountMode !== "fresh",
+    ),
   ].sort((a, b) => b.date.localeCompare(a.date));
 }
 export function profileSummary(state: State, person: PersonId) {
   const reviews = reviewsFor(state, person);
-  const average =
-    reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length;
+  const average = reviews.length
+    ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
+    : 0;
   const completed =
-    people[person].completed +
+    (state.accountMode === "fresh" ? 0 : people[person].completed) +
     state.products.filter(
       (p) =>
         (person === "tom" || hostPerson(p) === person) &&
         state.reservations[p.id]?.status === "completed",
     ).length;
-  return { average: average.toFixed(1), reviews: reviews.length, completed };
+  return {
+    average: reviews.length ? average.toFixed(1) : "—",
+    reviews: reviews.length,
+    completed,
+  };
 }
 // Existing local progress keeps its IDs and reservations, with the two personas applied.
 export function normalizePersonas(state: State): State {

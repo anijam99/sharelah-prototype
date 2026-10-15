@@ -2985,3 +2985,68 @@ legend {
     padding: 6px 5px;
   }
 }
+
+/* Mobile testing controls live inside Profile, leaving the app its full viewport. */
+.testing-lab {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.testing-lab h2,
+.testing-lab .home-layout-experiment h2 {
+  display: block;
+  font-size: 20px;
+  margin: 0 0 12px;
+}
+.testing-lab .experiment-caption {
+  display: block;
+  font-size: 12px;
+}
+.testing-lab .experiment-options button,
+.testing-lab .demo-controls button {
+  min-height: 44px;
+}
+.testing-lab .demo-controls,
+.testing-lab .experiment-rationale {
+  font-size: 13px;
+}
+.testing-lab .demo-controls select {
+  min-height: 44px;
+  font-size: 16px;
+}
+.inbox-group {
+  display: grid;
+  gap: 8px;
+}
+.inbox-group h2 {
+  font-size: 18px;
+  margin: 8px 0;
+}
+.inbox-group .row-card > span {
+  min-width: 0;
+}
+.conversation-status,
+.conversation-preview {
+  display: block;
+  margin-top: 5px;
+}
+.conversation-status {
+  color: var(--brand);
+  font-weight: 600;
+}
+.conversation-preview {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+@media (max-width: 899px) {
+  .app-layout > .experiment-panel {
+    display: none;
+  }
+  .app-layout {
+    gap: 0;
+  }
+  .app-frame {
+    height: 100dvh;
+  }
+}
