@@ -156,13 +156,13 @@ export function ReservationCountdown({
                   <div>
                     <strong>
                       {p.purchased
-                        ? "Your item is ready"
-                        : `${p.host} buys the bundle`}
+                        ? `${p.host} accepts your request`
+                        : `${p.host} accepts and buys the bundle`}
                     </strong>
                     <span>
                       {p.purchased
-                        ? "Arrange your pickup with your neighbour."
-                        : "We’ll let you know when it’s ready."}
+                        ? "Hosts check your profile first. Then arrange your pickup."
+                        : "Hosts check your profile first. We’ll let you know when it’s ready."}
                     </span>
                   </div>
                 </li>
@@ -180,7 +180,6 @@ export function ReservationCountdown({
                 Payment is released only after you confirm collection.
               </p>
             </div>
-            <p className="fine center">Demo payment · no real charge</p>
           </div>
         </main>
         <div className="receipt-undo-bar">
@@ -229,7 +228,7 @@ export function ReservationCountdown({
           </div>
           <p className="muted">
             {unavailable
-              ? "No demo payment was held. Try another split."
+              ? "No payment was held. Try another split."
               : `Reserve ${pending.quantity > 1 ? `${pending.quantity} portions` : "one portion"} and hold ${amount} using ${pending.method}?`}
           </p>
           {pending.variant === "C" && !unavailable && (
@@ -252,8 +251,7 @@ export function ReservationCountdown({
             <Row title={p.place} detail={p.date + " · " + p.time} />
           </div>
           <p className="fine">
-            Payment is released only after you confirm collection. Demo payment
-            · no real charge.
+            Payment is released only after you confirm collection.
           </p>
         </div>
       </main>

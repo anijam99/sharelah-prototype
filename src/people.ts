@@ -1,4 +1,4 @@
-import type { Product, State } from "./model";
+import { acceptedJoiners, type Product, type State } from "./model";
 export type PersonId = "jerry" | "tom";
 export const people = {
   jerry: {
@@ -18,6 +18,7 @@ export const people = {
   { name: string; initials: string; bio: string; completed: number }
 >;
 export const hostPerson = (p: Product): PersonId => (p.owner ? "tom" : "jerry");
+export const isPerson = (id: string): id is PersonId => id in people;
 export type NeighbourReview = {
   id: string;
   subject: PersonId;
@@ -157,5 +158,19 @@ export function normalizePersonas(state: State): State {
       ...state.createDraft,
       ...(state.createDraft.host ? { host: "Tom" } : {}),
     },
+  };
+}
+
+/** Who a split's chat is with: the host, or everyone Tom accepted into his split. */
+export function chatPartner(state: State, p: Product) {
+  if (!p.owner) return { name: p.host, id: hostPerson(p) as PersonId };
+  const ids = acceptedJoiners(state, p.id)
+    .map((r) => r.person)
+    .filter(isPerson);
+  return {
+    name: ids.length
+      ? ids.map((id) => people[id].name.split(" ")[0]).join(", ")
+      : "Your split",
+    id: ids[0],
   };
 }

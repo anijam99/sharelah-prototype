@@ -15,16 +15,9 @@ import {
 import { Provider, useStore } from "./store";
 import { Header, Button, Empty, Icon } from "./ui";
 import { Home, MapScreen, Splits, type HomeVariant } from "./Browse";
-import {
-  Chat,
-  Directions,
-  Hosting,
-  MySplit,
-  Offer,
-  Pickup,
-  Problem,
-} from "./Journey";
-import { Create } from "./Create";
+import { Hosting } from "./Hosting";
+import { Chat, Directions, MySplit, Offer, Pickup, Problem } from "./Journey";
+import { Create, createVariant, type CreateVariant } from "./Create";
 import { go, parseRoute, useRoute } from "./router";
 
 function Navigation({
@@ -93,6 +86,10 @@ function Root() {
     "sharelah-home-variant",
     (v) => (v === "B" || v === "C" ? v : "A"),
   );
+  const [createLayout, selectCreateLayout] = useStoredVariant<CreateVariant>(
+    "sharelah-create-variant",
+    createVariant,
+  );
   function selectHomeVariant(value: HomeVariant) {
     setHomeVariant(value);
     if (path === "/map" && value !== "A") go("/", undefined, true);
@@ -110,6 +107,8 @@ function Root() {
       selectVariant={selectVariant}
       homeVariant={homeVariant}
       selectHomeVariant={selectHomeVariant}
+      createLayout={createLayout}
+      selectCreateLayout={selectCreateLayout}
       open={setModal}
       locked={page === "holding"}
       embedded={testingPage}
@@ -163,6 +162,7 @@ function Root() {
         stage={
           page === "create" ? Math.min(4, Math.max(1, Number(id) || 1)) : 1
         }
+        layout={createLayout}
       />
     );
   else if (page === "compare") {

@@ -280,7 +280,8 @@ export function Camera({
         onChange={(e) => void upload(e.target.files?.[0])}
       />
       <p className="fine">
-        Photos and camera frames stay in this browser. No audio is requested.
+        Your photos stay on your phone until you share them. No audio is
+        recorded.
       </p>
     </div>
   );

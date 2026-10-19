@@ -36,6 +36,13 @@ test("browse, reserve, change payment, cancel, and reset", async ({ page }) => {
     /Confirmation in [1-5] seconds/,
   );
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+    "Request sent",
+    { timeout: 7000 },
+  );
+  await expect(
+    page.getByText("Jerry is reviewing your request."),
+  ).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(
     "My reservation",
     { timeout: 7000 },
   );
@@ -114,9 +121,7 @@ test("map restores selection and shows ownership", async ({ page }) => {
   ).toBeVisible();
 
   await page.getByRole("button", { name: "Near me" }).click();
-  await expect(
-    page.getByRole("img", { name: "Your sample location at SMU Campus Green" }),
-  ).toBeVisible();
+  await expect(page.getByRole("img", { name: "Your location" })).toBeVisible();
   await expect
     .poll(async () => {
       const center = await page.evaluate(() =>
@@ -399,9 +404,12 @@ test("confirmation C shows B's question with a top-right countdown and can cance
     .getByRole("button", { name: "Yes, reserve & hold S$10.65" })
     .click();
   await expect(
-    page.getByRole("heading", { name: "My reservation" }),
+    page.getByRole("heading", { name: "Request sent" }),
   ).toBeVisible();
   await page.clock.runFor(6000);
+  await expect(
+    page.getByRole("heading", { name: "My reservation" }),
+  ).toBeVisible();
   const state = await page.evaluate(() =>
     JSON.parse(localStorage.getItem("sharelah-demo-v1")!),
   );
@@ -411,7 +419,7 @@ test("confirmation C shows B's question with a top-right countdown and can cance
   expect(state.reservations.det.status).toBe("reserved");
 });
 
-test("outside demo controls let Jerry join once and reset the hosted split", async ({
+test("the host reviews Jerry's join request, declines, then accepts when he asks again", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1280, height: 664 });
@@ -430,10 +438,22 @@ test("outside demo controls let Jerry join once and reset the hosted split", asy
   await page.reload();
   const lab = page.getByRole("complementary");
   await lab.getByText("Demo settings & tools", { exact: true }).click();
-  await lab.getByRole("button", { name: "Jerry joins this split" }).click();
+  const ask = () => lab.getByRole("button", { name: "Request from Jerry" });
+  await ask().click();
   await expect(
-    lab.getByRole("button", { name: "Jerry has joined" }),
+    lab.getByRole("button", { name: "Jerry has asked" }),
   ).toBeDisabled();
+  await expect(
+    page.getByRole("heading", { name: "Someone wants to join." }),
+  ).toBeVisible();
+  const requests = page.getByRole("region", { name: "Requests to join" });
+  await expect(requests).toContainText("4.7");
+  await requests.getByRole("button", { name: "Decline" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Your split is live." }),
+  ).toBeVisible();
+  await ask().click();
+  await requests.getByRole("button", { name: "Accept" }).click();
   await expect(
     page.getByRole("heading", { name: "Your neighbour is in." }),
   ).toBeVisible();
@@ -1050,4 +1070,80 @@ test("asks the host a question before reserving and finds it in the inbox", asyn
   await expect(
     page.getByRole("region", { name: "Questions to hosts" }),
   ).toContainText("TOP liquid laundry detergent");
+});
+
+test("the host can remove an accepted neighbour before buying", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.evaluate(() => {
+    const state = JSON.parse(localStorage.getItem("sharelah-demo-v1")!);
+    state.products.push({
+      ...state.products[1],
+      id: "hosted-remove",
+      owner: true,
+      available: 1,
+    });
+    state.joinRequests["hosted-remove"] = [
+      { person: "jerry", quantity: 1, status: "accepted", at: "" },
+    ];
+    state.products.at(-1).available = 0;
+    localStorage.setItem("sharelah-demo-v1", JSON.stringify(state));
+  });
+  await page.goto("/#/hosting/hosted-remove");
+  await page.reload();
+  const inSplit = page.getByRole("region", { name: "In this split" });
+  await expect(inSplit).toContainText("Jerry");
+  await inSplit.getByRole("button", { name: "Remove from split" }).click();
+  await page
+    .getByRole("dialog", { name: "Remove Jerry?" })
+    .getByRole("button", { name: "Remove from split" })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Your split is live." }),
+  ).toBeVisible();
+  await expect(page.getByText("1 of 1 portions available")).toBeVisible();
+});
+
+test("a declined request releases the hold and explains why", async ({
+  page,
+}) => {
+  await page.goto("/#/offer/det");
+  await page.getByRole("button", { name: "Reserve a portion" }).click();
+  await page.getByRole("button", { name: "Confirm & hold S$10.65" }).click();
+  await page.getByRole("button", { name: "Looks good, proceed" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Request sent" }),
+  ).toBeVisible();
+  await page.goto("/#/profile/testing");
+  await page.getByRole("button", { name: "Simulate host declining" }).click();
+  await page.goto("/#/split/det");
+  await expect(
+    page.getByRole("heading", { name: "Request declined" }),
+  ).toBeVisible();
+  await expect(page.getByText(/S\$10\.65 hold was released/)).toBeVisible();
+});
+
+test("the prototype lab switches Start a split between steps and one page mid-flow", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/#/create/1");
+  const lab = page.getByRole("complementary");
+  await expect(page.getByText("Step 1 of 4")).toBeVisible();
+  await page.getByLabel("Item name").fill("Kirin Ichiban beer six-pack");
+  await lab.getByRole("button", { name: "B · One page" }).click();
+  await expect(page.getByText("Step 1 of 4")).toHaveCount(0);
+  await expect(page.getByLabel("Item name")).toHaveValue(
+    "Kirin Ichiban beer six-pack",
+  );
+  await expect(
+    page.getByRole("region", { name: /Portions & price/ }),
+  ).toBeVisible();
+  await page.reload();
+  await expect(
+    lab.getByRole("button", { name: "B · One page" }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await lab.getByRole("button", { name: "A · Step by step" }).click();
+  await expect(page.getByText("Step 1 of 4")).toBeVisible();
 });

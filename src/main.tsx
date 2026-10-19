@@ -14,10 +14,7 @@ class ErrorBoundary extends React.Component<
     return this.state.failed ? (
       <div className="fatal">
         <h1>Let’s get you back.</h1>
-        <p>
-          The app ran into a problem. Your saved demo data remains in this
-          browser.
-        </p>
+        <p>The app ran into a problem. Your splits and messages are safe.</p>
         <button onClick={() => location.reload()}>Reload ShareLah</button>
       </div>
     ) : (

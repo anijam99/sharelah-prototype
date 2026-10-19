@@ -11,6 +11,7 @@ import { useStore } from "./store";
 import {
   completedSavings,
   money,
+  releasedByHost,
   owned,
   statusLabel,
   total,
@@ -314,9 +315,6 @@ export function MapScreen({ open }: { open: OpenModal }) {
             .map((q) => (
               <Card p={q} key={q.id} />
             ))}
-          <p className="fine">
-            Pickup locations and walking estimates are sample data.
-          </p>
         </div>
       </main>
     </>
@@ -332,7 +330,7 @@ export function Splits() {
       ? p.owner && !p.closed
       : tab === "Past"
         ? state.reservations[p.id]?.status === "completed" ||
-          state.reservations[p.id]?.cancelReason === "lapsed"
+          releasedByHost(state.reservations[p.id])
         : owned(state.reservations[p.id]) &&
           state.reservations[p.id].status !== "completed",
   );

@@ -155,6 +155,12 @@ it("reserves via a sheet, saves the chosen payment, and cancels without leaving 
   );
   expect(saved().reservations.det).toBeUndefined();
   act(() => vi.advanceTimersByTime(1000));
+  // The request waits for the host, who accepts a few seconds later.
+  expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(
+    "Request sent",
+  );
+  expect(saved().reservations.det.status).toBe("requested");
+  act(() => vi.advanceTimersByTime(3500));
   expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(
     "My reservation",
   );
@@ -410,6 +416,8 @@ it.each(["A", "C"])(
     );
     act(() => vi.advanceTimersByTime(3000));
     expect(location.hash).toBe("#/split/det");
+    expect(saved().reservations.det.status).toBe("requested");
+    act(() => vi.advanceTimersByTime(3500));
     expect(saved().reservations.det.status).toBe("reserved");
     expect(saved().products.find((p: any) => p.id === "det").available).toBe(0);
   },
@@ -611,4 +619,39 @@ it("migrates old personas while keeping reservations and always uses Jerry acros
   click(/Neighbour profiles/);
   expect(screen.getByRole("button", { name: /^Jerry / })).toBeTruthy();
   expect(screen.getByRole("button", { name: /^Tom Chua/ })).toBeTruthy();
+});
+
+it("the one-page layout flags each incomplete section and publishes the same split", () => {
+  localStorage.setItem("sharelah-create-variant", "B");
+  render(<App />);
+  click("Share");
+  click(/Start a split manually/);
+  expect(screen.queryByText("Step 1 of 4")).toBeNull();
+  fireEvent.change(screen.getByLabelText("Pickup point"), {
+    target: { value: "" },
+  });
+  click("Publish split");
+  const section = (name: string) =>
+    screen.getByRole("region", { name: new RegExp(name) });
+  expect(within(section("Item")).getByRole("alert").textContent).toContain(
+    "Add an item",
+  );
+  expect(within(section("Pickup")).getByRole("alert")).toBeTruthy();
+  click("Samyang Buldak bowl noodles");
+  // Filling the example clears the errors and fills the bundle price.
+  expect(within(section("Item")).queryByRole("alert")).toBeNull();
+  expect(
+    (screen.getByLabelText("Bundle price (S$)") as HTMLInputElement).value,
+  ).toBe("6.4");
+  fireEvent.change(screen.getByLabelText("Pickup point"), {
+    target: { value: "Bugis+ · Main entrance" },
+  });
+  click("Publish split");
+  const p = saved().products.find((p: any) => p.owner);
+  expect(p).toMatchObject({
+    title: "Samyang Buldak bowl noodles",
+    itemCents: 320,
+  });
+  expect(screen.getByRole("heading", { name: "Split published" })).toBeTruthy();
+  localStorage.removeItem("sharelah-create-variant");
 });

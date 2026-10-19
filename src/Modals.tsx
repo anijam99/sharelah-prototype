@@ -4,9 +4,12 @@ import { useStore } from "./store";
 import { Button, Row, Sheet } from "./ui";
 import { finish, go } from "./router";
 import { confirmationVariant } from "./ReservationCountdown";
+import { isPerson, people } from "./people";
 import {
+  acceptedJoiners,
   buyBy,
   cancelReservation,
+  removeJoiner,
   money,
   quantityOf,
   saveReview,
@@ -25,6 +28,7 @@ export type Modal =
   | { kind: "reserve"; id: string }
   | { kind: "cancel"; id: string }
   | { kind: "close-split"; id: string }
+  | { kind: "remove-joiner"; id: string; person: string }
   | { kind: "rating"; id: string };
 export type OpenModal = (modal: Modal) => void;
 
@@ -43,6 +47,8 @@ export function Modals({ modal, close }: { modal: Modal; close: () => void }) {
   if (modal.kind === "cancel") return <CancelSheet p={p} close={close} />;
   if (modal.kind === "close-split")
     return <CloseSplitSheet p={p} close={close} />;
+  if (modal.kind === "remove-joiner")
+    return <RemoveJoinerSheet p={p} person={modal.person} close={close} />;
   return <RatingSheet p={p} close={close} />;
 }
 
@@ -167,12 +173,13 @@ function ReserveSheet({ p, close }: { p: Product; close: () => void }) {
           }}
         />
         <p className="notice">
+          {p.host} checks your profile and accepts requests, usually within
+          minutes. If they decline, your hold is released straight away.{" "}
           {p.purchased
             ? `${p.host} has already bought the bundle. `
             : `${p.host} buys by ${buyBy(p)} ${p.date.toLowerCase()}. If not, your hold is released automatically. `}
           Payment goes to {p.host} only after you confirm collection.
         </p>
-        <p className="fine">Demo payment · no real charge</p>
       </Sheet>
       {choosingPayment && (
         <Sheet
@@ -205,7 +212,7 @@ function ReserveSheet({ p, close }: { p: Product; close: () => void }) {
                 <small>
                   {m.startsWith("Visa")
                     ? "Credit or debit card"
-                    : "Demo balance · S$24.80"}
+                    : "Balance · S$24.80"}
                 </small>
               </span>
               {choice === m && <Check className="brand-text" />}
@@ -295,7 +302,7 @@ function HelpSheet({ close }: { close: () => void }) {
         [
           "02",
           "Reserve with confidence",
-          "Your payment stays held. Cancel free before the host buys, or get it back automatically if they don’t buy in time.",
+          "Send a request; hosts check your profile before accepting. Your payment stays held, and you get it back if they decline or don’t buy in time.",
         ],
         [
           "03",
@@ -314,10 +321,6 @@ function HelpSheet({ close }: { close: () => void }) {
       <p className="fine">
         Spotted deals are price tips from neighbours. You buy those yourself in
         store, or start a split to share a bundle.
-      </p>
-      <p className="fine">
-        Prototype: fictional neighbours and simulated payments. Data stays in
-        this browser.
       </p>
     </Sheet>
   );
@@ -381,7 +384,7 @@ function CancelSheet({ p, close }: { p: Product; close: () => void }) {
       <p>
         {p.host} hasn’t bought the bundle yet. Your{" "}
         {quantity > 1 ? `${quantity} portions` : "portion"} will become
-        available again and the demo hold will be cancelled.
+        available again and your hold will be released.
       </p>
     </ConfirmSheet>
   );
@@ -406,9 +409,40 @@ function CloseSplitSheet({ p, close }: { p: Product; close: () => void }) {
       }}
     >
       <p>
-        {state.joinedHosts[p.id]
-          ? "Jerry’s demo reservation will be cancelled."
+        {acceptedJoiners(state, p.id).length
+          ? "Everyone you accepted will have their hold released."
           : "Neighbours will no longer be able to reserve a portion."}
+      </p>
+    </ConfirmSheet>
+  );
+}
+
+function RemoveJoinerSheet({
+  p,
+  person,
+  close,
+}: {
+  p: Product;
+  person: string;
+  close: () => void;
+}) {
+  const { update } = useStore(),
+    name = isPerson(person) ? people[person].name : "this neighbour";
+  return (
+    <ConfirmSheet
+      title={`Remove ${name}?`}
+      confirm="Remove from split"
+      keep="Keep them in"
+      close={close}
+      onConfirm={() => {
+        update((s) => removeJoiner(s, p.id, person));
+        close();
+      }}
+    >
+      <p>
+        Their hold is released straight away and their portion becomes available
+        to other neighbours. You can only remove people before you buy the
+        bundle.
       </p>
     </ConfirmSheet>
   );
@@ -462,8 +496,7 @@ function RatingSheet({ p, close }: { p: Product; close: () => void }) {
         />
       </label>
       <p className="fine">
-        {comment.length}/1000 · Your review appears on {p.host}’s profile in
-        this demo.
+        {comment.length}/1000 · Your review appears on {p.host}’s profile.
       </p>
     </Sheet>
   );

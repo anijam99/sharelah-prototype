@@ -27,8 +27,7 @@ export function CachedPhotos({
   return (
     <Sheet title="Saved price-tag photos" onClose={onClose}>
       <p className="fine">
-        Saved in this browser. Choose a photo to reuse it. Reset demo clears
-        these photos.
+        Price tags you’ve photographed before. Choose one to reuse it.
       </p>
       {error ? (
         <p role="alert">{error}</p>

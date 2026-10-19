@@ -1,6 +1,8 @@
 import { seedDeals } from "./dealCatalog";
 export type Status =
-  "reserved" | "ready" | "reported" | "completed" | "cancelled";
+  "requested" | "reserved" | "ready" | "reported" | "completed" | "cancelled";
+/** Why a hold ended before purchase. */
+export type CancelReason = "you" | "lapsed" | "declined" | "removed";
 export type Product = {
   demo?: boolean;
   id: string;
@@ -40,12 +42,20 @@ export type Reservation = {
   createdAt: string;
   /** Portions in this reservation. Older saves have one. */
   quantity?: number;
-  /** Why a cancelled hold ended: by you, or because the host missed the buy-by time. */
-  cancelReason?: "you" | "lapsed";
+  cancelReason?: CancelReason;
+  /** While requested: when the (simulated) host answers. */
+  decideAt?: string;
   report?: { reason: string; note: string };
   rating?: number;
   reviewComment?: string;
   reviewedAt?: string;
+};
+export type JoinRequest = {
+  person: string;
+  quantity: number;
+  status: "requested" | "accepted" | "declined" | "removed";
+  /** When the request arrives; requests scheduled for later stay hidden until then. */
+  at: string;
 };
 export type ListingReport = {
   reason: string;
@@ -88,7 +98,10 @@ export type State = {
   payment: string;
   notify: boolean;
   name: string;
-  joinedHosts: Record<string, boolean>;
+  /** Neighbours asking to join splits Tom hosts, keyed by product id. */
+  joinRequests: Record<string, JoinRequest[]>;
+  /** Older saves only: a demo neighbour had joined. Migrated to joinRequests. */
+  joinedHosts?: Record<string, boolean>;
   createDraft: Partial<Product>;
   started: boolean;
   /** Keyed by "offer:<id>" or "deal:<id>". Older saves may not have it. */
@@ -238,8 +251,8 @@ seedDeals
       code: String(810000 + index),
       note:
         d.category === "Fashion"
-          ? "Message me your size or colour before I buy. Demo pickup."
-          : "Meet at the entrance. Sample pickup for the demo.",
+          ? "Message me your size or colour before I buy."
+          : "Meet at the entrance.",
     });
   });
 
@@ -425,7 +438,7 @@ export function initialState(
       payment: "Visa •••• 4242",
       notify: false,
       name: "Tom Chua",
-      joinedHosts: {},
+      joinRequests: {},
       createDraft: {},
       started: false,
       reports: {},
@@ -466,17 +479,26 @@ export function buyBy(p: Pick<Product, "buyBy" | "time">) {
 }
 export const owned = (r?: Reservation) => !!r && r.status !== "cancelled";
 export function conversationStatus(s: State, p: Product) {
-  const r = s.reservations[p.id];
-  if (r?.status === "completed" || (p.owner && p.closed && s.joinedHosts[p.id]))
+  const r = s.reservations[p.id],
+    hosting = p.owner && acceptedJoiners(s, p.id).length > 0;
+  if (r?.status === "completed" || (hosting && p.closed))
     return "Completed split";
-  if (owned(r) || (p.owner && !p.closed && s.joinedHosts[p.id]))
-    return "Current split";
+  if (owned(r) || (hosting && !p.closed)) return "Current split";
   // Messages before reserving are questions to the host.
   if (!p.owner && s.messages[p.id]?.length) return "Question";
   return null;
 }
+/** A hold the host ended (declined, removed or not bought in time), shown under Past. */
+export const releasedByHost = (r?: Reservation) =>
+  r?.status === "cancelled" && !!r.cancelReason && r.cancelReason !== "you";
 export function statusLabel(r?: Reservation) {
-  if (r?.cancelReason === "lapsed") return "Hold released";
+  if (r?.status === "cancelled" && r.cancelReason === "lapsed")
+    return "Hold released";
+  if (r?.status === "cancelled" && r.cancelReason === "declined")
+    return "Request declined";
+  if (r?.status === "cancelled" && r.cancelReason === "removed")
+    return "Removed by host";
+  if (r?.status === "requested") return "Waiting for host";
   return r?.status === "completed"
     ? "Completed"
     : r?.status === "reported"
@@ -506,23 +528,57 @@ export function reserve(s: State, id: string, quantity = 1): State {
     ),
     reservations: {
       ...s.reservations,
+      // Hosts accept each joiner; the demo host answers after a short wait.
       [id]: {
-        status: p.purchased ? "ready" : "reserved",
+        status: "requested",
         method: s.payment,
         createdAt: new Date().toISOString(),
         quantity,
+        decideAt: new Date(Date.now() + HOST_REPLY_MS).toISOString(),
       },
     },
   };
 }
-/** Releases a hold before purchase: cancelled by you, or lapsed when the host missed the buy-by time. */
+/** How long the simulated host takes to accept a request. */
+export const HOST_REPLY_MS = 3000;
+/** The host accepts every request that is due; Jerry always accepts Tom. */
+export function settleRequests(s: State, now = Date.now()): State {
+  const due = Object.entries(s.reservations).filter(
+    ([, r]) => r.status === "requested" && Date.parse(r.decideAt || "") <= now,
+  );
+  if (!due.length) return s;
+  const reservations = { ...s.reservations };
+  for (const [id] of due) reservations[id] = acceptedReservation(s, id);
+  return { ...s, reservations };
+}
+function acceptedReservation(s: State, id: string): Reservation {
+  const { decideAt, ...r } = s.reservations[id];
+  const p = s.products.find((p) => p.id === id);
+  return { ...r, status: p?.purchased ? "ready" : "reserved" };
+}
+/** Accept a pending request now (testing controls). */
+export function acceptRequest(s: State, id: string): State {
+  if (s.reservations[id]?.status !== "requested") return s;
+  return {
+    ...s,
+    reservations: { ...s.reservations, [id]: acceptedReservation(s, id) },
+  };
+}
+/**
+ * Releases a hold before purchase: cancelled by you, declined or removed by the
+ * host, or lapsed when the host missed the buy-by time.
+ */
 export function cancelReservation(
   s: State,
   id: string,
-  reason: "you" | "lapsed" = "you",
+  reason: CancelReason = "you",
 ): State {
   const r = s.reservations[id];
-  if (r?.status !== "reserved") return s;
+  const allowed =
+    r?.status === "requested"
+      ? reason === "you" || reason === "declined"
+      : r?.status === "reserved" && reason !== "declined";
+  if (!allowed) return s;
   return {
     ...s,
     products: s.products.map((p) =>
@@ -535,7 +591,12 @@ export function cancelReservation(
     ),
     reservations: {
       ...s.reservations,
-      [id]: { ...r, status: "cancelled", cancelReason: reason },
+      [id]: {
+        ...r,
+        status: "cancelled",
+        cancelReason: reason,
+        decideAt: undefined,
+      },
     },
   };
 }
@@ -654,17 +715,96 @@ export function saveReview(
   };
 }
 
-/** A demo neighbour claims one available portion, at most once per listing. */
-export function joinHostedDeal(s: State, id: string): State {
+/** Requests that have arrived by `now`, newest first. */
+export function joinersOf(s: State, id: string, now = Date.now()) {
+  return (
+    (s.joinRequests[id] || [])
+      // Undated requests (migrated from older saves) have already arrived.
+      .filter((r) => !(Date.parse(r.at) > now))
+      .sort((a, b) => b.at.localeCompare(a.at))
+  );
+}
+export const acceptedJoiners = (s: State, id: string) =>
+  (s.joinRequests[id] || []).filter((r) => r.status === "accepted");
+const activeRequest = (r: JoinRequest) =>
+  r.status === "requested" || r.status === "accepted";
+
+/** A neighbour asks to join a split Tom hosts, optionally arriving later. */
+export function requestToJoin(
+  s: State,
+  id: string,
+  person: string,
+  at = new Date().toISOString(),
+  quantity = 1,
+): State {
   const p = s.products.find((q) => q.id === id);
-  if (!p?.owner || p.closed || p.available < 1 || s.joinedHosts[id]) return s;
+  const requests = s.joinRequests[id] || [];
+  if (
+    !p?.owner ||
+    p.closed ||
+    requests.some((r) => r.person === person && activeRequest(r))
+  )
+    return s;
+  return {
+    ...s,
+    joinRequests: {
+      ...s.joinRequests,
+      [id]: [
+        ...requests.filter((r) => r.person !== person),
+        { person, quantity, status: "requested", at },
+      ],
+    },
+  };
+}
+function setJoiner(
+  s: State,
+  id: string,
+  person: string,
+  from: JoinRequest["status"],
+  to: JoinRequest["status"],
+  portions: number,
+): State {
+  const p = s.products.find((q) => q.id === id);
+  const request = (s.joinRequests[id] || []).find(
+    (r) => r.person === person && r.status === from,
+  );
+  if (!p?.owner || p.closed || !request) return s;
+  const change = portions * request.quantity;
+  if (p.available + change < 0) return s;
   return {
     ...s,
     products: s.products.map((q) =>
-      q.id === id ? { ...q, available: q.available - 1 } : q,
+      q.id === id ? { ...q, available: q.available + change } : q,
     ),
-    joinedHosts: { ...s.joinedHosts, [id]: true },
+    joinRequests: {
+      ...s.joinRequests,
+      [id]: s.joinRequests[id].map((r) =>
+        r === request ? { ...r, status: to } : r,
+      ),
+    },
   };
+}
+/** The host lets a neighbour in, taking their portions from what's available. */
+export const acceptJoiner = (s: State, id: string, person: string) =>
+  setJoiner(s, id, person, "requested", "accepted", -1);
+export const declineJoiner = (s: State, id: string, person: string) =>
+  setJoiner(s, id, person, "requested", "declined", 0);
+/** Before buying, the host can remove someone they accepted; their portions return. */
+export function removeJoiner(s: State, id: string, person: string): State {
+  if (s.products.find((q) => q.id === id)?.purchased) return s;
+  return setJoiner(s, id, person, "accepted", "removed", 1);
+}
+/** Older saves stored a joined demo neighbour as a flag. */
+export function migrateJoins(s: State): State {
+  if (s.joinRequests && !s.joinedHosts) return s;
+  const joinRequests = { ...s.joinRequests };
+  for (const [id, joined] of Object.entries(s.joinedHosts || {}))
+    if (joined && !joinRequests[id])
+      joinRequests[id] = [
+        { person: "jerry", quantity: 1, status: "accepted", at: "" },
+      ];
+  const { joinedHosts, ...rest } = s;
+  return { ...rest, joinRequests };
 }
 
 export const reportReasons = [

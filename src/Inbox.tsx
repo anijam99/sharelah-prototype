@@ -1,4 +1,5 @@
 import { conversationStatus, statusLabel } from "./model";
+import { chatPartner } from "./people";
 
 const groups = {
   "Current split": "Current splits",
@@ -33,7 +34,7 @@ export function Inbox() {
                 {group.map((p) => (
                   <Row
                     key={p.id}
-                    title={`${p.owner ? "Jerry" : p.host} · ${p.title}`}
+                    title={`${chatPartner(state, p).name} · ${p.title}`}
                     detail={
                       <>
                         <span className="conversation-status">

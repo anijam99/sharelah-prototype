@@ -107,10 +107,7 @@ export function TileMap({
     const sampleLocation = document.createElement("div");
     sampleLocation.className = "sample-location";
     sampleLocation.setAttribute("role", "img");
-    sampleLocation.setAttribute(
-      "aria-label",
-      "Your sample location at SMU Campus Green",
-    );
+    sampleLocation.setAttribute("aria-label", "Your location");
     const dot = document.createElement("span");
     dot.className = "sample-location-dot";
     dot.setAttribute("aria-hidden", "true");

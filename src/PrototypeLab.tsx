@@ -3,6 +3,7 @@ import { useSyncExternalStore } from "react";
 import type { ConfirmationVariant } from "./ReservationCountdown";
 import type { HomeVariant } from "./Browse";
 import type { OpenModal } from "./Modals";
+import type { CreateVariant } from "./Create";
 
 const mobileQuery = window.matchMedia("(max-width: 899px)");
 export function useMobileLayout() {
@@ -20,6 +21,8 @@ export function PrototypeLab({
   selectVariant,
   homeVariant,
   selectHomeVariant,
+  createLayout,
+  selectCreateLayout,
   open,
   locked,
   embedded = false,
@@ -28,6 +31,8 @@ export function PrototypeLab({
   selectVariant: (value: ConfirmationVariant) => void;
   homeVariant: HomeVariant;
   selectHomeVariant: (value: HomeVariant) => void;
+  createLayout: CreateVariant;
+  selectCreateLayout: (value: CreateVariant) => void;
   open: OpenModal;
   locked: boolean;
   embedded?: boolean;
@@ -144,6 +149,54 @@ export function PrototypeLab({
         <p className="experiment-caption">
           Changes Home immediately; on other screens it applies when you return
           Home.
+        </p>
+      </section>
+      <section
+        className="home-layout-experiment"
+        aria-label="Start a split A/B testing"
+      >
+        <h2>Start a split A/B test</h2>
+        <div
+          className="experiment-options"
+          role="group"
+          aria-label="Start a split layout"
+        >
+          <button
+            aria-pressed={createLayout === "A"}
+            onClick={() => selectCreateLayout("A")}
+          >
+            A · Step by step
+          </button>
+          <button
+            aria-pressed={createLayout === "B"}
+            onClick={() => selectCreateLayout("B")}
+          >
+            B · One page
+          </button>
+        </div>
+        <details className="experiment-rationale">
+          <summary>Why test these layouts?</summary>
+          <p>
+            <strong>A · Step by step.</strong> Four screens (item, portions,
+            pickup, review), one decision at a time, with a progress indicator
+            and errors caught at each step. Suits a small phone screen and
+            people new to hosting.
+          </p>
+          <p>
+            <strong>B · One page.</strong> The same fields in three numbered
+            sections on a single scrolling page, published with one button.
+            People see the whole split at once and can fix mistakes without
+            going back and forth.
+          </p>
+          <p>
+            Both use the same fields and validation. Compare time to publish and
+            errors: validation messages hit, plus fields that don’t match the
+            task.
+          </p>
+        </details>
+        <p className="experiment-caption">
+          Applies straight away, including to a split you’re part-way through;
+          your entries are kept when you switch.
         </p>
       </section>
       <DemoControls

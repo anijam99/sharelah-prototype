@@ -657,7 +657,7 @@ function sample(
     category: category || source.category,
     area: "Bugis",
     terms:
-      "Illustrative demo offer using a supplied product photo. Prices, bundle sizes, store and availability are fictional for testing.",
+      "While stocks last. Check eligible items and the final price at the shelf.",
   };
 }
 function lifestyle(
@@ -690,7 +690,7 @@ function lifestyle(
     area: "Bugis",
     createdAt: "",
     terms:
-      "Fictional product, store and offer for prototype testing. Each neighbour receives one item; choose your size or colour together.",
+      "While stocks last. Each neighbour receives one item; agree on size or colour with the host before they buy.",
   };
 }
 export const seedDeals: Deal[] = [

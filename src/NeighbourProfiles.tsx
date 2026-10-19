@@ -2,7 +2,13 @@ import { Star } from "lucide-react";
 import { Button, Empty, Header, Row } from "./ui";
 import { useStore } from "./store";
 import { go } from "./router";
-import { people, profileSummary, reviewsFor, type PersonId } from "./people";
+import {
+  isPerson,
+  people,
+  profileSummary,
+  reviewsFor,
+  type PersonId,
+} from "./people";
 
 export function NeighbourDirectory() {
   const { state } = useStore();
@@ -15,7 +21,7 @@ export function NeighbourDirectory() {
           <p className="muted">
             Get to know the person you’re sharing with and read their reviews.
           </p>
-          {(["jerry", "tom"] as PersonId[]).map((id) => {
+          {(Object.keys(people) as PersonId[]).map((id) => {
             const summary = profileSummary(state, id);
             return (
               <Row
@@ -37,7 +43,7 @@ export function NeighbourDirectory() {
 }
 export function NeighbourProfile({ id }: { id: string }) {
   const { state } = useStore();
-  if (id !== "jerry" && id !== "tom")
+  if (!isPerson(id))
     return (
       <>
         <Header title="Neighbour profile" />
@@ -55,7 +61,7 @@ export function NeighbourProfile({ id }: { id: string }) {
   const summary = profileSummary(state, id);
   const reviews = reviewsFor(state, id);
   const listings = state.products.filter(
-    (p) => (id === "tom" ? p.owner : !p.owner) && !p.closed,
+    (p) => (id === "tom" ? p.owner : id === "jerry" && !p.owner) && !p.closed,
   );
   return (
     <>
@@ -128,11 +134,13 @@ export function NeighbourProfile({ id }: { id: string }) {
                   month: "short",
                   year: "numeric",
                 })}
-                {r.sample ? " · Sample review" : " · Your review"}
+                {r.sample ? "" : " · Your review"}
               </small>
             </article>
           ))}
-          <h2>{id === "tom" ? "Your splits" : "Splits hosted by Jerry"}</h2>
+          <h2>
+            {id === "tom" ? "Your splits" : `Splits hosted by ${person.name}`}
+          </h2>
           {listings.map((p) => (
             <Row
               key={p.id}
@@ -153,11 +161,9 @@ export function NeighbourProfile({ id }: { id: string }) {
               }
             />
           ))}
-          {!listings.length && <p className="muted">No open listings yet.</p>}
-          <p className="fine">
-            Profiles and sample reviews are part of this demo. Reviews you add
-            are saved on this device.
-          </p>
+          {!listings.length && (
+            <p className="muted">No open splits right now.</p>
+          )}
         </div>
       </main>
     </>

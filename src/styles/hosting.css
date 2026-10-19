@@ -1,0 +1,72 @@
+/* Hosting: reviewing who joins your split. */
+.joiner-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.joiner-card {
+  gap: 10px;
+}
+.joiner-card.low {
+  box-shadow:
+    inset 0 0 0 1px #f0c58a,
+    var(--shadow);
+}
+.joiner-who {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-align: left;
+  min-height: 48px;
+}
+.joiner-who > span:nth-child(2) {
+  flex: 1;
+  min-width: 0;
+}
+.joiner-who strong {
+  display: block;
+  font-size: 17px;
+  font-weight: 600;
+}
+.joiner-who small {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 13px;
+}
+.joiner-who small svg {
+  color: #c98a00;
+}
+.joiner-portions {
+  flex: none;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.joiner-warning {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: #fff2d6;
+  color: #8a5a00;
+  font-size: 13px;
+  font-weight: 600;
+}
+.joiner-warning svg {
+  flex: none;
+}
+.joiner-review {
+  margin: 0;
+  padding-left: 10px;
+  border-left: 3px solid var(--border);
+  font-size: 15px;
+}
+.joiner-review small {
+  display: block;
+  margin-top: 2px;
+}
+.joiner-card .two-buttons .full {
+  min-height: 44px;
+}

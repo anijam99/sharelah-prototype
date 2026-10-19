@@ -65,6 +65,7 @@ BASE_URL=https://sharelah.your-domain.com npm run test:e2e
 - Consistent membership on Home, map pins and cards. Chobani blueberry Greek yoghurt starts in your splits and ready for pickup.
 - Split details show price, savings, host, pickup time and place at a glance, with Save, Compare, Ask the host, Directions and Shelf photo actions. Split details → reservation sheet (choose one or more portions; one service fee per reservation) → payment choice → animated five-second cancellation screen → held reservation. Cancelling during the countdown leaves availability and demo payment untouched. Refresh preserves the original deadline; navigating away abandons confirmation. Cancellation after confirmation and before purchase restores availability. Every split shows the host’s buy-by time (an hour before pickup unless set); if the host misses it, the hold is released automatically and the split shows “Your hold was released”.
 - Ready pickup → live rear-camera QR scanner or uploaded QR image / manual six-digit code → explicit item check → completion and rating. A valid scan does not release payment by itself.
+- Hosts approve who joins. Reserving someone else’s split sends a request and holds your payment; Jerry accepts after about three seconds (Testing controls can make him accept now, decline, or remove you, and each releases the hold with an explanation). When you host, a request shows the neighbour’s rating, review count, completed splits and latest review (with a warning if their rating is low). You can accept, decline, or remove someone you accepted until you buy the bundle. After you publish a split, Jerry asks to join after about 8 seconds; Testing controls can also send his request at any time.
 - Problem reports retain the held payment and block pickup completion.
 - Any split or spotted deal can be reported as fake, expired, out of stock, wrong or prohibited. Reports can be edited or withdrawn and stay in this browser.
 - Persistent local conversations, message drafts and quick replies. You can ask a host a question before reserving; Jerry sends one demo reply, and these threads appear under “Questions to hosts” in Messages.
@@ -82,7 +83,7 @@ On mobile (below 900 px), the prototype lab lives in **Profile → Testing contr
 
 The seeded setup includes two saved splits (TOP detergent and a tumbler) and three short conversations: one ready pickup and two completed splits. Inbox groups threads as Current splits, Questions to hosts (messages sent before reserving) and Completed splits.
 
-The tester persona is fixed as Tom Chua. Jerry hosts every seeded split and is the demo neighbour who joins Tom’s listings. Test controls let you simulate Jerry buying a reserved bundle, missing the buy-by time, or joining your own split. Show a facilitator pickup code on another device or print it:
+The tester persona is fixed as Tom Chua. Jerry hosts every seeded split and asks to join Tom’s splits. Test controls let you simulate Jerry buying a reserved bundle, missing the buy-by time, or joining your own split. Show a facilitator pickup code on another device or print it:
 
 `https://your-domain/testing/pickup-codes.html`
 
@@ -106,11 +107,11 @@ Third-party notices are in `THIRD_PARTY_NOTICES.md` and are included in the buil
 
 Home → Spotted deals → View all opens a searchable, category-filtered collection of 49 entries transcribed from the 12 supplied images. Each entry links to its source photo and keeps its advertised price or percentage promotion. Readable multibuys prefill the split form with the correct total, item count and one-item portion; offers with unknown prices or eligibility remain informational. Home search also finds these deals. The bundled collection appears in existing saved demos without a reset and remains after resetting user-created data. See `DEAL_PHOTO_REVIEW.md` for source coverage and reading decisions.
 
-The curated demo has 23 offers across nine categories, including fashion, tech and lifestyle. TOP detergent uses the supplied IMG_2070 photo; fictional non-grocery products use bundled SVG illustrations. Sample prices, stores and pickups are labelled as demo information. Only one yoghurt split remains. Existing reservations retain their IDs and pickup codes when the catalogue refreshes. Sharing a split from a spotted deal carries its image and bundle details into the draft.
+The curated demo has 23 offers across nine categories, including fashion, tech and lifestyle. TOP detergent uses the supplied IMG_2070 photo; fictional non-grocery products use bundled SVG illustrations. Prices, stores and pickups are sample data, but the app presents them without demo labels so study participants see a finished-looking product; Testing controls remain available from Profile. Only one yoghurt split remains. Existing reservations retain their IDs and pickup codes when the catalogue refreshes. Sharing a split from a spotted deal carries its image and bundle details into the draft.
 
 ### Neighbour profiles and reviews
 
-The prototype uses only Jerry and Tom Chua. Existing saved products migrate to these personas without clearing progress. Tap the host row on an offer, a profile link in a split/chat, or Profile → Neighbour profiles to view a neighbour’s biography, ratings, written reviews and listings. Review-author names link to that author’s profile. After a split is completed, Rate your experience supports 1–5 stars and optional comments (up to 1,000 characters). Reviews persist locally, appear on Jerry’s profile, update the rating average, and can be edited without creating a duplicate. Sample reviews are labelled; there is no cross-device review service.
+The prototype uses only Jerry and Tom Chua. Existing saved products migrate to these personas without clearing progress. Tap the host row on an offer, a profile link in a split/chat, or Profile → Neighbour profiles to view a neighbour’s biography, ratings, written reviews and listings. Review-author names link to that author’s profile. After a split is completed, Rate your experience supports 1–5 stars and optional comments (up to 1,000 characters). Reviews persist locally, appear on Jerry’s profile, update the rating average, and can be edited without creating a duplicate. Sample reviews look like ordinary reviews; there is no cross-device review service.
 
 ### Quiet map tiles
 
@@ -123,6 +124,10 @@ The demo location marker, Near me control and radius circle are centred at SMU C
 ### Price comparisons
 
 Chobani blueberry yoghurt and TOP detergent details expose Compare prices & travel, including from an existing split. Same-product matches can be expanded to other brands. Integer-cent calculations choose singles, multibuys or a mixture for the requested quantity, show any extra items, add one return-trip estimate or delivery charge, and apply free delivery only when the selected basket reaches the threshold. Pack-size-normalized totals include these costs. Scenario data lives in `src/comparison.ts`; comparison prices, destinations, transit times and fares are fixed demo fixtures, not live quotes. The demo tools explain this, while the comparison offers editable fare and delivery estimates.
+
+### Start a split experiment
+
+The prototype lab’s **Start a split A/B** selector persists under `sharelah-create-variant`. **A · Step by step** keeps the four-screen flow (item, portions, pickup, review). **B · One page** shows the same fields in three numbered sections on one scrolling page with a single **Publish split** button; publishing with missing details marks every incomplete section and scrolls to the first. Both layouts share the same fields and validation rules, so only the layout differs. Switching mid-flow keeps what you’ve entered. This test doesn’t interact with the confirmation or home/map tests, so all three selectors stay available together.
 
 ### Home/map layout experiment
 

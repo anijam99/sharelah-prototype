@@ -1,9 +1,12 @@
 import { useState } from "react";
 import { useStore } from "./store";
+import { people } from "./people";
+import { useNow } from "./ui";
 import {
+  acceptRequest,
   cancelReservation,
-  joinHostedDeal,
   owned,
+  requestToJoin,
   simulatePurchase,
 } from "./model";
 import { CachedPhotos } from "./CachedPhotos";
@@ -18,7 +21,8 @@ export function DemoControls({
   freshAccount: () => void;
   locked: boolean;
 }) {
-  const { state, update } = useStore();
+  const { state, update } = useStore(),
+    now = useNow();
   const [photos, setPhotos] = useState(false);
   const [message, setMessage] = useState("");
   const hosted = state.products.filter((p) => p.owner && !p.closed);
@@ -99,7 +103,10 @@ export function DemoControls({
           </p>
           <h3>Hosting simulation</h3>
           {!hosted.length && (
-            <p className="demo-hint">Start a split to invite Jerry.</p>
+            <p className="demo-hint">
+              Start a split to receive a join request. Jerry asks after about 8
+              seconds.
+            </p>
           )}
           {hosted.map((p) => (
             <div className="demo-scenario" key={p.id}>
@@ -107,17 +114,28 @@ export function DemoControls({
               <small>
                 {p.available} of {p.shareCount} portions left
               </small>
-              <button
-                disabled={!!state.joinedHosts[p.id] || p.available < 1}
-                onClick={() => {
-                  update((s) => joinHostedDeal(s, p.id));
-                  setMessage("Jerry claimed one portion.");
-                }}
-              >
-                {state.joinedHosts[p.id]
-                  ? "Jerry has joined"
-                  : "Jerry joins this split"}
-              </button>
+              {(["jerry"] as const).map((person) => {
+                const asked = (state.joinRequests[p.id] || []).some(
+                  (r) =>
+                    r.person === person &&
+                    (r.status === "accepted" ||
+                      (r.status === "requested" && !(Date.parse(r.at) > now))),
+                );
+                return (
+                  <button
+                    key={person}
+                    disabled={asked}
+                    onClick={() => {
+                      update((s) => requestToJoin(s, p.id, person));
+                      setMessage(`${people[person].name} asked to join.`);
+                    }}
+                  >
+                    {asked
+                      ? `${people[person].name} has asked`
+                      : `Request from ${people[person].name}`}
+                  </button>
+                );
+              })}
               <button
                 onClick={() => {
                   go("/hosting/" + p.id);
@@ -135,6 +153,26 @@ export function DemoControls({
             <div className="demo-scenario" key={p.id}>
               <strong>{p.title}</strong>
               <small>Pickup code: {p.code}</small>
+              {state.reservations[p.id].status === "requested" && (
+                <>
+                  <button
+                    onClick={() => {
+                      update((s) => acceptRequest(s, p.id));
+                      setMessage("Jerry accepted your request.");
+                    }}
+                  >
+                    Host accepts now
+                  </button>
+                  <button
+                    onClick={() => {
+                      update((s) => cancelReservation(s, p.id, "declined"));
+                      setMessage("Jerry declined. The hold was released.");
+                    }}
+                  >
+                    Host declines
+                  </button>
+                </>
+              )}
               {state.reservations[p.id].status === "reserved" && (
                 <>
                   <button
@@ -146,6 +184,14 @@ export function DemoControls({
                     }}
                   >
                     Simulate purchase
+                  </button>
+                  <button
+                    onClick={() => {
+                      update((s) => cancelReservation(s, p.id, "removed"));
+                      setMessage("Jerry removed you. The hold was released.");
+                    }}
+                  >
+                    Host removes you
                   </button>
                   <button
                     onClick={() => {

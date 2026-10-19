@@ -2,7 +2,7 @@ import { CompareButton } from "./Compare";
 import { comparisonFamily } from "./comparison";
 import { ReportButton, ReportedNotice, ReportSheet } from "./ReportListing";
 import { Pizza } from "./Pizza";
-import { hostPerson, profileSummary } from "./people";
+import { chatPartner, hostPerson, profileSummary } from "./people";
 import { TileMap } from "./TileMap";
 import { useState, useEffect, useRef } from "react";
 import {
@@ -15,7 +15,7 @@ import {
   Send,
   ShieldCheck,
 } from "lucide-react";
-import { Art, Button, Header, PriceRows, Row, QRCode, Empty } from "./ui";
+import { Art, Button, Header, PriceRows, Row, Empty } from "./ui";
 import { Camera } from "./Camera";
 import { back, finish, go } from "./router";
 import { useStore } from "./store";
@@ -237,6 +237,31 @@ export function Offer({ p, open }: { p: Product; open: OpenModal }) {
     </>
   );
 }
+/** What to tell a joiner whose hold the host ended. */
+const released: Record<
+  "you" | "lapsed" | "declined" | "removed",
+  { title: string; body: (p: Product, amount: string) => string }
+> = {
+  you: {
+    title: "No active reservation",
+    body: () => "You cancelled this reservation. Nothing was charged.",
+  },
+  lapsed: {
+    title: "Your hold was released",
+    body: (p, amount) =>
+      `${p.host} didn’t buy ${p.title} by ${buyBy(p)}, so your ${amount} hold was released. Nothing was charged.`,
+  },
+  declined: {
+    title: `Request declined`,
+    body: (p, amount) =>
+      `${p.host} couldn’t take you on this split, so your ${amount} hold was released. Nothing was charged. There are other splits nearby.`,
+  },
+  removed: {
+    title: "Removed from this split",
+    body: (p, amount) =>
+      `${p.host} removed you before buying the bundle, so your ${amount} hold was released. Nothing was charged.`,
+  },
+};
 export function MySplit({ p, open }: { p: Product; open: OpenModal }) {
   const { state } = useStore(),
     r = state.reservations[p.id];
@@ -246,35 +271,25 @@ export function MySplit({ p, open }: { p: Product; open: OpenModal }) {
         <Header title="My split" />
         <main className="page-scroll">
           <div className="content">
-            {r?.cancelReason === "lapsed" ? (
-              <Empty
-                title="Your hold was released"
-                action={
-                  <Button
-                    onClick={() => go("/offer/" + p.id, "My splits", true)}
-                  >
-                    View split
-                  </Button>
-                }
-              >
-                {p.host} didn’t buy {p.title} by {buyBy(p)}, so your{" "}
-                {money(total(p, quantityOf(r)))} hold was released. Nothing was
-                charged.
-              </Empty>
-            ) : (
-              <Empty
-                title="No active reservation"
-                action={
-                  <Button
-                    onClick={() => go("/offer/" + p.id, "My splits", true)}
-                  >
-                    View split
-                  </Button>
-                }
-              >
-                This portion is not currently in your splits.
-              </Empty>
-            )}
+            <Empty
+              title={
+                r?.status === "cancelled" && r.cancelReason
+                  ? released[r.cancelReason].title
+                  : "No active reservation"
+              }
+              action={
+                <Button onClick={() => go("/offer/" + p.id, "My splits", true)}>
+                  View split
+                </Button>
+              }
+            >
+              {r?.status === "cancelled" && r.cancelReason
+                ? released[r.cancelReason].body(
+                    p,
+                    money(total(p, quantityOf(r))),
+                  )
+                : "This portion is not currently in your splits."}
+            </Empty>
           </div>
         </main>
       </>
@@ -282,6 +297,7 @@ export function MySplit({ p, open }: { p: Product; open: OpenModal }) {
   const done = r.status === "completed",
     reported = r.status === "reported",
     ready = r.status === "ready",
+    requested = r.status === "requested",
     quantity = quantityOf(r),
     portions = quantity > 1 ? `${quantity} portions` : "portion";
   return (
@@ -294,7 +310,9 @@ export function MySplit({ p, open }: { p: Product; open: OpenModal }) {
               ? "Report submitted"
               : ready
                 ? "Ready for pickup"
-                : "My reservation"
+                : requested
+                  ? "Request sent"
+                  : "My reservation"
         }
         item={p.title}
       />
@@ -312,7 +330,9 @@ export function MySplit({ p, open }: { p: Product; open: OpenModal }) {
                   ? "WE’VE SAVED YOUR REPORT"
                   : ready
                     ? `YOUR ${portions.toUpperCase()} ${quantity > 1 ? "ARE" : "IS"} READY`
-                    : "YOU’RE IN"}
+                    : requested
+                      ? `WAITING FOR ${p.host.toUpperCase()}`
+                      : "YOU’RE IN"}
             </span>
             <h2>
               {done
@@ -321,7 +341,9 @@ export function MySplit({ p, open }: { p: Product; open: OpenModal }) {
                   ? "Payment stays held."
                   : ready
                     ? `Your ${portions} ${quantity > 1 ? "are" : "is"} ready.`
-                    : `Your ${portions} ${quantity > 1 ? "are" : "is"} reserved.`}
+                    : requested
+                      ? `${p.host} is reviewing your request.`
+                      : `Your ${portions} ${quantity > 1 ? "are" : "is"} reserved.`}
             </h2>
             <p>
               {p.title} · {quantity > 1 ? `${quantity} × ` : ""}
@@ -345,8 +367,8 @@ export function MySplit({ p, open }: { p: Product; open: OpenModal }) {
                 detail={r.report?.note || "No additional details."}
               />
               <p className="notice">
-                Your report is saved in this demo. Payment cannot be released
-                while it is under review.
+                Our team is looking into it. Your payment stays held until it’s
+                resolved.
               </p>
               <Button kind="secondary" onClick={() => go("/chat/" + p.id)}>
                 Message {p.host}
@@ -357,7 +379,7 @@ export function MySplit({ p, open }: { p: Product; open: OpenModal }) {
               <div className="panel">
                 <h3>Your receipt</h3>
                 <PriceRows p={p} quantity={quantity} />
-                <p className="fine">Paid with {r.method} · Demo payment</p>
+                <p className="fine">Paid with {r.method}</p>
               </div>
               {r.rating && (
                 <div className="panel">
@@ -379,9 +401,11 @@ export function MySplit({ p, open }: { p: Product; open: OpenModal }) {
               <div className="panel">
                 <h3>Next step</h3>
                 <p>
-                  {ready
-                    ? `Meet ${p.host}, check your sealed item, then scan their pickup code.`
-                    : `${p.host} buys the bundle by ${buyBy(p)} ${p.date.toLowerCase()} and lets you know when it’s ready. If they don’t buy in time, your hold is released automatically.`}
+                  {requested
+                    ? `Hosts check your profile and ratings before accepting. Your ${portions} ${quantity > 1 ? "are" : "is"} held for you meanwhile, and if ${p.host} declines, your hold is released straight away.`
+                    : ready
+                      ? `Meet ${p.host}, check your sealed item, then scan their pickup code.`
+                      : `${p.host} buys the bundle by ${buyBy(p)} ${p.date.toLowerCase()} and lets you know when it’s ready. If they don’t buy in time, your hold is released automatically.`}
                 </p>
               </div>
               <Row
@@ -406,7 +430,11 @@ export function MySplit({ p, open }: { p: Product; open: OpenModal }) {
                     : open({ kind: "cancel", id: p.id })
                 }
               >
-                {ready ? "Report a problem" : "Cancel reservation"}
+                {ready
+                  ? "Report a problem"
+                  : requested
+                    ? "Cancel request"
+                    : "Cancel reservation"}
               </button>
             </>
           )}
@@ -655,8 +683,8 @@ export function Problem({ p }: { p: Product }) {
             />
           </label>
           <div className="notice">
-            This is a prototype report. It is saved locally for testing and is
-            not sent to a support team.
+            Our team usually replies within a day. Your payment stays held in
+            the meantime.
           </div>
           <Button
             disabled={
@@ -679,7 +707,8 @@ export function Chat({ p }: { p: Product }) {
     end = useRef<HTMLDivElement>(null),
     messages = state.messages[p.id] || [],
     status = conversationStatus(state, p) ?? "Question",
-    neighbour = p.owner ? "Jerry" : p.host;
+    partner = chatPartner(state, p),
+    neighbour = partner.name;
   // Typing stays local; the draft is saved after a pause and when leaving.
   const [draft, setDraft] = useState(() => state.drafts[p.id] || "");
   const saved = useRef(draft);
@@ -764,9 +793,9 @@ export function Chat({ p }: { p: Product }) {
       <main className="page-scroll chat-scroll">
         <div className="content">
           <Row
-            title={"View " + neighbour + "’s profile"}
+            title={"View " + neighbour.split(", ")[0] + "’s profile"}
             detail="Read reviews from split partners"
-            onClick={() => go("/neighbour/jerry")}
+            onClick={() => go("/neighbour/" + (partner.id || "tom"))}
           />
           {status === "Question" ? (
             <Row
@@ -784,9 +813,6 @@ export function Chat({ p }: { p: Product }) {
               }
             />
           )}
-          <p className="chat-demo">
-            Demo conversation · messages stay on this device
-          </p>
           {!messages.length && (
             <p className="muted">
               {status === "Question"
@@ -802,7 +828,7 @@ export function Chat({ p }: { p: Product }) {
                   hour: "numeric",
                   minute: "2-digit",
                 })}{" "}
-                · {m.mine ? "Saved in demo" : "Demo message"}
+                {m.mine ? "· Sent" : ""}
               </small>
             </div>
           ))}
@@ -867,7 +893,7 @@ export function Directions({ p }: { p: Product }) {
           <p>{p.address}</p>
           <Row
             title={`${p.distance} m · about ${Math.ceil(p.distance / 70)} minutes on foot`}
-            detail="Estimated from the demo starting location"
+            detail="Estimated from your location"
           />
           <Row title={p.date + " · " + p.time} detail={p.note} />
           <a
@@ -885,108 +911,6 @@ export function Directions({ p }: { p: Product }) {
           <Button kind="secondary" onClick={() => back()}>
             Back to split
           </Button>
-        </div>
-      </main>
-    </>
-  );
-}
-export function Hosting({
-  p,
-  open,
-  published,
-}: {
-  p: Product;
-  open: OpenModal;
-  published: boolean;
-}) {
-  const { state, update } = useStore(),
-    joined = state.joinedHosts[p.id];
-  return (
-    <>
-      <Header
-        title={published ? "Split published" : "Your split"}
-        item={p.title}
-        label="Hosting"
-        onBack={() => {
-          sessionStorage.setItem("sharelah-splits-tab", "Hosting");
-          go("/splits", "Hosting", true);
-        }}
-      />
-      <main className="page-scroll">
-        <div className="content">
-          <div className="status-hero">
-            <Pizza
-              count={p.bundleCount}
-              taken={p.shareCount - p.available}
-              animate={published}
-            />
-            <h2>
-              {p.closed
-                ? "This split is closed."
-                : p.purchased
-                  ? "Ready to share."
-                  : joined
-                    ? "Your neighbour is in."
-                    : "Your split is live."}
-            </h2>
-            <p>
-              {p.title} · {p.available} of {p.shareCount} portions available
-            </p>
-            <div className="shared-edge" />
-          </div>
-          <Row title={p.title} detail={p.portion} />
-          <div className="panel">
-            <PriceRows p={p} />
-          </div>
-          <Row title={p.place} detail={p.date + " · " + p.time} />
-          {joined && (
-            <Row
-              title="Jerry · 1 portion"
-              detail={p.purchased ? "Ready for pickup" : "Waiting for purchase"}
-              onClick={() => go("/neighbour/jerry")}
-            />
-          )}
-          {joined && (
-            <Button kind="secondary" onClick={() => go("/chat/" + p.id)}>
-              Message Jerry
-            </Button>
-          )}{" "}
-          {!p.closed && p.purchased && (
-            <div className="panel center">
-              <h3>Your pickup code</h3>
-              <p>Show this after your neighbour has checked their item.</p>
-              <QRCode value={`sharelah:pickup:${p.id}:${p.code}`} />
-              <strong className="pickup-number">{p.code}</strong>
-            </div>
-          )}
-          {!p.closed && !p.purchased && joined && (
-            <Button
-              onClick={() =>
-                update((s) => ({
-                  ...s,
-                  products: s.products.map((q) =>
-                    q.id === p.id ? { ...q, purchased: true } : q,
-                  ),
-                }))
-              }
-            >
-              Mark purchased &amp; notify
-            </Button>
-          )}
-          {!p.closed && !p.purchased && (
-            <Button
-              kind="secondary"
-              onClick={() => open({ kind: "close-split", id: p.id })}
-            >
-              Close split
-            </Button>
-          )}
-          <button
-            className="text-button"
-            onClick={() => go("/profile/testing")}
-          >
-            Testing controls ›
-          </button>
         </div>
       </main>
     </>

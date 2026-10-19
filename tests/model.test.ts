@@ -21,7 +21,20 @@ import {
   spottedLabel,
   spottedPhrase,
   statusLabel,
+  acceptRequest,
+  acceptJoiner,
+  declineJoiner,
+  removeJoiner,
+  requestToJoin,
+  joinersOf,
+  settleRequests,
+  HOST_REPLY_MS,
+  migrateJoins,
 } from "../src/model";
+import type { State } from "../src/model";
+/** Reserve, then have the host accept straight away. */
+const joinSplit = (s: State, id: string, quantity?: number) =>
+  acceptRequest(reserve(s, id, quantity), id);
 describe("Reservation lifecycle", () => {
   it("keeps fresh accounts empty across migrations while retaining browsable deals", () => {
     const s = initialState("fresh");
@@ -31,7 +44,7 @@ describe("Reservation lifecycle", () => {
     expect(s.messages).toEqual({});
     expect(completedSavings(s)).toBe(0);
     expect(visibleProducts(s).length).toBeGreaterThan(0);
-    expect(reserve(s, "yog").reservations.yog.status).toBe("ready");
+    expect(joinSplit(s, "yog").reservations.yog.status).toBe("ready");
   });
   it("seeds saved items and threads once without restoring removed saves", () => {
     const s = initialState();
@@ -66,7 +79,7 @@ describe("Reservation lifecycle", () => {
     ).toBe(false);
     s.reservations[past[0].id].rating = 5;
     s.reservations[past[0].id].reviewComment = "Easy pickup";
-    const migrated = addDemoHistory(reserve(s, "det"));
+    const migrated = addDemoHistory(joinSplit(s, "det"));
     expect(migrated.products).toHaveLength(s.products.length);
     expect(migrated.reservations[past[0].id].reviewComment).toBe("Easy pickup");
     expect(migrated.reservations.det.status).toBe("reserved");
@@ -78,16 +91,16 @@ describe("Reservation lifecycle", () => {
     expect(total(s.products[0])).toBe(380);
   });
   it("reserves once, reduces availability, and prevents a duplicate hold", () => {
-    const s = reserve(initialState(), "det");
+    const s = joinSplit(initialState(), "det");
     expect(s.reservations.det.status).toBe("reserved");
     expect(s.products.find((p) => p.id === "det")!.available).toBe(0);
     expect(reserve(s, "det")).toBe(s);
   });
   it("cancels only before purchase, restoring the portion", () => {
-    const s = cancelReservation(reserve(initialState(), "det"), "det");
+    const s = cancelReservation(joinSplit(initialState(), "det"), "det");
     expect(s.reservations.det.status).toBe("cancelled");
     expect(s.products.find((p) => p.id === "det")!.available).toBe(1);
-    expect(reserve(s, "det").reservations.det.status).toBe("reserved");
+    expect(joinSplit(s, "det").reservations.det.status).toBe("reserved");
     const ready = initialState();
     expect(cancelReservation(ready, "yog")).toBe(ready);
   });
@@ -160,31 +173,118 @@ describe("Reservation lifecycle", () => {
   });
 });
 
-it("Jerry claims exactly one hosted portion and cannot join a full or closed listing", async () => {
-  const { joinHostedDeal } = await import("../src/model");
-  const s = initialState();
-  s.products.push({
-    ...s.products[1],
-    id: "hosted",
-    owner: true,
-    shareCount: 2,
-    available: 2,
+describe("Hosts approve who joins", () => {
+  const hosting = () => {
+    const s = initialState();
+    s.products.push({
+      ...s.products[1],
+      id: "hosted",
+      owner: true,
+      shareCount: 2,
+      available: 2,
+    });
+    return s;
+  };
+  it("lets the host accept, decline or remove neighbours", () => {
+    const s = requestToJoin(
+      requestToJoin(hosting(), "hosted", "neighbour-a"),
+      "hosted",
+      "jerry",
+    );
+    expect(joinersOf(s, "hosted").map((r) => r.status)).toEqual([
+      "requested",
+      "requested",
+    ]);
+    // Asking doesn't take a portion; accepting does.
+    expect(s.products.find((p) => p.id === "hosted")!.available).toBe(2);
+    const declined = declineJoiner(s, "hosted", "neighbour-a");
+    const accepted = acceptJoiner(declined, "hosted", "jerry");
+    expect(accepted.products.find((p) => p.id === "hosted")!.available).toBe(1);
+    expect(acceptJoiner(accepted, "hosted", "jerry")).toBe(accepted);
+    expect(acceptJoiner(accepted, "hosted", "neighbour-a")).toBe(accepted);
+    const removed = removeJoiner(accepted, "hosted", "jerry");
+    expect(removed.products.find((p) => p.id === "hosted")!.available).toBe(2);
+    expect(removed.joinRequests.hosted.map((r) => r.status)).toEqual([
+      "declined",
+      "removed",
+    ]);
+    // Someone removed or declined can ask again.
+    expect(
+      joinersOf(requestToJoin(removed, "hosted", "jerry"), "hosted")[0].status,
+    ).toBe("requested");
   });
-  const joined = joinHostedDeal(s, "hosted");
-  expect(joined.joinedHosts.hosted).toBe(true);
-  expect(joined.products.find((p) => p.id === "hosted")?.available).toBe(1);
-  expect(joinHostedDeal(joined, "hosted")).toBe(joined);
-  expect(joinHostedDeal(s, "det")).toBe(s);
-  const closed = {
-    ...s,
-    products: s.products.map((p) => ({ ...p, closed: true })),
-  };
-  expect(joinHostedDeal(closed, "hosted")).toBe(closed);
-  const full = {
-    ...s,
-    products: s.products.map((p) => ({ ...p, available: 0 })),
-  };
-  expect(joinHostedDeal(full, "hosted")).toBe(full);
+  it("never accepts more people than there are portions, or joins closed splits", () => {
+    let s = hosting();
+    for (const person of ["neighbour-a", "jerry", "neighbour-b"])
+      s = requestToJoin(s, "hosted", person);
+    s = acceptJoiner(
+      acceptJoiner(s, "hosted", "jerry"),
+      "hosted",
+      "neighbour-b",
+    );
+    expect(acceptJoiner(s, "hosted", "neighbour-a")).toBe(s);
+    const closed = {
+      ...hosting(),
+      products: hosting().products.map((p) => ({ ...p, closed: true })),
+    };
+    expect(requestToJoin(closed, "hosted", "jerry")).toBe(closed);
+    expect(requestToJoin(hosting(), "det", "jerry").joinRequests).toEqual({});
+  });
+  it("can't remove anyone once the host has bought the bundle", () => {
+    const s = acceptJoiner(
+      requestToJoin(hosting(), "hosted", "jerry"),
+      "hosted",
+      "jerry",
+    );
+    const bought = simulatePurchase(s, "hosted");
+    expect(removeJoiner(bought, "hosted", "jerry")).toBe(bought);
+  });
+  it("hides requests scheduled for later until they arrive", () => {
+    const later = new Date(Date.now() + 60_000).toISOString();
+    const s = requestToJoin(hosting(), "hosted", "neighbour-a", later);
+    expect(joinersOf(s, "hosted")).toEqual([]);
+    expect(joinersOf(s, "hosted", Date.now() + 61_000)).toHaveLength(1);
+    const undated = requestToJoin(hosting(), "hosted", "neighbour-b", "");
+    expect(joinersOf(undated, "hosted")).toHaveLength(1);
+  });
+});
+
+it("migrates an older save's joined flag into an accepted request", () => {
+  const { joinRequests, ...old } = initialState();
+  const migrated = migrateJoins({
+    ...old,
+    joinedHosts: { hosted: true },
+  } as State);
+  expect(migrated.joinedHosts).toBeUndefined();
+  expect(migrated.joinRequests.hosted[0]).toMatchObject({
+    person: "jerry",
+    status: "accepted",
+  });
+});
+
+describe("Joining someone else's split", () => {
+  it("waits for the host, who accepts once the reply time passes", () => {
+    const s = reserve(initialState("fresh"), "det");
+    expect(s.reservations.det.status).toBe("requested");
+    expect(statusLabel(s.reservations.det)).toBe("Waiting for host");
+    expect(settleRequests(s, Date.now())).toBe(s);
+    const later = settleRequests(s, Date.now() + HOST_REPLY_MS + 1);
+    expect(later.reservations.det.status).toBe("reserved");
+    expect(later.reservations.det.decideAt).toBeUndefined();
+  });
+  it("releases the hold when the host declines or removes you", () => {
+    const s = reserve(initialState("fresh"), "det");
+    const declined = cancelReservation(s, "det", "declined");
+    expect(declined.reservations.det.cancelReason).toBe("declined");
+    expect(declined.products.find((p) => p.id === "det")!.available).toBe(1);
+    expect(statusLabel(declined.reservations.det)).toBe("Request declined");
+    // Removal only happens after acceptance; declining only before.
+    expect(cancelReservation(s, "det", "removed")).toBe(s);
+    const accepted = acceptRequest(s, "det");
+    expect(cancelReservation(accepted, "det", "declined")).toBe(accepted);
+    const removed = cancelReservation(accepted, "det", "removed");
+    expect(statusLabel(removed.reservations.det)).toBe("Removed by host");
+  });
 });
 
 describe("Listing reports", () => {
@@ -256,7 +356,7 @@ describe("Multiple portions", () => {
 
 describe("Buy-by deadline", () => {
   it("releases a waiting hold when the host misses the buy-by time", () => {
-    const held = reserve(initialState("fresh"), "det");
+    const held = joinSplit(initialState("fresh"), "det");
     const lapsed = cancelReservation(held, "det", "lapsed");
     expect(lapsed.reservations.det).toMatchObject({
       status: "cancelled",
@@ -267,7 +367,7 @@ describe("Buy-by deadline", () => {
     expect(conversationStatus(lapsed, lapsed.products[1])).toBeNull();
   });
   it("marks a waiting reservation ready when the host buys", () => {
-    const held = reserve(initialState("fresh"), "det");
+    const held = joinSplit(initialState("fresh"), "det");
     const bought = simulatePurchase(held, "det");
     expect(bought.reservations.det.status).toBe("ready");
     expect(bought.products.find((p) => p.id === "det")!.purchased).toBe(true);

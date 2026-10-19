@@ -19,9 +19,7 @@ export function DealPage({ id }: { id: string }) {
     return (
       <>
         <Header title="Spotted deal" />
-        <Empty title="Deal not found">
-          This deal may have been cleared when the demo was reset.
-        </Empty>
+        <Empty title="Deal not found">This deal may have been removed.</Empty>
       </>
     );
   const canSplit = !d.sourceFile || (d.bundleCount && d.priceCents > 0);
@@ -49,7 +47,7 @@ export function DealPage({ id }: { id: string }) {
                 ? "POSTED BY YOU"
                 : d.sourceFile
                   ? "PHOTOGRAPHED DEAL"
-                  : "SAMPLE DEAL"}
+                  : "SPOTTED BY A NEIGHBOUR"}
             </span>
             <h2>{d.title}</h2>
             <DealPrice deal={d} />

@@ -12,7 +12,9 @@ import {
   addDemoHistory,
   addDemoExtras,
   initialState,
+  migrateJoins,
   refreshSeedProducts,
+  settleRequests,
   type State,
 } from "./model";
 const KEY = "sharelah-demo-v1";
@@ -32,8 +34,7 @@ function load() {
       typeof value.payment === "string" &&
       value.createDraft &&
       typeof value.createDraft === "object" &&
-      value.joinedHosts &&
-      typeof value.joinedHosts === "object" &&
+      typeof (value.joinRequests ?? value.joinedHosts) === "object" &&
       value.products.every(
         (p: any) =>
           p &&
@@ -47,15 +48,19 @@ function load() {
     )
       return normalizePersonas(
         addDemoExtras(
-          addDemoHistory({
-            ...(value as State),
-            deals: mergePhotoDeals(value.deals),
-            products: refreshSeedProducts(value.products).map((p) =>
-              p.owner && value.joinedHosts[p.id] && p.available === p.shareCount
-                ? { ...p, available: Math.max(0, p.available - 1) }
-                : p,
-            ),
-          }),
+          addDemoHistory(
+            migrateJoins({
+              ...(value as State),
+              deals: mergePhotoDeals(value.deals),
+              products: refreshSeedProducts(value.products).map((p) =>
+                p.owner &&
+                value.joinedHosts?.[p.id] &&
+                p.available === p.shareCount
+                  ? { ...p, available: Math.max(0, p.available - 1) }
+                  : p,
+              ),
+            }),
+          ),
         ),
       );
   } catch {}
@@ -80,6 +85,18 @@ export function Provider({ children }: { children: ReactNode }) {
       );
     }
   }, [state]);
+  // Simulated hosts answer pending requests once their reply time passes.
+  const waiting = Object.values(state.reservations).some(
+    (r) => r.status === "requested",
+  );
+  useEffect(() => {
+    if (!waiting) return;
+    const timer = window.setInterval(
+      () => setState((s) => settleRequests(s)),
+      500,
+    );
+    return () => window.clearInterval(timer);
+  }, [waiting]);
   function update(fn: (s: State) => State) {
     setState(fn);
   }

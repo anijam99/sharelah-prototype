@@ -7,6 +7,7 @@ import { NeighbourProfile } from "./NeighbourProfiles";
 import { profileSummary } from "./people";
 import type { OpenModal } from "./Modals";
 import {
+  acceptRequest,
   cancelReservation,
   completedSavings,
   money,
@@ -131,9 +132,6 @@ function ProfileHome() {
             detail="Reset demo and explore other states"
             onClick={() => go("/profile/testing")}
           />
-          <p className="fine center">
-            Independent demo · no real payments or messages
-          </p>
         </div>
       </main>
     </>
@@ -157,7 +155,7 @@ function TestingSection({
       <h3>Pickup codes</h3>
       {state.products
         .filter((p) =>
-          ["reserved", "ready", "reported"].includes(
+          ["requested", "reserved", "ready", "reported"].includes(
             state.reservations[p.id]?.status,
           ),
         )
@@ -166,6 +164,21 @@ function TestingSection({
             <h3>{p.title}</h3>
             <QRCode value={`sharelah:pickup:${p.id}:${p.code}`} />
             <strong className="pickup-number">{p.code}</strong>
+            {state.reservations[p.id].status === "requested" && (
+              <>
+                <Button onClick={() => update((s) => acceptRequest(s, p.id))}>
+                  Simulate host accepting
+                </Button>
+                <Button
+                  kind="secondary"
+                  onClick={() =>
+                    update((s) => cancelReservation(s, p.id, "declined"))
+                  }
+                >
+                  Simulate host declining
+                </Button>
+              </>
+            )}
             {state.reservations[p.id].status === "reserved" && (
               <>
                 <Button
@@ -180,6 +193,14 @@ function TestingSection({
                   }
                 >
                   Simulate missed buy-by time
+                </Button>
+                <Button
+                  kind="secondary"
+                  onClick={() =>
+                    update((s) => cancelReservation(s, p.id, "removed"))
+                  }
+                >
+                  Simulate host removing you
                 </Button>
               </>
             )}

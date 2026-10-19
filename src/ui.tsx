@@ -12,8 +12,10 @@ import { back, go } from "./router";
 import { readPhoto, useStore } from "./store";
 import { svgIcons } from "./icons";
 import {
+  joinersOf,
   money,
   owned,
+  releasedByHost,
   savingFor,
   serviceFee,
   statusLabel,
@@ -21,6 +23,15 @@ import {
   type Product,
 } from "./model";
 import { resolveDealPhoto } from "./dealPhotos";
+/** The current time, refreshed on an interval, for things that arrive or expire. */
+export function useNow(interval = 1000) {
+  const [now, setNow] = useState(Date.now);
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), interval);
+    return () => window.clearInterval(timer);
+  }, [interval]);
+  return now;
+}
 export function Button({
   children,
   kind = "primary",
@@ -219,14 +230,17 @@ export function Card({ p }: { p: Product }) {
   const { state } = useStore(),
     r = state.reservations[p.id],
     joined = owned(r),
-    lapsed = r?.cancelReason === "lapsed";
+    released = releasedByHost(r),
+    requests = p.owner
+      ? joinersOf(state, p.id).filter((q) => q.status === "requested").length
+      : 0;
   return (
     <button
       className="offer-card"
       onClick={() =>
         go(
           "/" +
-            (p.owner ? "hosting" : joined || lapsed ? "split" : "offer") +
+            (p.owner ? "hosting" : joined || released ? "split" : "offer") +
             "/" +
             p.id,
         )
@@ -245,10 +259,18 @@ export function Card({ p }: { p: Product }) {
                 ? "Completed"
                 : r.status === "reported"
                   ? "Report under review"
-                  : "In your splits"}
+                  : r.status === "requested"
+                    ? "Request sent"
+                    : "In your splits"}
             </span>
           )}
-          {p.owner && <span className="membership">Your listing</span>}
+          {p.owner && (
+            <span className="membership">
+              {requests
+                ? `${requests} ${requests === 1 ? "request" : "requests"} to review`
+                : "Your split"}
+            </span>
+          )}
         </div>
       </div>
       <div className="compact-offer-type">

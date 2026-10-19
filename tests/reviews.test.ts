@@ -65,7 +65,7 @@ it("combines reviews across Jerry's splits and replaces an edited review", () =>
   ).toBe("Changed comment");
 });
 
-it("has only Tom and Jerry and normalizes hosted listings to Tom", () => {
+it("has only Tom and Jerry and normalizes hosted splits to Tom", () => {
   const state = initialState();
   state.products.push({
     ...state.products[0],

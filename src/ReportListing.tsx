@@ -37,10 +37,7 @@ export function ReportSheet({
           {noun === "split" ? "host" : "person who posted it"} is asked to
           confirm the details.
         </p>
-        <p className="fine">
-          They won’t see who reported it. In this demo, reports are saved only
-          on this device.
-        </p>
+        <p className="fine">They won’t see who reported it.</p>
       </Sheet>
     );
   return (
