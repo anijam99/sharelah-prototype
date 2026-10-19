@@ -1,0 +1,265 @@
+.state-caption {
+  margin: 8px 0;
+}
+
+.price-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.price-rows > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: 15px;
+  align-items: flex-start;
+}
+
+.price-rows span {
+  color: var(--muted);
+}
+
+.price-rows strong {
+  text-align: right;
+  font-weight: 500;
+}
+
+.price-rows .total {
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+  font-size: 17px;
+}
+
+.price-rows .total strong {
+  font-weight: 600;
+}
+
+.price-rows > p {
+  font-size: 13px;
+}
+
+.status-hero {
+  padding: 24px 20px;
+  background: var(--paper);
+  border-radius: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.status-hero h2 {
+  font-size: 30px;
+  line-height: 32px;
+  color: var(--ink);
+}
+
+.status-hero > strong {
+  font-size: 17px;
+  color: var(--pressed);
+}
+
+.checkout-total {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 20px;
+  background: var(--paper);
+  border-radius: 16px;
+}
+
+.checkout-total strong {
+  font: 800 36px/1.1 var(--display);
+  color: var(--pressed);
+}
+
+.checkout-total > span {
+  font-size: 15px;
+}
+
+.qr-code {
+  width: 220px;
+  height: 220px;
+  max-width: 100%;
+  margin: 0 auto;
+  background: white;
+  image-rendering: pixelated;
+}
+
+.pickup-number {
+  font-size: 30px;
+  letter-spacing: 6px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.code-input {
+  font-size: 32px !important;
+  letter-spacing: 8px;
+  text-align: center;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  min-height: 80px !important;
+}
+
+.chat-demo {
+  font-size: 11px;
+  line-height: 1.4;
+  text-align: center;
+  color: var(--muted);
+}
+
+.bubble {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-radius: 6px 20px 20px 20px;
+  background: white;
+  max-width: 90%;
+  align-self: flex-start;
+}
+
+.bubble.mine {
+  background: var(--tint);
+  align-self: flex-end;
+  border-radius: 20px 6px 20px 20px;
+}
+
+.bubble p {
+  white-space: pre-wrap;
+}
+
+.bubble small {
+  font-size: 11px;
+}
+
+.composer {
+  padding: 10px 20px max(18px, env(safe-area-inset-bottom));
+  background: var(--canvas);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 -6px 20px #fffcf8cc;
+}
+
+.quick-replies {
+  display: flex;
+  gap: 8px;
+}
+
+.quick-replies button {
+  flex: 1;
+  background: var(--tint);
+  color: var(--brand);
+  border-radius: 12px;
+  min-height: 44px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.composer form {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.composer textarea {
+  min-height: 52px;
+  max-height: 132px;
+  resize: none;
+}
+
+.composer .primary {
+  width: 52px;
+  flex: none;
+  padding: 12px;
+}
+
+.status-hero {
+  transition:
+    opacity 200ms var(--ease-out),
+    transform 200ms var(--ease-out);
+  @starting-style {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .status-hero {
+    transform: none;
+  }
+}
+
+.inbox-group {
+  display: grid;
+  gap: 8px;
+}
+
+.inbox-group h2 {
+  font-size: 18px;
+  margin: 8px 0;
+}
+
+.inbox-group .row-card > span {
+  min-width: 0;
+}
+
+.conversation-status,
+.conversation-preview {
+  display: block;
+  margin-top: 5px;
+}
+
+.conversation-status {
+  color: var(--brand);
+  font-weight: 600;
+}
+
+.conversation-preview {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Reserve sheet: choose how many portions to hold. */
+.quantity-picker {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: white;
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+}
+.quantity-picker > span {
+  flex: 1;
+}
+.quantity-picker strong {
+  display: block;
+  font-weight: 600;
+}
+.quantity-picker small {
+  display: block;
+}
+.quantity-picker button {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: white;
+  color: var(--brand);
+}
+.quantity-picker button:disabled {
+  opacity: 0.4;
+}
+.quantity-picker output {
+  min-width: 24px;
+  text-align: center;
+  font: 700 22px/1 var(--display);
+  font-variant-numeric: tabular-nums;
+}

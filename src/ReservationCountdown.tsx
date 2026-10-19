@@ -4,7 +4,14 @@ import { useEffect, useRef, useState } from "react";
 import { Header, Button, Row, Art } from "./ui";
 import { useStore } from "./store";
 import { go } from "./router";
-import { money, owned, reserve, total, type Product } from "./model";
+import {
+  money,
+  owned,
+  reserve,
+  serviceFee,
+  total,
+  type Product,
+} from "./model";
 
 export type ConfirmationVariant = "A" | "B" | "C";
 export function confirmationVariant(value: unknown): ConfirmationVariant {
@@ -21,6 +28,7 @@ export function ReservationCountdown({
   const [pending] = useState(() => ({
     deadline: Number(history.state?.holdDeadline) || 0,
     method: history.state?.holdMethod as string | undefined,
+    quantity: Math.max(1, Number(history.state?.holdQuantity) || 1),
     variant: confirmationVariant(history.state?.holdVariant || variant),
   }));
   const [remaining, setRemaining] = useState(() =>
@@ -42,12 +50,12 @@ export function ReservationCountdown({
       !current ||
       current.closed ||
       current.owner ||
-      current.available < 1
+      current.available < pending.quantity
     ) {
       setUnavailable(true);
     } else {
       update((s) => {
-        const reserved = reserve(s, p.id);
+        const reserved = reserve(s, p.id, pending.quantity);
         if (reserved === s) return s;
         return {
           ...reserved,
@@ -91,7 +99,10 @@ export function ReservationCountdown({
     // The deadline is fixed for this screen; latest contains the current store.
   }, [pending, p.id]);
 
-  const seconds = Math.ceil(remaining / 1000);
+  const seconds = Math.ceil(remaining / 1000),
+    amount = money(total(p, pending.quantity)),
+    portionText =
+      (pending.quantity > 1 ? `${pending.quantity} × ` : "") + p.portion;
   if (pending.variant === "A")
     return (
       <>
@@ -114,24 +125,29 @@ export function ReservationCountdown({
                 <Art p={p} />
                 <div>
                   <h3>{p.title}</h3>
-                  <p>{p.portion}</p>
+                  <p>{portionText}</p>
                 </div>
               </div>
               <div className="receipt-amount">
                 <span>
-                  Amount to hold<strong>{money(total(p))}</strong>
+                  Amount to hold<strong>{amount}</strong>
                 </span>
                 <ShieldCheck size={30} aria-hidden="true" />
               </div>
               <div className="receipt-payment">
                 <span>{pending.method}</span>
-                <span>Includes S$0.15 fee</span>
+                <span>Includes {serviceFee} fee</span>
               </div>
               <ol className="receipt-steps">
                 <li className="current">
                   <Clock3 size={18} aria-hidden="true" />
                   <div>
-                    <strong>Reserving your portion</strong>
+                    <strong>
+                      Reserving your{" "}
+                      {pending.quantity > 1
+                        ? `${pending.quantity} portions`
+                        : "portion"}
+                    </strong>
                     <span>Five seconds to undo before the hold starts.</span>
                   </div>
                 </li>
@@ -214,7 +230,7 @@ export function ReservationCountdown({
           <p className="muted">
             {unavailable
               ? "No demo payment was held. Try another split."
-              : `Reserve one portion and hold ${money(total(p))} using ${pending.method}?`}
+              : `Reserve ${pending.quantity > 1 ? `${pending.quantity} portions` : "one portion"} and hold ${amount} using ${pending.method}?`}
           </p>
           {pending.variant === "C" && !unavailable && (
             <p className="fine">
@@ -227,11 +243,11 @@ export function ReservationCountdown({
               <Art p={p} />
               <div>
                 <h3>{p.title}</h3>
-                <p>{p.portion}</p>
+                <p>{portionText}</p>
               </div>
             </div>
-            <Row title="Total to hold" detail="Includes S$0.15 fee">
-              {money(total(p))}
+            <Row title="Total to hold" detail={`Includes ${serviceFee} fee`}>
+              {amount}
             </Row>
             <Row title={p.place} detail={p.date + " · " + p.time} />
           </div>
@@ -248,9 +264,7 @@ export function ReservationCountdown({
           </Button>
         ) : (
           <>
-            <Button onClick={complete}>
-              Yes, reserve &amp; hold {money(total(p))}
-            </Button>
+            <Button onClick={complete}>Yes, reserve &amp; hold {amount}</Button>
             <Button kind="secondary" onClick={cancel}>
               Go back
             </Button>

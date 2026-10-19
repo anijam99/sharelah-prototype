@@ -1,126 +1,239 @@
 import { CompareButton } from "./Compare";
+import { comparisonFamily } from "./comparison";
+import { ReportButton, ReportedNotice, ReportSheet } from "./ReportListing";
 import { Pizza } from "./Pizza";
 import { hostPerson, profileSummary } from "./people";
-import { dealPrice } from "./dealCatalog";
 import { TileMap } from "./TileMap";
 import { useState, useEffect, useRef } from "react";
-import { Check, Send, Camera as CameraIcon } from "lucide-react";
+import {
+  ArrowLeftRight,
+  Camera as CameraIcon,
+  Flag,
+  Heart,
+  MessageCircle,
+  Navigation,
+  Send,
+  ShieldCheck,
+} from "lucide-react";
 import { Art, Button, Header, PriceRows, Row, QRCode, Empty } from "./ui";
 import { Camera } from "./Camera";
 import { back, finish, go } from "./router";
 import { useStore } from "./store";
 import {
+  buyBy,
   conversationStatus,
   complete,
   money,
   owned,
+  quantityOf,
   reportProblem,
-  statusLabel,
+  savingFor,
+  serviceFee,
   total,
   validateCode,
   type Product,
 } from "./model";
-import type { OpenModal } from "./Browse";
+import type { OpenModal } from "./Modals";
 export function Offer({ p, open }: { p: Product; open: OpenModal }) {
   const { state, update } = useStore(),
+    [reporting, setReporting] = useState(false),
     saved = state.saved.includes(p.id),
     deal = state.deals.find((d) => d.id === p.sourceDealId),
-    host = profileSummary(state, hostPerson(p));
+    host = profileSummary(state, hostPerson(p)),
+    mine = owned(state.reservations[p.id]),
+    reportKey = "offer:" + p.id,
+    reported = !!state.reports?.[reportKey],
+    saving = savingFor(p),
+    walk = Math.ceil(p.distance / 70);
   return (
     <>
-      <Header title={p.title} />
+      <Header
+        title="Split details"
+        action={
+          <ReportButton
+            noun="split"
+            onClick={() => setReporting(true)}
+            reported={reported}
+          />
+        }
+      />
       <main className="page-scroll">
-        <div className="content">
-          <div className="offer-hero">
-            <div className="product-line">
-              <Art p={p} large />
-              <div>
-                <h2>{p.title}</h2>
-                <p>{p.portion}</p>
-                <span>{p.store}</span>
+        <div className="content offer-content">
+          <ReportedNotice
+            reportKey={reportKey}
+            edit={() => setReporting(true)}
+          />
+          <section className="item-hero" aria-label="Item">
+            <Art p={p} large />
+            <div>
+              <h2>{p.title}</h2>
+              <p>{p.portion}</p>
+              <small>{p.store}</small>
+              <div className="item-badges">
+                <span className={p.available < 1 ? "badge muted" : "badge"}>
+                  {p.closed
+                    ? "Closed"
+                    : p.available < 1
+                      ? "Fully reserved"
+                      : `${p.available} of ${p.shareCount} left`}
+                </span>
+                <span className="badge muted">{p.category}</span>
+                {mine && <span className="badge dark">In your splits</span>}
               </div>
             </div>
-            <strong className="big-price">{money(total(p))} total</strong>
-            <p>
-              Save {money(Math.max(0, p.retailCents - total(p)))} compared with{" "}
-              {money(p.retailCents)} retail.
-            </p>
-            <small>Includes S$0.15 service fee</small>
-            <div className="shared-edge" />
+          </section>
+          <div className="fact-grid">
+            <div className="fact price">
+              <small>You pay</small>
+              <strong>{money(total(p))}</strong>
+              <span className={saving > 0 ? "saving" : ""}>
+                {saving > 0
+                  ? `Save ${money(saving)} · was ${money(p.retailCents)}`
+                  : `Incl. ${serviceFee} fee`}
+              </span>
+            </div>
+            <button
+              className="fact"
+              onClick={() => go("/neighbour/" + hostPerson(p))}
+            >
+              <small>Hosted by</small> <strong>{p.host}</strong>{" "}
+              <span>
+                {host.average} ★ · {host.reviews} reviews
+              </span>
+            </button>
+            <button className="fact" onClick={() => go("/directions/" + p.id)}>
+              <small>Pickup</small> <strong>{p.date}</strong>{" "}
+              <span>{p.time}</span>
+            </button>
+            <button className="fact" onClick={() => go("/directions/" + p.id)}>
+              <small>Where</small> <strong>{p.place}</strong>{" "}
+              <span>
+                {p.distance} m · {walk} min walk
+              </span>
+            </button>
           </div>
-          <CompareButton item={p} kind="offer" />
-          <Row
-            title={"Hosted by " + p.host}
-            detail={`${host.average} ★ · ${host.reviews} reviews · View profile`}
-            onClick={() => go("/neighbour/" + hostPerson(p))}
-          />
-          {deal && (
-            <Row
-              title="View the photographed deal"
-              detail={dealPrice(deal) + " · " + deal.portion}
-              onClick={() => go("/deal/" + deal.id)}
-            />
+          <div className="quick-actions">
+            <button
+              aria-pressed={saved}
+              onClick={() =>
+                update((s) => ({
+                  ...s,
+                  saved: saved
+                    ? s.saved.filter((id) => id !== p.id)
+                    : [...s.saved, p.id],
+                }))
+              }
+            >
+              <Heart
+                size={20}
+                aria-hidden="true"
+                fill={saved ? "currentColor" : "none"}
+              />
+              {saved ? "Saved" : "Save"}
+            </button>
+            {comparisonFamily(p) && (
+              <button
+                aria-label="Compare prices & travel"
+                onClick={() => go(`/compare/offer/${p.id}`)}
+              >
+                <ArrowLeftRight size={20} aria-hidden="true" />
+                Compare
+              </button>
+            )}
+            {!mine && (
+              <button onClick={() => go("/chat/" + p.id)}>
+                <MessageCircle size={20} aria-hidden="true" />
+                Ask {p.host}
+              </button>
+            )}
+            <button onClick={() => go("/directions/" + p.id)}>
+              <Navigation size={20} aria-hidden="true" />
+              Directions
+            </button>
+            {deal?.photo && (
+              <button onClick={() => go("/deal/" + deal.id)}>
+                <CameraIcon size={20} aria-hidden="true" />
+                Shelf photo
+              </button>
+            )}
+          </div>
+          <div className="panel deal-summary">
+            <div className="deal-summary-top">
+              <div className="deal-summary-pizza" aria-hidden="true">
+                <Pizza count={p.bundleCount} taken={p.shareCount} />
+              </div>
+              <div>
+                <h3>How this split works</h3>
+                <p>
+                  {p.host} buys{" "}
+                  {deal?.priceLabel
+                    ? `the “${deal.priceLabel}” offer`
+                    : `${p.bundleCount} for ${money(p.bundleCents)}`}
+                  , keeps {p.bundleCount - p.shareCount} and shares{" "}
+                  {p.shareCount} with neighbours.{" "}
+                  {p.purchased
+                    ? "It’s already bought and ready to collect."
+                    : `They’ll buy it by ${buyBy(p)} ${p.date.toLowerCase()}. If they don’t, your hold is released automatically.`}
+                </p>
+              </div>
+            </div>
+            <details className="price-details">
+              <summary>Price breakdown</summary>
+              <PriceRows p={p} />
+            </details>
+          </div>
+          {p.note && (
+            <div className="host-note">
+              <small>Note from {p.host}</small>
+              <p>“{p.note}”</p>
+            </div>
           )}
-          <div className="panel">
-            <h3>Just your portion.</h3>
-            <p>
-              {p.host} buys the {p.bundleCount}-item bundle and shares{" "}
-              {p.shareCount} {p.shareCount === 1 ? "item" : "items"} with
-              neighbours.
-            </p>
-            <PriceRows p={p} />
-          </div>
-          <Row
-            title={p.place}
-            detail={
-              <>
-                {p.date} · {p.time}
-                <br />
-                {p.distance} m away · {Math.ceil(p.distance / 70)} min walk
-              </>
-            }
-            onClick={() => go("/directions/" + p.id)}
-          />
-          <div className="notice">
-            Your payment stays held until you check the item and confirm
-            collection.
-          </div>
-          <Button
-            kind="secondary"
-            onClick={() =>
-              update((s) => ({
-                ...s,
-                saved: saved
-                  ? s.saved.filter((id) => id !== p.id)
-                  : [...s.saved, p.id],
-              }))
-            }
-          >
-            {saved ? "Remove from saved" : "♡ Save split"}
-          </Button>
-          <button className="text-button" onClick={() => open("help")}>
-            How it works ›
+          <p className="fine trust-line">
+            <ShieldCheck size={16} aria-hidden="true" />
+            <span>
+              Payment is held until you check the item and confirm collection.{" "}
+              <button
+                className="text-button"
+                onClick={() => open({ kind: "help" })}
+              >
+                How it works ›
+              </button>
+            </span>
+          </p>
+          <button className="report-row" onClick={() => setReporting(true)}>
+            <Flag size={16} aria-hidden="true" />
+            {reported
+              ? "You reported this split · Edit report"
+              : "Something off? Report this split"}
           </button>
         </div>
       </main>
-      <footer className="action-bar">
+      <footer className="action-bar with-price">
+        <div className="action-price">
+          <strong>{money(total(p))}</strong>
+          <small>per portion</small>
+        </div>
         <Button
-          disabled={
-            p.closed || (!owned(state.reservations[p.id]) && p.available < 1)
-          }
+          disabled={p.closed || (!mine && p.available < 1)}
           onClick={() =>
-            owned(state.reservations[p.id])
-              ? go("/split/" + p.id)
-              : open("review:" + p.id)
+            mine ? go("/split/" + p.id) : open({ kind: "reserve", id: p.id })
           }
         >
-          {owned(state.reservations[p.id])
+          {mine
             ? "View my split"
             : p.available < 1
               ? "All portions reserved"
               : "Reserve a portion"}
         </Button>
       </footer>
+      {reporting && (
+        <ReportSheet
+          reportKey={reportKey}
+          title={p.title}
+          noun="split"
+          close={() => setReporting(false)}
+        />
+      )}
     </>
   );
 }
@@ -133,23 +246,44 @@ export function MySplit({ p, open }: { p: Product; open: OpenModal }) {
         <Header title="My split" />
         <main className="page-scroll">
           <div className="content">
-            <Empty
-              title="No active reservation"
-              action={
-                <Button onClick={() => go("/offer/" + p.id, "My splits", true)}>
-                  View offer
-                </Button>
-              }
-            >
-              This portion is not currently in your splits.
-            </Empty>
+            {r?.cancelReason === "lapsed" ? (
+              <Empty
+                title="Your hold was released"
+                action={
+                  <Button
+                    onClick={() => go("/offer/" + p.id, "My splits", true)}
+                  >
+                    View split
+                  </Button>
+                }
+              >
+                {p.host} didn’t buy {p.title} by {buyBy(p)}, so your{" "}
+                {money(total(p, quantityOf(r)))} hold was released. Nothing was
+                charged.
+              </Empty>
+            ) : (
+              <Empty
+                title="No active reservation"
+                action={
+                  <Button
+                    onClick={() => go("/offer/" + p.id, "My splits", true)}
+                  >
+                    View split
+                  </Button>
+                }
+              >
+                This portion is not currently in your splits.
+              </Empty>
+            )}
           </div>
         </main>
       </>
     );
   const done = r.status === "completed",
     reported = r.status === "reported",
-    ready = r.status === "ready";
+    ready = r.status === "ready",
+    quantity = quantityOf(r),
+    portions = quantity > 1 ? `${quantity} portions` : "portion";
   return (
     <>
       <Header
@@ -177,7 +311,7 @@ export function MySplit({ p, open }: { p: Product; open: OpenModal }) {
                 : reported
                   ? "WE’VE SAVED YOUR REPORT"
                   : ready
-                    ? "YOUR PORTION IS READY"
+                    ? `YOUR ${portions.toUpperCase()} ${quantity > 1 ? "ARE" : "IS"} READY`
                     : "YOU’RE IN"}
             </span>
             <h2>
@@ -186,14 +320,15 @@ export function MySplit({ p, open }: { p: Product; open: OpenModal }) {
                 : reported
                   ? "Payment stays held."
                   : ready
-                    ? "Your portion is ready."
-                    : "Your portion is reserved."}
+                    ? `Your ${portions} ${quantity > 1 ? "are" : "is"} ready.`
+                    : `Your ${portions} ${quantity > 1 ? "are" : "is"} reserved.`}
             </h2>
             <p>
-              {p.title} · {p.portion}
+              {p.title} · {quantity > 1 ? `${quantity} × ` : ""}
+              {p.portion}
             </p>
             <strong>
-              {money(total(p))} {done ? "released" : "held"}
+              {money(total(p, quantity))} {done ? "released" : "held"}
             </strong>
             <div className="shared-edge" />
           </div>
@@ -221,7 +356,7 @@ export function MySplit({ p, open }: { p: Product; open: OpenModal }) {
             <>
               <div className="panel">
                 <h3>Your receipt</h3>
-                <PriceRows p={p} />
+                <PriceRows p={p} quantity={quantity} />
                 <p className="fine">Paid with {r.method} · Demo payment</p>
               </div>
               {r.rating && (
@@ -232,7 +367,7 @@ export function MySplit({ p, open }: { p: Product; open: OpenModal }) {
                   )}
                 </div>
               )}
-              <Button onClick={() => open("rating:" + p.id)}>
+              <Button onClick={() => open({ kind: "rating", id: p.id })}>
                 {r.rating ? "Edit your review" : "Rate your experience"}
               </Button>
               <Button kind="secondary" onClick={() => go("/splits")}>
@@ -246,7 +381,7 @@ export function MySplit({ p, open }: { p: Product; open: OpenModal }) {
                 <p>
                   {ready
                     ? `Meet ${p.host}, check your sealed item, then scan their pickup code.`
-                    : `${p.host} will buy the bundle and let you know when it’s ready.`}
+                    : `${p.host} buys the bundle by ${buyBy(p)} ${p.date.toLowerCase()} and lets you know when it’s ready. If they don’t buy in time, your hold is released automatically.`}
                 </p>
               </div>
               <Row
@@ -266,7 +401,9 @@ export function MySplit({ p, open }: { p: Product; open: OpenModal }) {
               <button
                 className="text-button"
                 onClick={() =>
-                  ready ? go("/problem/" + p.id) : open("cancel:" + p.id)
+                  ready
+                    ? go("/problem/" + p.id)
+                    : open({ kind: "cancel", id: p.id })
                 }
               >
                 {ready ? "Report a problem" : "Cancel reservation"}
@@ -278,7 +415,7 @@ export function MySplit({ p, open }: { p: Product; open: OpenModal }) {
       {!done && !reported && (
         <footer className="action-bar">
           <Button onClick={() => go(ready ? "/scan/" + p.id : "/splits")}>
-            {ready ? "Collect my portion" : "View my splits"}
+            {ready ? `Collect my ${portions}` : "View my splits"}
           </Button>
         </footer>
       )}
@@ -297,7 +434,9 @@ export function Pickup({
     [error, setError] = useState(""),
     [confirmed, setConfirmed] = useState(false),
     [scan, setScan] = useState(kind === "scan");
-  const r = state.reservations[p.id];
+  const r = state.reservations[p.id],
+    quantity = quantityOf(r),
+    amount = money(total(p, quantity));
   const stamp = Number(sessionStorage.getItem("sharelah-verified-" + p.id));
   const verified = stamp > 0 && Date.now() - stamp < 30 * 60 * 1000;
   function accept(value: string) {
@@ -356,11 +495,14 @@ export function Pickup({
             verified ? (
               <>
                 <h2>Everything look right?</h2>
-                <Row title={p.title} detail={p.portion} />
-                <PriceRows p={p} />
+                <Row
+                  title={p.title}
+                  detail={(quantity > 1 ? `${quantity} × ` : "") + p.portion}
+                />
+                <PriceRows p={p} quantity={quantity} />
                 <div className="notice">
-                  Check the item and quantity before releasing {money(total(p))}{" "}
-                  to complete your split.
+                  Check the item and quantity before releasing {amount} to
+                  complete your split.
                 </div>
                 <label className="checkbox">
                   <input
@@ -368,7 +510,9 @@ export function Pickup({
                     checked={confirmed}
                     onChange={(e) => setConfirmed(e.target.checked)}
                   />
-                  I received my portion in the expected condition.
+                  I received{" "}
+                  {quantity > 1 ? `all ${quantity} portions` : "my portion"} in
+                  the expected condition.
                 </label>
                 <Button
                   disabled={!confirmed}
@@ -378,7 +522,7 @@ export function Pickup({
                     finish("/split/" + p.id);
                   }}
                 >
-                  Confirm &amp; release {money(total(p))}
+                  Confirm &amp; release {amount}
                 </Button>
                 <Button kind="secondary" onClick={() => go("/problem/" + p.id)}>
                   Something is wrong
@@ -534,12 +678,31 @@ export function Chat({ p }: { p: Product }) {
   const { state, update } = useStore(),
     end = useRef<HTMLDivElement>(null),
     messages = state.messages[p.id] || [],
-    draft = state.drafts[p.id] || "";
+    status = conversationStatus(state, p) ?? "Question",
+    neighbour = p.owner ? "Jerry" : p.host;
+  // Typing stays local; the draft is saved after a pause and when leaving.
+  const [draft, setDraft] = useState(() => state.drafts[p.id] || "");
+  const saved = useRef(draft);
+  const saveDraft = useRef((value: string) => {
+    if (value === saved.current) return;
+    saved.current = value;
+    update((s) => ({ ...s, drafts: { ...s.drafts, [p.id]: value } }));
+  });
+  const latestDraft = useRef(draft);
+  latestDraft.current = draft;
+  useEffect(() => {
+    const timer = window.setTimeout(() => saveDraft.current(draft), 400);
+    return () => window.clearTimeout(timer);
+  }, [draft]);
+  useEffect(() => () => saveDraft.current(latestDraft.current), []);
   useEffect(() => {
     end.current?.scrollIntoView({ behavior: "instant", block: "nearest" });
   }, [messages.length]);
   function send(body: string) {
     if (!body.trim()) return;
+    const asking = status === "Question" && !p.owner;
+    saved.current = "";
+    setDraft("");
     update((s) => ({
       ...s,
       messages: {
@@ -556,30 +719,80 @@ export function Chat({ p }: { p: Product }) {
       },
       drafts: { ...s.drafts, [p.id]: "" },
     }));
+    // Demo: the host answers a first question so the thread feels real.
+    if (asking)
+      window.setTimeout(
+        () =>
+          update((s) =>
+            (s.messages[p.id] || []).some((m) => !m.mine)
+              ? s
+              : {
+                  ...s,
+                  messages: {
+                    ...s.messages,
+                    [p.id]: [
+                      ...(s.messages[p.id] || []),
+                      {
+                        id: crypto.randomUUID(),
+                        body: p.purchased
+                          ? `Hi! Yes, I’ve already bought it. Reserve a portion and we can meet at ${p.place}.`
+                          : `Hi! Yes, it’s still available. Reserve a portion and I’ll buy the bundle by ${buyBy(p)}.`,
+                        mine: false,
+                        time: new Date().toISOString(),
+                      },
+                    ],
+                  },
+                },
+          ),
+        1200,
+      );
   }
+  // [button label, message sent]
+  const quickReplies =
+    status === "Question"
+      ? [
+          ["Still available?", "Is this still available?"],
+          ["Collect later?", "Could I collect a little later?"],
+        ]
+      : [
+          ["I’m here", "I’m here."],
+          ["5 mins late", "Running 5 minutes late."],
+        ];
   return (
     <>
-      <Header title={p.owner ? "Jerry" : p.host} item={p.title} />
+      <Header title={neighbour} item={p.title} />
       <main className="page-scroll chat-scroll">
         <div className="content">
           <Row
-            title={"View " + (p.owner ? "Jerry" : p.host) + "’s profile"}
+            title={"View " + neighbour + "’s profile"}
             detail="Read reviews from split partners"
             onClick={() => go("/neighbour/jerry")}
           />
-          <Row
-            title={p.title}
-            detail={
-              conversationStatus(state, p) === "Completed split"
-                ? `Completed split · ${p.date}`
-                : `Current split · ${p.portion}`
-            }
-          />
+          {status === "Question" ? (
+            <Row
+              title={p.title}
+              detail={`Asking about this split · ${money(total(p))} per portion`}
+              onClick={() => go("/offer/" + p.id)}
+            />
+          ) : (
+            <Row
+              title={p.title}
+              detail={
+                status === "Completed split"
+                  ? `Completed split · ${p.date}`
+                  : `Current split · ${p.portion}`
+              }
+            />
+          )}
           <p className="chat-demo">
             Demo conversation · messages stay on this device
           </p>
           {!messages.length && (
-            <p className="muted">No messages yet. Arrange your pickup here.</p>
+            <p className="muted">
+              {status === "Question"
+                ? `Ask ${neighbour} about the item, pack size or pickup before you reserve.`
+                : "No messages yet. Arrange your pickup here."}
+            </p>
           )}
           {messages.map((m) => (
             <div className={"bubble " + (m.mine ? "mine" : "")} key={m.id}>
@@ -598,10 +811,11 @@ export function Chat({ p }: { p: Product }) {
       </main>
       <footer className="composer">
         <div className="quick-replies">
-          <button onClick={() => send("I’m here.")}>I’m here</button>
-          <button onClick={() => send("Running 5 minutes late.")}>
-            5 mins late
-          </button>
+          {quickReplies.map(([label, message]) => (
+            <button key={label} onClick={() => send(message)}>
+              {label}
+            </button>
+          ))}
         </div>
         <form
           onSubmit={(e) => {
@@ -617,13 +831,12 @@ export function Chat({ p }: { p: Product }) {
             rows={1}
             maxLength={1000}
             value={draft}
-            placeholder="Write a message"
-            onChange={(e) =>
-              update((s) => ({
-                ...s,
-                drafts: { ...s.drafts, [p.id]: e.target.value },
-              }))
+            placeholder={
+              status === "Question"
+                ? `Ask ${neighbour} a question`
+                : "Write a message"
             }
+            onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
@@ -691,7 +904,7 @@ export function Hosting({
   return (
     <>
       <Header
-        title={published ? "Split published" : "Your listing"}
+        title={published ? "Split published" : "Your split"}
         item={p.title}
         label="Hosting"
         onBack={() => {
@@ -709,7 +922,7 @@ export function Hosting({
             />
             <h2>
               {p.closed
-                ? "This listing is closed."
+                ? "This split is closed."
                 : p.purchased
                   ? "Ready to share."
                   : joined
@@ -763,9 +976,9 @@ export function Hosting({
           {!p.closed && !p.purchased && (
             <Button
               kind="secondary"
-              onClick={() => open("close-listing:" + p.id)}
+              onClick={() => open({ kind: "close-split", id: p.id })}
             >
-              Close listing
+              Close split
             </Button>
           )}
           <button

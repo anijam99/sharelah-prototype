@@ -14,44 +14,44 @@ if (!history.state?.sharelah)
 export function currentPath() {
   return location.hash.slice(1) || "/";
 }
+// Back-button labels, matched by path prefix in order (longest prefixes first).
+const labels: [string, string][] = [
+  ["/compare", "Compare prices"],
+  ["/map", "Map"],
+  ["/deals", "Spotted deals"],
+  ["/deal/", "Deal"],
+  ["/splits", "My splits"],
+  ["/saved", "Saved"],
+  ["/search", "Results"],
+  ["/neighbour", "Neighbours"],
+  ["/profile", "Profile"],
+  ["/messages", "Messages"],
+  ["/chat", "Chat"],
+  ["/offer", "Split"],
+  ["/split", "My split"],
+  ["/hosting", "Your split"],
+  ["/create", "Share"],
+];
 export function routeLabel(path = currentPath()) {
-  return path.startsWith("/compare")
-    ? "Compare prices"
-    : path.startsWith("/map")
-      ? "Map"
-      : path.startsWith("/deals")
-        ? "Spotted deals"
-        : path.startsWith("/splits")
-          ? "My splits"
-          : path.startsWith("/saved")
-            ? "Saved"
-            : path.startsWith("/search")
-              ? "Results"
-              : path.startsWith("/neighbour")
-                ? "Neighbours"
-                : path.startsWith("/profile")
-                  ? "Profile"
-                  : path.startsWith("/messages")
-                    ? "Messages"
-                    : path.startsWith("/chat")
-                      ? "Chat"
-                      : path.startsWith("/offer")
-                        ? "Offer"
-                        : path.startsWith("/split")
-                          ? "My split"
-                          : path.startsWith("/create")
-                            ? "Share"
-                            : "Home";
+  return labels.find(([prefix]) => path.startsWith(prefix))?.[1] ?? "Home";
 }
+/** "/hosting/abc?published=1" → page "hosting", id "abc", params published=1. */
+export function parseRoute(path: string) {
+  const [pathname, query = ""] = path.split("?");
+  const [page = "", id = "", extra = ""] = pathname.slice(1).split("/");
+  return { page, id, extra, params: new URLSearchParams(query) };
+}
+export type FlowState = {
+  holdDeadline: number;
+  holdMethod: string;
+  holdQuantity?: number;
+  holdVariant?: "A" | "B" | "C";
+};
 export function go(
   path: string,
   label?: string,
   replace = false,
-  flowState?: {
-    holdDeadline: number;
-    holdMethod: string;
-    holdVariant?: "A" | "B" | "C";
-  },
+  flowState?: FlowState,
 ) {
   if (path === currentPath()) return;
   scrolls.set(

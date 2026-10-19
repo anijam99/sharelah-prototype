@@ -190,7 +190,10 @@ test("the tile map has accessible offer pins, attribution, zoom and pickup locat
     });
   });
   await page.goto("/#/map");
-  await expect(page.locator(".maplibregl-canvas").first()).toBeVisible();
+  // The vector renderer loads lazily and can take a few seconds on a busy machine.
+  await expect(page.locator(".maplibregl-canvas").first()).toBeVisible({
+    timeout: 15_000,
+  });
   await expect(page.getByRole("link", { name: "OpenStreetMap" })).toBeVisible();
   await expect(page.getByRole("link", { name: "OpenFreeMap" })).toBeVisible();
   const photoPins = page.locator(".photo-pin");
@@ -586,14 +589,16 @@ test("varied demo categories, TOP photo and Share entry points work", async ({
   await expect(page.locator(".offer-card")).toHaveCount(2);
   await page.getByRole("button", { name: "Share", exact: true }).click();
   await expect(
-    page.getByRole("dialog").getByRole("button", { name: /Share a deal/ }),
+    page
+      .getByRole("dialog")
+      .getByRole("button", { name: /Post a spotted deal/ }),
   ).toBeVisible();
   await page
     .getByRole("dialog")
-    .getByRole("button", { name: /Enter details manually/ })
+    .getByRole("button", { name: /Start a split manually/ })
     .click();
   await expect(
-    page.getByRole("heading", { name: "Share a split", exact: true }),
+    page.getByRole("heading", { name: "Start a split", exact: true }),
   ).toBeVisible();
   await page.goto("/#/deals");
   await page.getByRole("button", { name: "Stationery", exact: true }).click();
@@ -955,14 +960,10 @@ test("mobile testing controls live in Profile and fresh accounts stay empty afte
   await page.goto("/#/messages");
   await expect(page.locator(".inbox-group .row-card")).toHaveCount(3);
   await expect(
-    page
-      .getByRole("region", { name: "Current conversations" })
-      .getByRole("button"),
+    page.getByRole("region", { name: "Current splits" }).getByRole("button"),
   ).toHaveCount(1);
   await expect(
-    page
-      .getByRole("region", { name: "Completed conversations" })
-      .getByRole("button"),
+    page.getByRole("region", { name: "Completed splits" }).getByRole("button"),
   ).toHaveCount(2);
   await page.screenshot({ path: "/tmp/sharelah-mobile-inbox.png" });
   await page
@@ -971,4 +972,82 @@ test("mobile testing controls live in Profile and fresh accounts stay empty afte
   await expect(
     page.getByText("Completed split · 11 Oct 2026", { exact: true }),
   ).toBeVisible();
+});
+
+test("reports a fake or expired listing and remembers it", async ({ page }) => {
+  await page.goto("/#/offer/det");
+  await page
+    .getByRole("button", { name: "Report this split", exact: true })
+    .click();
+  const sheet = page.getByRole("dialog", { name: "Report this split" });
+  await expect(
+    sheet.getByRole("button", { name: "Submit report" }),
+  ).toBeDisabled();
+  await sheet.getByText("Fake or misleading").click();
+  await sheet.getByRole("button", { name: "Submit report" }).click();
+  await page.getByRole("button", { name: "Done" }).click();
+  await expect(page.getByRole("status")).toContainText("fake or misleading");
+  await page.reload();
+  await expect(
+    page.getByRole("button", { name: "Edit your report" }),
+  ).toBeVisible();
+  await page.goto("/#/deal/photo-chobani-blueberry");
+  await page
+    .getByRole("button", { name: "Report this deal", exact: true })
+    .click();
+  await page.getByText("Deal has expired").click();
+  await page.getByRole("button", { name: "Submit report" }).click();
+  const state = await page.evaluate(() =>
+    JSON.parse(localStorage.getItem("sharelah-demo-v1")!),
+  );
+  expect(Object.keys(state.reports)).toEqual([
+    "offer:det",
+    "deal:photo-chobani-blueberry",
+  ]);
+});
+
+test("reserves several portions, then the hold lapses when the host misses the buy-by time", async ({
+  page,
+}) => {
+  await page.goto("/#/offer/sample-demo-tote");
+  await expect(page.getByText(/buy it by 6:15 pm today/)).toBeVisible();
+  await page.getByRole("button", { name: "Reserve a portion" }).click();
+  const sheet = page.getByRole("dialog", { name: "Reserve your portion" });
+  await sheet.getByRole("button", { name: "One more portion" }).click();
+  await expect(
+    sheet.getByRole("button", { name: "One more portion" }),
+  ).toBeDisabled();
+  const hold = sheet.getByRole("button", { name: /Confirm & hold/ });
+  const amount = (await hold.textContent())!.match(/S\$[\d.]+/)![0];
+  await hold.click();
+  await page.getByRole("button", { name: "Looks good, proceed" }).click();
+  await expect(page.getByText("Your 2 portions are reserved.")).toBeVisible();
+  await expect(page.getByText(`${amount} held`)).toBeVisible();
+  await page.goto("/#/profile/testing");
+  await page
+    .getByRole("button", { name: "Simulate missed buy-by time" })
+    .click();
+  await page.goto("/#/split/sample-demo-tote");
+  await expect(
+    page.getByRole("heading", { name: "Your hold was released" }),
+  ).toBeVisible();
+  await expect(
+    page.getByText(`your ${amount} hold was released`),
+  ).toBeVisible();
+  await page.goto("/#/offer/sample-demo-tote");
+  await expect(page.getByText("2 of 2 left")).toBeVisible();
+});
+
+test("asks the host a question before reserving and finds it in the inbox", async ({
+  page,
+}) => {
+  await page.goto("/#/offer/det");
+  await page.getByRole("button", { name: "Ask Jerry" }).click();
+  await expect(page.getByText("Asking about this split")).toBeVisible();
+  await page.getByRole("button", { name: "Still available?" }).click();
+  await expect(page.getByText(/Yes, it’s still available/)).toBeVisible();
+  await page.goto("/#/messages");
+  await expect(
+    page.getByRole("region", { name: "Questions to hosts" }),
+  ).toContainText("TOP liquid laundry detergent");
 });

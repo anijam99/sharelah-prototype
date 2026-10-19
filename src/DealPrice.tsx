@@ -1,4 +1,11 @@
-import { money, total, type Deal, type Product } from "./model";
+import {
+  money,
+  savingFor,
+  serviceFee,
+  total,
+  type Deal,
+  type Product,
+} from "./model";
 import { dealPrice } from "./dealCatalog";
 
 export function DealPrice({ deal: d }: { deal: Deal }) {
@@ -28,7 +35,7 @@ export function DealPrice({ deal: d }: { deal: Deal }) {
   );
 }
 export function SplitPrice({ p, offer }: { p: Product; offer?: Deal }) {
-  const saving = p.retailCents - total(p);
+  const saving = savingFor(p);
   return (
     <div className="deal-glance split-glance">
       <span className="offer-type">
@@ -45,8 +52,8 @@ export function SplitPrice({ p, offer }: { p: Product; offer?: Deal }) {
       </span>
       <span className="saving-label">
         {saving > 0
-          ? `Save ${money(saving)} per portion · incl. S$0.15 fee`
-          : "Includes S$0.15 service fee"}
+          ? `Save ${money(saving)} per portion · incl. ${serviceFee} fee`
+          : `Includes ${serviceFee} service fee`}
       </span>
     </div>
   );

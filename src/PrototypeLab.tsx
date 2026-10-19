@@ -2,6 +2,7 @@ import { DemoControls } from "./DemoControls";
 import { useSyncExternalStore } from "react";
 import type { ConfirmationVariant } from "./ReservationCountdown";
 import type { HomeVariant } from "./Browse";
+import type { OpenModal } from "./Modals";
 
 const mobileQuery = window.matchMedia("(max-width: 899px)");
 export function useMobileLayout() {
@@ -27,7 +28,7 @@ export function PrototypeLab({
   selectVariant: (value: ConfirmationVariant) => void;
   homeVariant: HomeVariant;
   selectHomeVariant: (value: HomeVariant) => void;
-  open: (value: string) => void;
+  open: OpenModal;
   locked: boolean;
   embedded?: boolean;
 }) {
@@ -147,8 +148,8 @@ export function PrototypeLab({
       </section>
       <DemoControls
         locked={locked}
-        resetDemo={() => open("reset")}
-        freshAccount={() => open("fresh-account")}
+        resetDemo={() => open({ kind: "reset" })}
+        freshAccount={() => open({ kind: "reset", fresh: true })}
       />
     </aside>
   );

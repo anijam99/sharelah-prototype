@@ -1,0 +1,312 @@
+.experiment-panel {
+  width: 290px;
+  flex-shrink: 0;
+  align-self: center;
+  padding: 24px;
+  border: 1px solid #d8cfc5;
+  border-radius: 20px;
+  background: #fffaf4;
+}
+
+.experiment-panel > .eyebrow {
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.experiment-panel h2 {
+  font-size: 24px;
+  margin: 10px 0 18px;
+}
+
+.experiment-options {
+  display: flex;
+  gap: 6px;
+}
+
+.experiment-options button {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 12px;
+  background: white;
+}
+
+.experiment-options button {
+  flex: 1;
+}
+
+.experiment-options button[aria-pressed="true"] {
+  background: var(--ink);
+  color: white;
+  border-color: var(--ink);
+}
+
+.experiment-rationale {
+  margin-top: 16px;
+  font-size: 13px;
+}
+
+.experiment-rationale summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.experiment-rationale p {
+  margin: 12px 0;
+}
+
+.experiment-caption {
+  color: var(--muted);
+  font-size: 12px;
+  margin: 14px 0 0;
+}
+
+@media (max-width: 899px) {
+  .experiment-panel {
+    width: 100%;
+    max-width: 480px;
+    border-radius: 0;
+    padding: 10px 16px;
+    max-height: 40dvh;
+    overflow: auto;
+    background: #eee5da;
+  }
+}
+
+@media (max-width: 899px) {
+  .experiment-panel h2 {
+    display: none;
+  }
+}
+
+@media (max-width: 899px) {
+  .experiment-options {
+    margin-top: 6px;
+  }
+}
+
+@media (max-width: 899px) {
+  .experiment-rationale {
+    margin-top: 6px;
+  }
+}
+
+@media (max-width: 899px) {
+  .experiment-caption {
+    margin-top: 6px;
+    font-size: 10px;
+  }
+}
+
+@media (max-width: 899px) {
+  .experiment-panel {
+    padding: 8px 16px;
+  }
+}
+
+@media (max-width: 899px) {
+  .experiment-panel > .eyebrow,
+  .experiment-caption {
+    display: none;
+  }
+}
+
+@media (max-width: 899px) {
+  .experiment-options {
+    margin-top: 0;
+  }
+}
+
+@media (max-width: 899px) {
+  .experiment-options button {
+    padding: 7px 10px;
+  }
+}
+
+@media (max-width: 899px) {
+  .experiment-rationale {
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 899px) {
+  .experiment-panel {
+    position: relative;
+    padding-bottom: 12px;
+  }
+}
+
+.receipt-countdown-heading .eyebrow {
+  font-size: 10px;
+}
+
+.demo-controls {
+  border-top: 1px solid var(--border);
+  margin-top: 16px;
+  padding-top: 14px;
+  font-size: 13px;
+}
+
+.demo-controls summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.demo-controls fieldset {
+  padding: 0;
+  border: 0;
+  margin: 14px 0 0;
+  display: grid;
+  gap: 10px;
+}
+
+.demo-controls label {
+  font-size: 12px;
+  gap: 4px;
+}
+
+.demo-controls select {
+  padding: 8px;
+  font-size: 12px;
+  border-radius: 8px;
+  min-height: 36px;
+}
+
+.demo-controls h3 {
+  font-size: 15px;
+  margin-top: 8px;
+}
+
+.demo-controls button {
+  border: 1px solid var(--border);
+  background: white;
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 12px;
+  min-height: 40px;
+}
+
+.demo-controls .demo-reset {
+  color: #a42e17;
+  border-color: #e4b4a8;
+}
+
+.demo-hint {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.demo-scenario {
+  display: grid;
+  gap: 7px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px;
+}
+
+.demo-scenario strong {
+  font-size: 12px;
+}
+
+.demo-scenario small {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.experiment-panel {
+  max-height: calc(100dvh - 40px);
+  overflow-y: auto;
+}
+
+@media (max-width: 899px) {
+  .experiment-panel {
+    max-height: 35dvh;
+  }
+}
+
+@media (max-width: 899px) {
+  .demo-controls {
+    margin-top: 8px;
+    padding-top: 7px;
+    font-size: 11px;
+  }
+}
+/* A separate experiment controls the home/map layout. */
+.home-layout-experiment {
+  border-top: 1px solid var(--border);
+  margin-top: 18px;
+  padding-top: 14px;
+}
+
+.home-layout-experiment h2 {
+  font-size: 18px;
+  margin: 0 0 12px;
+}
+
+.home-layout-experiment .experiment-options button,
+.confirmation-options button {
+  padding: 10px 5px;
+  font-size: 11px;
+}
+
+@media (max-width: 899px) {
+  .home-layout-experiment {
+    margin-top: 8px;
+    padding-top: 8px;
+  }
+}
+
+@media (max-width: 899px) {
+  .home-layout-experiment h2 {
+    display: block;
+    font-size: 11px;
+    margin-bottom: 6px;
+  }
+}
+
+@media (max-width: 899px) {
+  .home-layout-experiment .experiment-options button {
+    min-height: 36px;
+    padding: 6px 5px;
+  }
+}
+/* Mobile testing controls live inside Profile, leaving the app its full viewport. */
+.testing-lab {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.testing-lab h2,
+.testing-lab .home-layout-experiment h2 {
+  display: block;
+  font-size: 20px;
+  margin: 0 0 12px;
+}
+
+.testing-lab .experiment-caption {
+  display: block;
+  font-size: 12px;
+}
+
+.testing-lab .experiment-options button,
+.testing-lab .demo-controls button {
+  min-height: 44px;
+}
+
+.testing-lab .demo-controls,
+.testing-lab .experiment-rationale {
+  font-size: 13px;
+}
+
+.testing-lab .demo-controls select {
+  min-height: 44px;
+  font-size: 16px;
+}
+
+@media (max-width: 899px) {
+  .app-layout > .experiment-panel {
+    display: none;
+  }
+}

@@ -97,7 +97,7 @@ it("shows individual product crops in main splits, deal cards and deal details",
   expect(
     screen.getByRole("link", { name: /Open full photo/ }).getAttribute("href"),
   ).toBe("/assets/deals/IMG_2069.jpg");
-  click("Share a split from this deal");
+  click("Start a split from this deal");
   expect(saved().createDraft.photo).toBe(
     "/assets/deals/IMG_2069.jpg#deal=chobani-blueberry",
   );
@@ -280,14 +280,14 @@ it("starts a fresh account, preserves it after reload and restores seeded data o
   expect(saved().reservations["past-demo-detergent"].status).toBe("completed");
 });
 
-it("shows only split conversations and labels current and completed threads", () => {
+it("groups current, question and completed threads in the inbox", () => {
   render(<App />);
   const previous = saved();
   cleanup();
   previous.messages.det = [
     {
       id: "orphan",
-      body: "Unrelated offer enquiry",
+      body: "Is the detergent still available?",
       mine: true,
       time: new Date().toISOString(),
     },
@@ -295,11 +295,18 @@ it("shows only split conversations and labels current and completed threads", ()
   localStorage.setItem("sharelah-demo-v1", JSON.stringify(previous));
   render(<App />);
   navigate("/messages");
-  expect(document.querySelectorAll(".inbox-group .row-card")).toHaveLength(3);
+  expect(document.querySelectorAll(".inbox-group .row-card")).toHaveLength(4);
   expect(screen.getByText("Current split · Ready for pickup")).toBeTruthy();
   expect(screen.getByText("Completed split · 11 Oct 2026")).toBeTruthy();
-  expect(screen.queryByText("Unrelated offer enquiry")).toBeNull();
-  click(/Jerry · TOP liquid laundry detergent/);
+  const questions = screen.getByRole("region", { name: "Questions to hosts" });
+  expect(questions.textContent).toContain("Is the detergent still available?");
+  expect(questions.textContent).toContain("Not reserved · 1 of 1 left");
+  fireEvent.click(
+    within(screen.getByRole("region", { name: "Completed splits" })).getByRole(
+      "button",
+      { name: /Jerry · TOP liquid laundry detergent/ },
+    ),
+  );
   expect(screen.getByText("Completed split · 11 Oct 2026")).toBeTruthy();
   expect(screen.getByText("Collected, thank you for sharing!")).toBeTruthy();
   expect(
@@ -312,7 +319,7 @@ it("shows only split conversations and labels current and completed threads", ()
 it("validates a new listing, computes its portions, publishes it, and resets only local demo data", async () => {
   render(<App />);
   click("Share");
-  click(/Enter details manually/);
+  click(/Start a split manually/);
   click("Set portions & price");
   expect(screen.getByRole("alert").textContent).toContain("Add an item");
   click("Samyang Buldak bowl noodles");
@@ -321,9 +328,9 @@ it("validates a new listing, computes its portions, publishes it, and resets onl
     target: { value: "10.01" },
   });
   click("Arrange pickup");
-  click("Review listing");
+  click("Review split");
   expect(screen.getByText("S$5.15")).toBeTruthy();
-  click("Share split");
+  click("Publish split");
   const p = saved().products.find((p: any) => p.owner);
   expect(p.itemCents).toBe(500);
   expect(p.bundleCents).toBe(1001);
@@ -357,11 +364,9 @@ it("opens the camera for a deal report and offers a usable permission-denied fal
   fireEvent.change(screen.getByLabelText("Advertised price (S$)"), {
     target: { value: "12.50" },
   });
-  click("Share deal");
+  click("Post deal");
   expect(saved().deals[0].priceCents).toBe(1250);
-  expect(
-    screen.getByRole("heading", { name: "Neighbourhood find" }),
-  ).toBeTruthy();
+  expect(screen.getByRole("heading", { name: "Spotted deal" })).toBeTruthy();
 });
 
 it.each(["A", "C"])(
@@ -438,7 +443,7 @@ it("shows photo deals in existing demos and searches separate offers in the same
       .querySelector("image")
       ?.getAttribute("href"),
   ).toBe("/assets/deals/IMG_2069.jpg");
-  click("Share a split from this deal");
+  click("Start a split from this deal");
   expect(saved().createDraft.portion).toBe("1 tub · 160 g");
   expect(saved().createDraft.bundleCount).toBe(2);
   expect(saved().createDraft.bundleCents).toBe(730);

@@ -930,6 +930,12 @@ export const seedDeals: Deal[] = [
     photo: dealPhoto("bodywash"),
   },
 ];
+// Demo spotting dates: staggered over the past week so freshness reads naturally.
+seedDeals.forEach((d, i) => {
+  d.createdAt = new Date(
+    Date.UTC(2026, 9, 18 - (i % 7), 1 + ((i * 3) % 11), (i * 17) % 60),
+  ).toISOString();
+});
 export const dealCategories = [
   "All",
   "Food & drinks",

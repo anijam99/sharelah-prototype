@@ -1,6 +1,11 @@
 import { useState } from "react";
 import { useStore } from "./store";
-import { joinHostedDeal, owned } from "./model";
+import {
+  cancelReservation,
+  joinHostedDeal,
+  owned,
+  simulatePurchase,
+} from "./model";
 import { CachedPhotos } from "./CachedPhotos";
 import { go } from "./router";
 
@@ -94,7 +99,7 @@ export function DemoControls({
           </p>
           <h3>Hosting simulation</h3>
           {!hosted.length && (
-            <p className="demo-hint">Share a split to invite Jerry.</p>
+            <p className="demo-hint">Start a split to invite Jerry.</p>
           )}
           {hosted.map((p) => (
             <div className="demo-scenario" key={p.id}>
@@ -131,32 +136,28 @@ export function DemoControls({
               <strong>{p.title}</strong>
               <small>Pickup code: {p.code}</small>
               {state.reservations[p.id].status === "reserved" && (
-                <button
-                  onClick={() => {
-                    update((s) =>
-                      s.reservations[p.id]?.status !== "reserved"
-                        ? s
-                        : {
-                            ...s,
-                            products: s.products.map((q) =>
-                              q.id === p.id ? { ...q, purchased: true } : q,
-                            ),
-                            reservations: {
-                              ...s.reservations,
-                              [p.id]: {
-                                ...s.reservations[p.id],
-                                status: "ready",
-                              },
-                            },
-                          },
-                    );
-                    setMessage(
-                      "Host purchase simulated. The portion is ready for pickup.",
-                    );
-                  }}
-                >
-                  Simulate purchase
-                </button>
+                <>
+                  <button
+                    onClick={() => {
+                      update((s) => simulatePurchase(s, p.id));
+                      setMessage(
+                        "Host purchase simulated. The portion is ready for pickup.",
+                      );
+                    }}
+                  >
+                    Simulate purchase
+                  </button>
+                  <button
+                    onClick={() => {
+                      update((s) => cancelReservation(s, p.id, "lapsed"));
+                      setMessage(
+                        "Buy-by time missed. The hold was released and the portion is available again.",
+                      );
+                    }}
+                  >
+                    Simulate missed buy-by time
+                  </button>
+                </>
               )}
             </div>
           ))}
@@ -164,7 +165,7 @@ export function DemoControls({
             Reset demo data
           </button>
           <p className="demo-hint">
-            Clears this browser’s listings, reservations, messages and cached
+            Clears this browser’s splits, reservations, messages and cached
             photos.
           </p>
         </fieldset>

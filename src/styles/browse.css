@@ -1,0 +1,411 @@
+.page-scroll:has(.home-location) > .content {
+  gap: 12px;
+}
+
+.home-location {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  text-align: left;
+  color: var(--brand);
+}
+
+.home-location strong {
+  font-size: 15px;
+}
+
+.home-location span {
+  margin-left: auto;
+  font-size: 13px;
+}
+
+.search-box {
+  background: white;
+  box-shadow: var(--shadow);
+  min-height: 51px;
+  border-radius: 20px;
+  padding: 14px 16px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.search-box svg {
+  flex: none;
+}
+
+.search-box input {
+  border: 0;
+  box-shadow: none;
+  padding: 0;
+  background: none;
+  min-height: 23px;
+  min-width: 0;
+  font-size: 17px;
+}
+
+.categories {
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.categories .chip {
+  flex: none;
+  white-space: nowrap;
+  padding: 11px 14px;
+}
+
+.filter-bar {
+  background: #f6efe6;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 16px;
+  min-height: 44px;
+  border-radius: 14px;
+  color: var(--brand);
+  font-size: 15px;
+}
+
+.filter-bar svg {
+  display: none;
+}
+
+.filter-bar span:last-child {
+  margin-left: auto;
+}
+
+.section-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+.section-heading h2 {
+  font-size: 20px;
+  letter-spacing: -0.4px;
+}
+
+.offer-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  width: 100%;
+  text-align: left;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: white;
+  box-shadow: var(--shadow);
+}
+
+.deal-thumb {
+  width: 76px;
+  height: 76px;
+  object-fit: cover;
+  border-radius: 10px;
+}
+
+.segmented {
+  display: flex;
+  background: #f6efe6;
+  border-radius: 14px;
+  padding: 4px;
+}
+
+.segmented button {
+  flex: 1;
+  border-radius: 11px;
+  min-height: 44px;
+  color: var(--muted);
+  font-size: 15px;
+}
+
+.segmented .selected {
+  background: white;
+  color: var(--brand);
+  box-shadow: var(--shadow);
+  font-weight: 600;
+}
+
+input,
+textarea,
+select {
+  width: 100%;
+  min-height: 52px;
+  background: white;
+  color: var(--ink);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 13px 14px;
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 400;
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: var(--brand);
+  width: 20px;
+  min-height: 20px;
+  margin: 0;
+  flex: none;
+}
+
+textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #82776e;
+}
+
+.content form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .secondary:hover,
+  .row-card:is(button):hover,
+  .offer-card:hover {
+    background: #fffcf8;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .chip:hover:not(.selected) {
+    background: var(--tint);
+  }
+}
+
+@media (max-width: 375px) {
+  .categories .chip {
+    font-size: 14px;
+    padding-left: 11px;
+    padding-right: 11px;
+  }
+}
+
+@media (max-width: 375px) {
+  .filter-bar {
+    gap: 8px;
+    font-size: 14px;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .offer-card {
+    border-color: #a99c90;
+  }
+}
+
+.deal-search {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: white;
+  color: var(--muted);
+}
+
+.deal-search input {
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.deal-thumb {
+  flex: none;
+}
+
+.deal-glance {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+  font-size: 13px;
+  text-align: left;
+}
+
+.offer-type {
+  justify-self: start;
+  background: var(--tint);
+  color: var(--brand);
+  border-radius: 6px;
+  padding: 3px 7px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.deal-price-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 7px;
+}
+
+.deal-price-line del {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.deal-price-line strong {
+  font-size: 16px;
+}
+
+.saving-label {
+  color: #476237;
+  font-size: 12px;
+}
+
+.price-unknown {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.split-glance {
+  padding: 10px 0;
+  border-top: 1px dashed var(--border);
+}
+/* Compact browsing cards keep comparison information together. */
+.offer-card {
+  gap: 5px;
+  padding: 11px 12px;
+  border-radius: 14px;
+}
+
+.offer-card .product-line {
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.offer-card .product-art > img {
+  max-width: 48px;
+  max-height: 48px;
+}
+
+.compact-offer-type {
+  font-size: 10px;
+  line-height: 15px;
+  color: var(--brand);
+  font-weight: 600;
+}
+
+.compact-prices {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+}
+
+.compact-prices strong {
+  font: 700 18px/22px var(--display);
+}
+
+.compact-prices del,
+.compact-prices small {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.compact-prices span {
+  font-size: 11px;
+  color: #476237;
+}
+
+.compact-prices svg {
+  margin-left: auto;
+  color: var(--brand);
+  align-self: center;
+}
+
+.compact-pickup {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  border-top: 1px solid var(--border);
+  padding-top: 5px;
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.compact-pickup span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.compact-pickup small {
+  font-size: inherit;
+}
+
+.spotted-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 48px;
+  gap: 5px 10px;
+  text-align: left;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px;
+}
+
+.spotted-heading strong {
+  display: block;
+  font-size: 14px;
+  line-height: 18px;
+}
+
+.spotted-heading small {
+  display: block;
+  font-size: 10px;
+  color: var(--muted);
+  margin-top: 3px;
+}
+
+.spotted-card .deal-thumb {
+  width: 48px;
+  height: 48px;
+}
+
+.spotted-card .deal-glance {
+  grid-column: 1 / -1;
+  margin-top: 0;
+  gap: 3px;
+}
+
+.spotted-card .offer-type {
+  font-size: 10px;
+  padding: 1px 5px;
+}
+
+.spotted-card .deal-price-line strong {
+  font-size: 14px;
+}
+
+.spotted-card .saving-label,
+.spotted-card .price-unknown {
+  font-size: 10px;
+}
+
+@media (max-width: 899px) {
+  .page-scroll:has(.home-location) > .content {
+    gap: 8px;
+  }
+}
+
+/* One line under each Home feed heading explains what kind of item it holds. */
+.section-intro {
+  margin-top: -6px;
+}

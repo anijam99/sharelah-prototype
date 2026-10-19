@@ -17,7 +17,8 @@ import {
   visibleProducts,
 } from "./model";
 export type HomeVariant = "A" | "B" | "C";
-export type OpenModal = (type: string) => void;
+export type { OpenModal } from "./Modals";
+import type { OpenModal } from "./Modals";
 export function Home({
   open,
   search = false,
@@ -53,7 +54,10 @@ export function Home({
               <h1 className="sr-only" tabIndex={-1}>
                 Nearby deals
               </h1>
-              <button className="home-location" onClick={() => open("area")}>
+              <button
+                className="home-location"
+                onClick={() => open({ kind: "area" })}
+              >
                 <MapPin size={17} aria-hidden="true" />
                 <strong>{state.area}</strong>
                 <span>Change area ›</span>
@@ -66,10 +70,10 @@ export function Home({
               <label className="search-box">
                 <Search size={21} />
                 <input
-                  aria-label="Search products or deals"
+                  aria-label="Search splits and deals"
                   value={query}
                   autoFocus
-                  placeholder="Search products or deals"
+                  placeholder="Search splits and deals"
                   onChange={(e) => {
                     setQuery(e.target.value);
                     sessionStorage.setItem("sharelah-search", e.target.value);
@@ -79,7 +83,7 @@ export function Home({
             ) : (
               <button className="search-box" onClick={() => go("/search")}>
                 <Search size={21} />
-                <span>Search products or deals</span>
+                <span>Search splits and deals</span>
               </button>
             ))}
           {!saved && (
@@ -99,7 +103,10 @@ export function Home({
                   </button>
                 ))}
               </div>
-              <button className="filter-bar" onClick={() => open("filters")}>
+              <button
+                className="filter-bar"
+                onClick={() => open({ kind: "filters" })}
+              >
                 <SlidersHorizontal size={17} />
                 <span>Filters</span>
                 <span>
@@ -118,11 +125,20 @@ export function Home({
                   : "Nearby splits"}
             </h2>
             {!saved && !search && (
-              <button className="text-button" onClick={() => open("help")}>
+              <button
+                className="text-button"
+                onClick={() => open({ kind: "help" })}
+              >
                 How it works ›
               </button>
             )}
           </div>
+          {!saved && !search && (
+            <p className="fine section-intro">
+              Neighbours are buying in bulk. Reserve a portion and collect it
+              nearby.
+            </p>
+          )}
           {products.map((p, index) => (
             <Fragment key={p.id}>
               <Card p={p} />
@@ -139,14 +155,14 @@ export function Home({
               action={
                 <Button
                   kind="secondary"
-                  onClick={() => (saved ? go("/") : open("filters"))}
+                  onClick={() => (saved ? go("/") : open({ kind: "filters" }))}
                 >
                   {saved ? "Explore nearby" : "Change filters"}
                 </Button>
               }
             >
               {saved
-                ? "Save an offer to come back to it later."
+                ? "Save a split to come back to it later."
                 : "Try another search, category or distance."}
             </Empty>
           )}
@@ -161,12 +177,13 @@ export function Home({
                   className="text-button"
                   onClick={() => go("/report-deal")}
                 >
-                  Share a deal ›
+                  Post a deal ›
                 </button>
               </div>
               {!search && (
-                <p className="fine">
-                  Demo offers · sample prices and pickup details.
+                <p className="fine section-intro">
+                  Prices neighbours spotted in store. You can’t reserve these:
+                  buy them yourself, or start a split to share the bundle.
                 </p>
               )}
               {(search ? deals : deals.slice(0, 4)).map((d) => (
@@ -201,11 +218,11 @@ export function MapScreen({ open }: { open: OpenModal }) {
       <main className="page-scroll">
         <div className="content">
           <div className="map-controls">
-            <button className="chip" onClick={() => open("area")}>
+            <button className="chip" onClick={() => open({ kind: "area" })}>
               <MapPin size={17} />
               {state.area}⌄
             </button>
-            <button className="chip" onClick={() => open("filters")}>
+            <button className="chip" onClick={() => open({ kind: "filters" })}>
               {state.radius < 1000 ? "500 m" : state.radius / 1000 + " km"}{" "}
               radius⌄
             </button>
@@ -282,7 +299,7 @@ export function MapScreen({ open }: { open: OpenModal }) {
             <Empty
               title="No splits in this area"
               action={
-                <Button onClick={() => open("area")}>
+                <Button onClick={() => open({ kind: "area" })}>
                   Choose another area
                 </Button>
               }
@@ -314,7 +331,8 @@ export function Splits() {
     tab === "Hosting"
       ? p.owner && !p.closed
       : tab === "Past"
-        ? state.reservations[p.id]?.status === "completed"
+        ? state.reservations[p.id]?.status === "completed" ||
+          state.reservations[p.id]?.cancelReason === "lapsed"
         : owned(state.reservations[p.id]) &&
           state.reservations[p.id].status !== "completed",
   );
@@ -363,13 +381,13 @@ export function Splits() {
                     tab === "Hosting" ? go("/create/1") : go("/")
                   }
                 >
-                  {tab === "Hosting" ? "Share a split" : "Explore nearby"}
+                  {tab === "Hosting" ? "Start a split" : "Explore nearby"}
                 </Button>
               }
             >
               {tab === "Hosting"
-                ? "Share a listing for an offer you’ve found."
-                : "Browse nearby offers and keep only what you need."}
+                ? "Found a bundle that’s too much for you? Start a split and share the rest."
+                : "Browse nearby splits and reserve only what you need."}
             </Empty>
           )}
           <button

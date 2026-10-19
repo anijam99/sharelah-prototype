@@ -5,14 +5,16 @@ import { Header, Photo, Empty, Button } from "./ui";
 import { useStore } from "./store";
 import { go } from "./router";
 import { dealPrice, dealCategories } from "./dealCatalog";
-import type { Deal } from "./model";
+import { spottedPhrase, type Deal } from "./model";
 
 export function DealRow({ deal }: { deal: Deal }) {
   return (
     <button className="spotted-card" onClick={() => go("/deal/" + deal.id)}>
       <span className="spotted-heading">
         <strong>{deal.title}</strong>
-        <small>{deal.store}</small>
+        <small>
+          {deal.store} · {spottedPhrase(deal.createdAt)}
+        </small>
       </span>
       {deal.photo && (
         <Photo
@@ -45,15 +47,15 @@ export function Deals() {
       <main className="page-scroll">
         <div className="content">
           <p className="fine">
-            Good finds across everyday essentials, fashion and more. Sample
-            offers for the demo.
+            Prices neighbours have spotted in store. These aren’t reservable:
+            buy them yourself, or start a split to share a bundle.
           </p>
           <label className="deal-search">
             <Search size={20} aria-hidden="true" />
             <input
               type="search"
               aria-label="Search spotted deals"
-              placeholder="Search items, stores or offers"
+              placeholder="Search items or stores"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />

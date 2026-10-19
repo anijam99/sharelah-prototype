@@ -1,4 +1,10 @@
 import { conversationStatus, statusLabel } from "./model";
+
+const groups = {
+  "Current split": "Current splits",
+  Question: "Questions to hosts",
+  "Completed split": "Completed splits",
+} as const;
 import { go } from "./router";
 import { useStore } from "./store";
 import { Empty, Header, Row } from "./ui";
@@ -13,7 +19,7 @@ export function Inbox() {
       <Header title="Messages" />
       <main className="page-scroll">
         <div className="content">
-          {(["Current split", "Completed split"] as const).map((status) => {
+          {(Object.keys(groups) as (keyof typeof groups)[]).map((status) => {
             const group = threads.filter(
               (p) => conversationStatus(state, p) === status,
             );
@@ -21,17 +27,9 @@ export function Inbox() {
               <section
                 key={status}
                 className="inbox-group"
-                aria-label={
-                  status === "Current split"
-                    ? "Current conversations"
-                    : "Completed conversations"
-                }
+                aria-label={groups[status]}
               >
-                <h2>
-                  {status === "Current split"
-                    ? "Current splits"
-                    : "Completed splits"}
-                </h2>
+                <h2>{groups[status]}</h2>
                 {group.map((p) => (
                   <Row
                     key={p.id}
@@ -39,10 +37,13 @@ export function Inbox() {
                     detail={
                       <>
                         <span className="conversation-status">
-                          {status} ·{" "}
-                          {status === "Completed split"
-                            ? p.date
-                            : statusLabel(state.reservations[p.id])}
+                          {status === "Question"
+                            ? `Not reserved · ${p.available} of ${p.shareCount} left`
+                            : `${status} · ${
+                                status === "Completed split"
+                                  ? p.date
+                                  : statusLabel(state.reservations[p.id])
+                              }`}
                         </span>
                         <span className="conversation-preview">
                           {state.messages[p.id].at(-1)?.body}

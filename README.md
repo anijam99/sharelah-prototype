@@ -60,15 +60,16 @@ BASE_URL=https://sharelah.your-domain.com npm run test:e2e
 ## What works
 
 - Home / Map / Create / Splits / Profile navigation, contextual Back labels and a four-step creation indicator.
-- Browse, search, category, distance, sorting, saved offers and neighbourhood changes.
+- Browse, search, category, distance, sorting, saved splits and neighbourhood changes. Home explains its two feeds: **splits** (a neighbour buys a bundle; you reserve a portion) and **spotted deals** (price tips you buy yourself, or start a split from). Each spotted deal shows when it was spotted; catalogue dates are made up and fall within the week before 19 Oct 2026.
 - Interactive Leaflet maps with OpenStreetMap tiles, clickable offer pins, zoom controls and a remembered map view. Pickup points and walking distances are sample data; “Near me” resets to the demo Bugis location rather than using GPS. Map tiles require internet access.
 - Consistent membership on Home, map pins and cards. Chobani blueberry Greek yoghurt starts in your splits and ready for pickup.
-- Offer details → reservation sheet → payment choice → animated five-second cancellation screen → held reservation. Cancelling during the countdown leaves availability and demo payment untouched. Refresh preserves the original deadline; navigating away abandons confirmation. Cancellation after confirmation and before purchase restores availability.
+- Split details show price, savings, host, pickup time and place at a glance, with Save, Compare, Ask the host, Directions and Shelf photo actions. Split details → reservation sheet (choose one or more portions; one service fee per reservation) → payment choice → animated five-second cancellation screen → held reservation. Cancelling during the countdown leaves availability and demo payment untouched. Refresh preserves the original deadline; navigating away abandons confirmation. Cancellation after confirmation and before purchase restores availability. Every split shows the host’s buy-by time (an hour before pickup unless set); if the host misses it, the hold is released automatically and the split shows “Your hold was released”.
 - Ready pickup → live rear-camera QR scanner or uploaded QR image / manual six-digit code → explicit item check → completion and rating. A valid scan does not release payment by itself.
 - Problem reports retain the held payment and block pickup completion.
-- Persistent local conversations, message drafts and quick replies.
+- Any split or spotted deal can be reported as fake, expired, out of stock, wrong or prohibited. Reports can be edited or withdrawn and stay in this browser.
+- Persistent local conversations, message drafts and quick replies. You can ask a host a question before reserving; Jerry sends one demo reply, and these threads appear under “Questions to hosts” in Messages.
 - Shelf-photo capture and upload, item entry, bundle allocation in integer cents, editable pickup details, review, publishing and hosting controls.
-- Deal reporting opens the camera, saves a compressed photo locally and lets the tester enter the item and advertised price. Price-tag text is entered manually; OCR is not included.
+- Posting a spotted deal opens the camera, saves a compressed photo locally and lets the tester enter the item and advertised price. Price-tag text is entered manually; OCR is not included.
 - Camera switching, optional torch where supported, permission-denied fallbacks, and stream cleanup when the screen closes or becomes hidden.
 
 Payments, neighbour actions, notifications, ratings/history and support resolution are simulated. Messages and reports stay in this browser; they do not reach another person. Each browser has its own listings, so this prototype intentionally has no cross-device marketplace or shared chat.
@@ -79,9 +80,9 @@ Use **Profile → Testing controls → Demo settings & tools → Start fresh acc
 
 On mobile (below 900 px), the prototype lab lives in **Profile → Testing controls**, including both independent A/B/C selectors, radius, neighbourhood, payment and participant simulations. It occupies no space above the app, which fills the dynamic viewport. Desktop keeps the outside-app panel; opening Testing controls places the same controls in that page without duplicating them.
 
-The seeded setup includes two saved offers (TOP detergent and a tumbler) and three short conversations: one ready pickup and two completed splits. Inbox shows only threads with messages tied to an active or completed split, grouped and labelled Current or Completed. Old unrelated offer enquiries are retained in storage but do not appear in Inbox. Chat no longer invents a greeting for every offer.
+The seeded setup includes two saved splits (TOP detergent and a tumbler) and three short conversations: one ready pickup and two completed splits. Inbox groups threads as Current splits, Questions to hosts (messages sent before reserving) and Completed splits.
 
-The tester persona is fixed as Tom Chua. Jerry hosts every seeded split and is the demo neighbour who joins Tom’s listings. Test controls let you simulate Jerry buying a reserved bundle or joining your own listing. Show a facilitator pickup code on another device or print it:
+The tester persona is fixed as Tom Chua. Jerry hosts every seeded split and is the demo neighbour who joins Tom’s listings. Test controls let you simulate Jerry buying a reserved bundle, missing the buy-by time, or joining your own split. Show a facilitator pickup code on another device or print it:
 
 `https://your-domain/testing/pickup-codes.html`
 
@@ -97,7 +98,7 @@ Before the study, test on the actual participant phones over HTTPS: allow/deny p
 
 ## Project layout
 
-`src/` contains the application, domain transitions, browser persistence, router and camera adapter. `public/assets/` contains original Figma artwork; `src/vendor/` contains the bundled QR JavaScript modules; `public/vendor/` contains the WASM binary served locally. `tests/` contains domain, DOM, lifecycle, QR and Playwright checks. `design-reference/` contains the Figma implementation references and is excluded from the Docker image.
+`src/` contains the application, domain transitions (`model.ts`), browser persistence (`store.tsx`), router and camera adapter. `App.tsx` only routes; screens live in their own files, and every sheet is opened through the typed `Modal` union in `Modals.tsx`. Styles are split by area under `src/styles/`, imported in cascade order by `src/styles/index.css`; put new rules in the file for the screen they style. `public/assets/` contains original Figma artwork; `src/vendor/` contains the bundled QR JavaScript modules; `public/vendor/` contains the WASM binary served locally. `tests/` contains domain, DOM, lifecycle, QR and Playwright checks. `design-reference/` contains the Figma implementation references and is excluded from the Docker image.
 
 Third-party notices are in `THIRD_PARTY_NOTICES.md` and are included in the built app. The earlier `../prototype/` study app is separate from this implementation.
 

@@ -9,6 +9,7 @@ import {
   money,
   parsePrice,
   seedProducts,
+  serviceFee,
   type Product,
 } from "./model";
 import { savePhoto, useStore } from "./store";
@@ -185,14 +186,14 @@ export function Create({
           camera
             ? "Photograph a price tag"
             : mode === "deal"
-              ? "Share a deal"
+              ? "Post a deal"
               : stage === 1
-                ? "Share a split"
+                ? "Start a split"
                 : stage === 2
                   ? "Allocate portions"
                   : stage === 3
                     ? "Arrange pickup"
-                    : "Review listing"
+                    : "Review split"
         }
         item={stage > 1 ? p.title : undefined}
         label={
@@ -270,8 +271,8 @@ export function Create({
                 </>
               ) : (
                 <p className="muted">
-                  Share a price you spotted. Your photo helps neighbours check
-                  the deal.
+                  Post a price you spotted in store. Your photo helps neighbours
+                  check the deal before they go.
                 </p>
               )}
               {(stage === 1 || mode === "deal") && (
@@ -446,7 +447,7 @@ export function Create({
                     <span>Each neighbour pays</span>
                     <h2>{money(prices.neighbourTotal)} per person</h2>
                     <p className="fine">
-                      Includes the portion + S$0.15 service fee
+                      Includes the portion + {serviceFee} service fee
                     </p>
                   </div>
                   <p className="fine">
@@ -567,14 +568,14 @@ export function Create({
             onClick={stage === 4 || mode === "deal" ? publish : next}
           >
             {mode === "deal"
-              ? "Share deal"
+              ? "Post deal"
               : stage === 4
-                ? "Share split"
+                ? "Publish split"
                 : stage === 1
                   ? "Set portions & price"
                   : stage === 2
                     ? "Arrange pickup"
-                    : "Review listing"}
+                    : "Review split"}
           </Button>
         </footer>
       )}

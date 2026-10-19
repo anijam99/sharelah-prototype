@@ -1,0 +1,204 @@
+.compare-content {
+  gap: 16px;
+}
+
+.compare-product {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.compare-product > img,
+.compare-product > svg {
+  width: 64px;
+  height: 64px;
+  flex: none;
+  object-fit: contain;
+  border-radius: 14px;
+}
+
+.compare-product h2 {
+  font-size: 21px;
+  line-height: 1.2;
+}
+
+.compare-product p {
+  font-size: 13px;
+  margin-top: 6px;
+}
+
+.compare-controls {
+  display: grid;
+  gap: 14px;
+}
+
+.compare-controls > label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 600;
+}
+
+.compare-controls select {
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--canvas);
+}
+
+.compare-controls fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+
+.compare-controls legend {
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+
+.compare-controls .chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.compare-card {
+  display: grid;
+  gap: 10px;
+  padding: 18px;
+}
+
+.compare-card.best {
+  border: 2px solid var(--brand);
+}
+
+.compare-card-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: center;
+}
+
+.compare-card h3 {
+  font-size: 17px;
+}
+
+.compare-card > p {
+  font-size: 13px;
+  margin: 0;
+}
+
+.compare-offer {
+  font-weight: 600;
+  color: var(--brand);
+}
+
+.compare-location {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+}
+
+.compare-breakdown {
+  margin: 4px 0 0;
+  display: grid;
+  gap: 7px;
+  font-size: 13px;
+}
+
+.compare-breakdown > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.compare-breakdown dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.compare-fee {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.compare-fee input {
+  width: 82px;
+  min-height: 44px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--canvas);
+  font-size: 16px;
+}
+
+.compare-total {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+  font-size: 12px;
+}
+
+.compare-total strong {
+  display: block;
+  color: var(--brand);
+  font-size: 26px;
+  font-variant-numeric: tabular-nums;
+}
+
+.compare-total > span:last-child {
+  text-align: right;
+}
+
+.compare-total small {
+  display: block;
+  margin-top: 4px;
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.compare-controls > label,
+.compare-fee {
+  flex-direction: row;
+}
+
+.compare-controls select {
+  width: auto;
+  min-width: 100px;
+}
+
+.compare-controls {
+  padding: 14px;
+  gap: 10px;
+}
+
+.compare-controls .fine {
+  font-size: 11px;
+}
+
+.compare-content > .segmented button {
+  font-size: 13px;
+}
+
+.compare-reference {
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+}
+
+.compare-reference h3 {
+  font-size: 15px;
+}
+
+.compare-reference > p {
+  font-size: 12px;
+}

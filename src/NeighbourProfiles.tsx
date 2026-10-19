@@ -132,7 +132,7 @@ export function NeighbourProfile({ id }: { id: string }) {
               </small>
             </article>
           ))}
-          <h2>{id === "tom" ? "Your listings" : "Splits hosted by Jerry"}</h2>
+          <h2>{id === "tom" ? "Your splits" : "Splits hosted by Jerry"}</h2>
           {listings.map((p) => (
             <Row
               key={p.id}

@@ -21,6 +21,8 @@ export type Product = {
   owner: boolean;
   purchased: boolean;
   closed: boolean;
+  /** When the host will buy the bundle, e.g. "6:00 pm". Derived from pickup when absent. */
+  buyBy?: string;
   place: string;
   address: string;
   area: string;
@@ -36,10 +38,19 @@ export type Reservation = {
   status: Status;
   method: string;
   createdAt: string;
+  /** Portions in this reservation. Older saves have one. */
+  quantity?: number;
+  /** Why a cancelled hold ended: by you, or because the host missed the buy-by time. */
+  cancelReason?: "you" | "lapsed";
   report?: { reason: string; note: string };
   rating?: number;
   reviewComment?: string;
   reviewedAt?: string;
+};
+export type ListingReport = {
+  reason: string;
+  note: string;
+  createdAt: string;
 };
 export type Message = { id: string; body: string; mine: boolean; time: string };
 export type Deal = {
@@ -80,6 +91,8 @@ export type State = {
   joinedHosts: Record<string, boolean>;
   createDraft: Partial<Product>;
   started: boolean;
+  /** Keyed by "offer:<id>" or "deal:<id>". Older saves may not have it. */
+  reports?: Record<string, ListingReport>;
 };
 const common = {
   owner: false,
@@ -415,20 +428,42 @@ export function initialState(
       joinedHosts: {},
       createDraft: {},
       started: false,
+      reports: {},
     }),
   );
 }
 export const money = (cents: number) => "S$" + (cents / 100).toFixed(2);
-export const total = (p: Product) => p.itemCents + 15;
+/** Charged once per reservation, however many portions it holds. */
+export const SERVICE_FEE_CENTS = 15;
+export const serviceFee = money(SERVICE_FEE_CENTS);
+export const quantityOf = (r?: Reservation) => r?.quantity || 1;
+export const total = (p: Product, quantity = 1) =>
+  p.itemCents * quantity + SERVICE_FEE_CENTS;
+export const savingFor = (p: Product, quantity = 1) =>
+  Math.max(0, p.retailCents * quantity - total(p, quantity));
 export const completedSavings = (s: State) =>
   s.products.reduce(
     (sum, p) =>
       sum +
       (s.reservations[p.id]?.status === "completed"
-        ? Math.max(0, p.retailCents - total(p))
+        ? savingFor(p, quantityOf(s.reservations[p.id]))
         : 0),
     0,
   );
+/** The host's buy-by time: explicit, or an hour before the pickup window opens. */
+export function buyBy(p: Pick<Product, "buyBy" | "time">) {
+  if (p.buyBy) return p.buyBy;
+  // Windows look like "6:30–6:45 pm"; the am/pm suffix belongs to the end time.
+  const m = p.time.match(/^(\d{1,2}):(\d{2})\D+(\d{1,2}):(\d{2})\s*(am|pm)$/i);
+  if (!m) return "before pickup";
+  const pm = m[5].toLowerCase() === "pm" ? 12 : 0;
+  const end = ((Number(m[3]) % 12) + pm) * 60 + Number(m[4]);
+  let start = ((Number(m[1]) % 12) + pm) * 60 + Number(m[2]);
+  if (start > end) start -= 12 * 60;
+  const at = (start - 60 + 24 * 60) % (24 * 60);
+  const hour = Math.floor(at / 60);
+  return `${((hour + 11) % 12) + 1}:${String(at % 60).padStart(2, "0")} ${hour >= 12 ? "pm" : "am"}`;
+}
 export const owned = (r?: Reservation) => !!r && r.status !== "cancelled";
 export function conversationStatus(s: State, p: Product) {
   const r = s.reservations[p.id];
@@ -436,9 +471,12 @@ export function conversationStatus(s: State, p: Product) {
     return "Completed split";
   if (owned(r) || (p.owner && !p.closed && s.joinedHosts[p.id]))
     return "Current split";
+  // Messages before reserving are questions to the host.
+  if (!p.owner && s.messages[p.id]?.length) return "Question";
   return null;
 }
 export function statusLabel(r?: Reservation) {
+  if (r?.cancelReason === "lapsed") return "Hold released";
   return r?.status === "completed"
     ? "Completed"
     : r?.status === "reported"
@@ -449,14 +487,22 @@ export function statusLabel(r?: Reservation) {
           ? "Waiting for purchase"
           : "Available";
 }
-export function reserve(s: State, id: string): State {
+export function reserve(s: State, id: string, quantity = 1): State {
   const p = s.products.find((p) => p.id === id);
-  if (!p || p.owner || p.closed || p.available < 1 || owned(s.reservations[id]))
+  if (
+    !p ||
+    p.owner ||
+    p.closed ||
+    !Number.isInteger(quantity) ||
+    quantity < 1 ||
+    p.available < quantity ||
+    owned(s.reservations[id])
+  )
     return s;
   return {
     ...s,
     products: s.products.map((p) =>
-      p.id === id ? { ...p, available: p.available - 1 } : p,
+      p.id === id ? { ...p, available: p.available - quantity } : p,
     ),
     reservations: {
       ...s.reservations,
@@ -464,23 +510,49 @@ export function reserve(s: State, id: string): State {
         status: p.purchased ? "ready" : "reserved",
         method: s.payment,
         createdAt: new Date().toISOString(),
+        quantity,
       },
     },
   };
 }
-export function cancelReservation(s: State, id: string): State {
-  if (s.reservations[id]?.status !== "reserved") return s;
+/** Releases a hold before purchase: cancelled by you, or lapsed when the host missed the buy-by time. */
+export function cancelReservation(
+  s: State,
+  id: string,
+  reason: "you" | "lapsed" = "you",
+): State {
+  const r = s.reservations[id];
+  if (r?.status !== "reserved") return s;
   return {
     ...s,
     products: s.products.map((p) =>
       p.id === id
-        ? { ...p, available: Math.min(p.shareCount, p.available + 1) }
+        ? {
+            ...p,
+            available: Math.min(p.shareCount, p.available + quantityOf(r)),
+          }
         : p,
     ),
     reservations: {
       ...s.reservations,
-      [id]: { ...s.reservations[id], status: "cancelled" },
+      [id]: { ...r, status: "cancelled", cancelReason: reason },
     },
+  };
+}
+/** Demo: the host buys the bundle, so a waiting reservation becomes ready. */
+export function simulatePurchase(s: State, id: string): State {
+  return {
+    ...s,
+    products: s.products.map((q) =>
+      q.id === id ? { ...q, purchased: true } : q,
+    ),
+    reservations:
+      s.reservations[id]?.status === "reserved"
+        ? {
+            ...s.reservations,
+            [id]: { ...s.reservations[id], status: "ready" },
+          }
+        : s.reservations,
   };
 }
 export function reportProblem(
@@ -529,7 +601,7 @@ export function allocation(bundleCents: number, count: number, share: number) {
   const item = Math.floor(bundleCents / count);
   return {
     itemCents: item,
-    neighbourTotal: item + 15,
+    neighbourTotal: item + SERVICE_FEE_CENTS,
     hostCents: bundleCents - item * share,
   };
 }
@@ -550,7 +622,7 @@ export function visibleProducts(s: State, query = "", category = "All") {
       s.sort === "Lowest price"
         ? total(a) - total(b)
         : s.sort === "Biggest savings"
-          ? b.retailCents - total(b) - (a.retailCents - total(a))
+          ? savingFor(b) - savingFor(a)
           : a.distance - b.distance,
     );
 }
@@ -593,4 +665,58 @@ export function joinHostedDeal(s: State, id: string): State {
     ),
     joinedHosts: { ...s.joinedHosts, [id]: true },
   };
+}
+
+export const reportReasons = [
+  ["Fake or misleading", "The item, photo or price doesn’t look genuine."],
+  ["Deal has expired", "The offer has ended or the price has changed."],
+  ["Out of stock", "The store no longer has this item."],
+  ["Wrong details", "The price, pack size, store or pickup is incorrect."],
+  ["Prohibited or unsafe item", "This shouldn’t be shared on ShareLah."],
+  ["Something else", "Tell us what’s wrong below."],
+] as const;
+/** Saves or replaces this tester's report; an empty reason withdraws it. */
+export function reportListing(
+  s: State,
+  key: string,
+  reason: string,
+  note = "",
+): State {
+  const reports = { ...s.reports };
+  if (reason)
+    reports[key] = {
+      reason,
+      note: note.trim().slice(0, 1000),
+      createdAt: new Date().toISOString(),
+    };
+  else delete reports[key];
+  return { ...s, reports };
+}
+
+/** "Today", "Yesterday", "3 days ago", then a short date once it's over a week old. */
+export function spottedLabel(iso: string, now = Date.now()) {
+  if (!iso) return "Date unknown";
+  const day = 24 * 60 * 60 * 1000;
+  const start = (t: number) => {
+    const d = new Date(t);
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  };
+  const days = Math.round((start(now) - start(Date.parse(iso))) / day);
+  if (days <= 0) return "Today";
+  if (days === 1) return "Yesterday";
+  if (days < 8) return `${days} days ago`;
+  return new Date(iso).toLocaleDateString("en-SG", {
+    day: "numeric",
+    month: "short",
+  });
+}
+/** Deals this tester posted, as opposed to sample or photographed demo deals. */
+export const postedByYou = (d: Deal) => !d.demo && !d.sourceFile;
+/** For running text: "spotted today", "spotted 3 days ago", "spotted on 2 Oct". */
+export function spottedPhrase(iso: string, now = Date.now()) {
+  const label = spottedLabel(iso, now);
+  if (label === "Date unknown") return "date unknown";
+  if (label === "Today" || label === "Yesterday")
+    return "spotted " + label.toLowerCase();
+  return label.endsWith("ago") ? "spotted " + label : "spotted on " + label;
 }

@@ -11,7 +11,15 @@ import { ChevronLeft, ChevronRight, X, Check, Package } from "lucide-react";
 import { back, go } from "./router";
 import { readPhoto, useStore } from "./store";
 import { svgIcons } from "./icons";
-import { money, total, owned, statusLabel, type Product } from "./model";
+import {
+  money,
+  owned,
+  savingFor,
+  serviceFee,
+  statusLabel,
+  total,
+  type Product,
+} from "./model";
 import { resolveDealPhoto } from "./dealPhotos";
 export function Button({
   children,
@@ -131,11 +139,13 @@ export function Header({
   item,
   label,
   onBack,
+  action,
 }: {
   title: string;
   item?: string;
   label?: string;
   onBack?: () => void;
+  action?: ReactNode;
 }) {
   return (
     <header className="page-header">
@@ -147,6 +157,7 @@ export function Header({
         <h1 tabIndex={-1}>{title}</h1>
         {item && <p>{item}</p>}
       </div>
+      {action}
     </header>
   );
 }
@@ -207,13 +218,17 @@ export function Row({
 export function Card({ p }: { p: Product }) {
   const { state } = useStore(),
     r = state.reservations[p.id],
-    joined = owned(r);
+    joined = owned(r),
+    lapsed = r?.cancelReason === "lapsed";
   return (
     <button
       className="offer-card"
       onClick={() =>
         go(
-          "/" + (p.owner ? "hosting" : joined ? "split" : "offer") + "/" + p.id,
+          "/" +
+            (p.owner ? "hosting" : joined || lapsed ? "split" : "offer") +
+            "/" +
+            p.id,
         )
       }
       aria-label={"Open " + p.title}
@@ -259,7 +274,7 @@ export function Card({ p }: { p: Product }) {
         </small>
       </div>
       <span className="sr-only">
-        Per portion, including S$0.15 fee.{" "}
+        Per portion, including {serviceFee} fee.{" "}
         {joined ? statusLabel(r) : "View details"}
       </span>
     </button>
@@ -283,25 +298,34 @@ export function Empty({
     </div>
   );
 }
-export function PriceRows({ p }: { p: Product }) {
+export function PriceRows({
+  p,
+  quantity = 1,
+}: {
+  p: Product;
+  quantity?: number;
+}) {
+  const saving = savingFor(p, quantity);
   return (
     <div className="price-rows">
       <div>
-        <span>{p.portion}</span>
-        <strong>{money(p.itemCents)}</strong>
+        <span>
+          {quantity > 1 ? `${quantity} × ` : ""}
+          {p.portion}
+        </span>
+        <strong>{money(p.itemCents * quantity)}</strong>
       </div>
       <div>
         <span>Service fee</span>
-        <strong>S$0.15</strong>
+        <strong>{serviceFee}</strong>
       </div>
       <div className="total">
         <strong>Your total</strong>
-        <strong>{money(total(p))}</strong>
+        <strong>{money(total(p, quantity))}</strong>
       </div>
-      {p.retailCents > total(p) && (
+      {saving > 0 && (
         <p className="brand-text">
-          You save {money(p.retailCents - total(p))} · Retail{" "}
-          {money(p.retailCents)}
+          You save {money(saving)} · Retail {money(p.retailCents * quantity)}
         </p>
       )}
     </div>
