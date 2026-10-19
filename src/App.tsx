@@ -13,21 +13,25 @@ import {
   type ConfirmationVariant,
 } from "./ReservationCountdown";
 import { Provider, useStore } from "./store";
-import { Header, Button, Empty, Icon } from "./ui";
+import { Header, Button, Empty, Icon, AlertBadge } from "./ui";
 import { Home, MapScreen, Splits, type HomeVariant } from "./Browse";
 import { Hosting } from "./Hosting";
 import { Chat, Directions, MySplit, Offer, Pickup, Problem } from "./Journey";
 import { Create, createVariant, type CreateVariant } from "./Create";
 import { go, parseRoute, useRoute } from "./router";
+import { nextArrival, pendingRequests } from "./model";
 
 function Navigation({
   active,
   openCreate,
   combinedHome = false,
+  requests = 0,
 }: {
   active: string;
   openCreate: () => void;
   combinedHome?: boolean;
+  /** Join requests waiting on the Splits tab. */
+  requests?: number;
 }) {
   return (
     <nav className="bottom-nav" aria-label="Main navigation">
@@ -51,6 +55,7 @@ function Navigation({
           >
             <span>
               <Icon name={icon} />
+              {icon === "splits" && <AlertBadge count={requests} />}
             </span>
             <small>{label}</small>
           </button>
@@ -73,7 +78,23 @@ function useStoredVariant<T extends string>(
   ] as const;
 }
 
+/** Re-render when the next scheduled join request arrives, so badges appear on time. */
+function useArrivals() {
+  const { state } = useStore(),
+    [, tick] = useState(0),
+    next = nextArrival(state);
+  useEffect(() => {
+    if (!Number.isFinite(next)) return;
+    const timer = window.setTimeout(
+      () => tick((n) => n + 1),
+      Math.max(0, next - Date.now()) + 50,
+    );
+    return () => window.clearTimeout(timer);
+  }, [next]);
+}
+
 function Root() {
+  useArrivals();
   const mobile = useMobileLayout();
   const path = useRoute(),
     { state, storageError } = useStore(),
@@ -216,6 +237,7 @@ function Root() {
           <Navigation
             active={active}
             openCreate={() => setModal({ kind: "create" })}
+            requests={pendingRequests(state).length}
             combinedHome={homeVariant !== "A"}
           />
         )}

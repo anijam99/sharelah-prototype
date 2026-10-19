@@ -1147,3 +1147,100 @@ test("the prototype lab switches Start a split between steps and one page mid-fl
   await lab.getByRole("button", { name: "A · Step by step" }).click();
   await expect(page.getByText("Step 1 of 4")).toBeVisible();
 });
+
+test("Jerry's join request shows on the Splits tab, the inbox and the hosted card", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.evaluate(() => {
+    const state = JSON.parse(localStorage.getItem("sharelah-demo-v1")!);
+    state.products.push({
+      ...state.products[1],
+      id: "hosted-badge",
+      owner: true,
+      available: 1,
+    });
+    // Arrives a moment after load, like a real request after publishing.
+    state.joinRequests["hosted-badge"] = [
+      {
+        person: "jerry",
+        quantity: 1,
+        status: "requested",
+        at: new Date(Date.now() + 2500).toISOString(),
+      },
+    ];
+    localStorage.setItem("sharelah-demo-v1", JSON.stringify(state));
+  });
+  await page.reload();
+  const splitsTab = page
+    .getByRole("navigation", { name: "Main navigation" })
+    .getByRole("button", { name: /Splits/ });
+  await expect(splitsTab).toHaveAccessibleName("Splits");
+  await expect(splitsTab).toHaveAccessibleName(/1 join request/, {
+    timeout: 6000,
+  });
+  await expect(
+    page.getByRole("button", { name: /Inbox.*1 join request/ }),
+  ).toBeVisible();
+  await splitsTab.click();
+  await page.getByRole("button", { name: /Hosting/ }).click();
+  const card = page.getByRole("button", { name: /Open TOP liquid/ });
+  await expect(card).toContainText("Jerry asked to join");
+  await page.goto("/#/messages");
+  const requests = page.getByRole("region", { name: "Join requests" });
+  await expect(requests).toContainText("Jerry asked to join");
+  await requests.getByRole("button").click();
+  await page
+    .getByRole("region", { name: "Requests to join" })
+    .getByRole("button", { name: "Accept" })
+    .click();
+  await page.goto("/#/splits");
+  await expect(splitsTab).toHaveAccessibleName("Splits");
+  await expect(
+    page.getByRole("button", { name: /Open TOP liquid/ }),
+  ).toContainText("Jerry joined");
+});
+
+test("after buying, simulating Jerry's scan completes the hosted split", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.evaluate(() => {
+    const state = JSON.parse(localStorage.getItem("sharelah-demo-v1")!);
+    state.products.push({
+      ...state.products[1],
+      id: "hosted-scan",
+      owner: true,
+      available: 0,
+    });
+    state.joinRequests["hosted-scan"] = [
+      { person: "jerry", quantity: 1, status: "accepted", at: "" },
+    ];
+    localStorage.setItem("sharelah-demo-v1", JSON.stringify(state));
+  });
+  await page.goto("/#/hosting/hosted-scan");
+  await page.reload();
+  await expect(
+    page.getByRole("button", { name: "Simulate Jerry scanning the code" }),
+  ).toHaveCount(0);
+  await page.getByRole("button", { name: "Mark purchased & notify" }).click();
+  await expect(page.getByRole("img", { name: "Pickup QR code" })).toBeVisible();
+  await page
+    .getByRole("button", { name: "Simulate Jerry scanning the code" })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Split complete", level: 1 }),
+  ).toBeVisible();
+  await expect(page.getByText("Everyone has collected.")).toBeVisible();
+  await expect(page.getByText("Collected ✓")).toBeVisible();
+  await expect(page.getByRole("img", { name: "Pickup QR code" })).toHaveCount(
+    0,
+  );
+  await page.goto("/#/splits");
+  await page.getByRole("button", { name: "Past", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: /Open TOP liquid/ }).filter({
+      hasText: "Split complete",
+    }),
+  ).toBeVisible();
+});

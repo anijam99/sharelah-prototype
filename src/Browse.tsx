@@ -4,13 +4,15 @@ import { DealRow, matchesDeal } from "./Deals";
 import { Fragment, useState } from "react";
 import { HomeMap } from "./HomeMap";
 import { MapPin, Navigation, Search, SlidersHorizontal } from "lucide-react";
-import { Art, Button, Card, Empty, TopHeader } from "./ui";
+import { AlertBadge, Art, Button, Card, Empty, TopHeader } from "./ui";
 import { go } from "./router";
 import { TileMap } from "./TileMap";
 import { useStore } from "./store";
 import {
   completedSavings,
+  hostedComplete,
   money,
+  pendingRequests,
   releasedByHost,
   owned,
   statusLabel,
@@ -330,7 +332,8 @@ export function Splits() {
       ? p.owner && !p.closed
       : tab === "Past"
         ? state.reservations[p.id]?.status === "completed" ||
-          releasedByHost(state.reservations[p.id])
+          releasedByHost(state.reservations[p.id]) ||
+          hostedComplete(state, p)
         : owned(state.reservations[p.id]) &&
           state.reservations[p.id].status !== "completed",
   );
@@ -351,6 +354,9 @@ export function Splits() {
                 }}
               >
                 {t}
+                {t === "Hosting" && (
+                  <AlertBadge count={pendingRequests(state).length} />
+                )}
               </button>
             ))}
           </div>

@@ -11,9 +11,14 @@ import { ChevronLeft, ChevronRight, X, Check, Package } from "lucide-react";
 import { back, go } from "./router";
 import { readPhoto, useStore } from "./store";
 import { svgIcons } from "./icons";
+import { isPerson, people, profileSummary } from "./people";
 import {
+  acceptedJoiners,
+  buyBy,
+  hostedComplete,
   joinersOf,
   money,
+  pendingRequests,
   owned,
   releasedByHost,
   savingFor,
@@ -43,6 +48,20 @@ export function Button({
     <button className={kind + " full"} {...props}>
       {children}
     </button>
+  );
+}
+/** A "!" on a tab or shortcut when join requests need an answer. */
+export function AlertBadge({ count }: { count: number }) {
+  if (!count) return null;
+  return (
+    <>
+      <b className="alert-badge" aria-hidden="true">
+        !
+      </b>
+      <span className="sr-only">
+        , {count} join {count === 1 ? "request" : "requests"}
+      </span>
+    </>
   );
 }
 export function Icon({ name }: { name: string }) {
@@ -173,6 +192,7 @@ export function Header({
   );
 }
 export function TopHeader({ title }: { title?: string }) {
+  const { state } = useStore();
   return (
     <header className="top-header">
       {title ? (
@@ -192,6 +212,7 @@ export function TopHeader({ title }: { title?: string }) {
           <button onClick={() => go("/messages")}>
             <Icon name="inbox" />
             <span>Inbox</span>
+            <AlertBadge count={pendingRequests(state).length} />
           </button>
         </div>
       )}
@@ -232,8 +253,8 @@ export function Card({ p }: { p: Product }) {
     joined = owned(r),
     released = releasedByHost(r),
     requests = p.owner
-      ? joinersOf(state, p.id).filter((q) => q.status === "requested").length
-      : 0;
+      ? joinersOf(state, p.id).filter((q) => q.status === "requested")
+      : [];
   return (
     <button
       className="offer-card"
@@ -264,13 +285,7 @@ export function Card({ p }: { p: Product }) {
                     : "In your splits"}
             </span>
           )}
-          {p.owner && (
-            <span className="membership">
-              {requests
-                ? `${requests} ${requests === 1 ? "request" : "requests"} to review`
-                : "Your split"}
-            </span>
-          )}
+          {p.owner && <span className="membership">Your split</span>}
         </div>
       </div>
       <div className="compact-offer-type">
@@ -295,11 +310,84 @@ export function Card({ p }: { p: Product }) {
           {p.date} · {p.time}
         </small>
       </div>
+      {p.owner && (!p.closed || hostedComplete(state, p)) && (
+        <HostStrip p={p} requests={requests} />
+      )}
       <span className="sr-only">
         Per portion, including {serviceFee} fee.{" "}
         {joined ? statusLabel(r) : "View details"}
       </span>
     </button>
+  );
+}
+/** On a hosted split's card: who has asked or joined, without opening it. */
+function HostStrip({
+  p,
+  requests,
+}: {
+  p: Product;
+  requests: ReturnType<typeof joinersOf>;
+}) {
+  const { state } = useStore(),
+    accepted = acceptedJoiners(state, p.id),
+    nameOf = (person: string) =>
+      isPerson(person) ? people[person].name : "A neighbour";
+  if (hostedComplete(state, p))
+    return (
+      <span className="host-strip">
+        <Check size={16} aria-hidden="true" />
+        <span>
+          <strong>Split complete</strong>
+          <small>
+            Collected by{" "}
+            {accepted.map((r) => nameOf(r.person).split(" ")[0]).join(", ")}
+          </small>
+        </span>
+      </span>
+    );
+  if (requests.length) {
+    const first = requests[0].person,
+      rating = isPerson(first) ? profileSummary(state, first).average : "—";
+    return (
+      <span className="host-strip alert">
+        <b aria-hidden="true">!</b>
+        <span>
+          <strong>
+            {requests.length === 1
+              ? `${nameOf(first)} asked to join`
+              : `${requests.length} neighbours asked to join`}
+          </strong>
+          <small>
+            {requests.length === 1 ? `${rating} ★ · ` : ""}Tap to accept or
+            decline
+          </small>
+        </span>
+      </span>
+    );
+  }
+  if (accepted.length)
+    return (
+      <span className="host-strip">
+        <Check size={16} aria-hidden="true" />
+        <span>
+          <strong>
+            {accepted.map((r) => nameOf(r.person).split(" ")[0]).join(", ")}{" "}
+            joined
+          </strong>
+          <small>
+            {p.purchased
+              ? "Ready for pickup"
+              : `Buy the bundle by ${buyBy(p)} ${p.date.toLowerCase()}`}
+          </small>
+        </span>
+      </span>
+    );
+  return (
+    <span className="host-strip quiet">
+      <span>
+        <small>No requests yet · neighbours nearby can see it</small>
+      </span>
+    </span>
   );
 }
 export function Empty({

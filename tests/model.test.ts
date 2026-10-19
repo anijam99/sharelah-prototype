@@ -30,6 +30,11 @@ import {
   settleRequests,
   HOST_REPLY_MS,
   migrateJoins,
+  pendingRequests,
+  nextArrival,
+  collectJoiner,
+  hostedComplete,
+  acceptedJoiners,
 } from "../src/model";
 import type { State } from "../src/model";
 /** Reserve, then have the host accept straight away. */
@@ -238,6 +243,45 @@ describe("Hosts approve who joins", () => {
     );
     const bought = simulatePurchase(s, "hosted");
     expect(removeJoiner(bought, "hosted", "jerry")).toBe(bought);
+  });
+  it("lists requests needing an answer and when the next one arrives", () => {
+    // A moment from now, so the request made "now" below has arrived.
+    const now = Date.now() + 1000,
+      later = new Date(now + 60_000).toISOString();
+    const s = requestToJoin(
+      requestToJoin(hosting(), "hosted", "jerry"),
+      "hosted",
+      "neighbour-a",
+      later,
+    );
+    expect(pendingRequests(s, now).map((r) => r.request.person)).toEqual([
+      "jerry",
+    ]);
+    expect(nextArrival(s, now)).toBe(Date.parse(later));
+    expect(nextArrival(hosting(), now)).toBe(Infinity);
+    expect(pendingRequests(acceptJoiner(s, "hosted", "jerry"), now)).toEqual(
+      [],
+    );
+  });
+  it("completes the split once everyone accepted has collected", () => {
+    const joined = acceptJoiner(
+      requestToJoin(hosting(), "hosted", "jerry"),
+      "hosted",
+      "jerry",
+    );
+    // No collecting before the host has bought the bundle.
+    expect(collectJoiner(joined, "hosted", "jerry")).toBe(joined);
+    const done = collectJoiner(
+      simulatePurchase(joined, "hosted"),
+      "hosted",
+      "jerry",
+    );
+    expect(done.joinRequests.hosted[0].status).toBe("collected");
+    const p = done.products.find((q) => q.id === "hosted")!;
+    expect(p.closed).toBe(true);
+    expect(hostedComplete(done, p)).toBe(true);
+    expect(conversationStatus(done, p)).toBe("Completed split");
+    expect(acceptedJoiners(done, "hosted")).toHaveLength(1);
   });
   it("hides requests scheduled for later until they arrive", () => {
     const later = new Date(Date.now() + 60_000).toISOString();

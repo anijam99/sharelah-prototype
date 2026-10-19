@@ -1,5 +1,5 @@
-import { conversationStatus, statusLabel } from "./model";
-import { chatPartner } from "./people";
+import { conversationStatus, pendingRequests, statusLabel } from "./model";
+import { chatPartner, isPerson, people, profileSummary } from "./people";
 
 const groups = {
   "Current split": "Current splits",
@@ -15,11 +15,47 @@ export function Inbox() {
   const threads = state.products.filter(
     (p) => conversationStatus(state, p) && state.messages[p.id]?.length,
   );
+  const requests = pendingRequests(state);
   return (
     <>
       <Header title="Messages" />
       <main className="page-scroll">
         <div className="content">
+          {requests.length > 0 && (
+            <section className="inbox-group" aria-label="Join requests">
+              <h2>Join requests</h2>
+              {requests.map(({ p, request }) => (
+                <Row
+                  key={p.id + request.person}
+                  title={
+                    <>
+                      <b className="alert-badge inline" aria-hidden="true">
+                        !
+                      </b>{" "}
+                      {isPerson(request.person)
+                        ? people[request.person].name
+                        : "A neighbour"}{" "}
+                      asked to join
+                    </>
+                  }
+                  detail={
+                    <>
+                      <span className="conversation-status">
+                        {p.title}
+                        {isPerson(request.person)
+                          ? ` · ${profileSummary(state, request.person).average} ★`
+                          : ""}
+                      </span>
+                      <span className="conversation-preview">
+                        Accept or decline before they can pay
+                      </span>
+                    </>
+                  }
+                  onClick={() => go("/hosting/" + p.id)}
+                />
+              ))}
+            </section>
+          )}
           {(Object.keys(groups) as (keyof typeof groups)[]).map((status) => {
             const group = threads.filter(
               (p) => conversationStatus(state, p) === status,
@@ -57,7 +93,7 @@ export function Inbox() {
               </section>
             ) : null;
           })}
-          {!threads.length && (
+          {!threads.length && !requests.length && (
             <Empty title="No conversations yet">
               Your split conversations will appear here when you start
               messaging.

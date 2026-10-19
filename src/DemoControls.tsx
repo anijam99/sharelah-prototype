@@ -5,6 +5,7 @@ import { useNow } from "./ui";
 import {
   acceptRequest,
   cancelReservation,
+  collectJoiner,
   owned,
   requestToJoin,
   simulatePurchase,
@@ -136,6 +137,22 @@ export function DemoControls({
                   </button>
                 );
               })}
+              {p.purchased &&
+                (state.joinRequests[p.id] || [])
+                  .filter((r) => r.status === "accepted")
+                  .map((r) => (
+                    <button
+                      key={r.person}
+                      onClick={() => {
+                        update((s) => collectJoiner(s, p.id, r.person));
+                        setMessage(
+                          "Jerry scanned your code and collected. Split complete.",
+                        );
+                      }}
+                    >
+                      Jerry scans the pickup code
+                    </button>
+                  ))}
               <button
                 onClick={() => {
                   go("/hosting/" + p.id);

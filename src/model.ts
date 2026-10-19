@@ -53,7 +53,7 @@ export type Reservation = {
 export type JoinRequest = {
   person: string;
   quantity: number;
-  status: "requested" | "accepted" | "declined" | "removed";
+  status: "requested" | "accepted" | "collected" | "declined" | "removed";
   /** When the request arrives; requests scheduled for later stay hidden until then. */
   at: string;
 };
@@ -724,10 +724,35 @@ export function joinersOf(s: State, id: string, now = Date.now()) {
       .sort((a, b) => b.at.localeCompare(a.at))
   );
 }
+/** Join requests waiting for Tom's answer, across every open split he hosts. */
+export function pendingRequests(s: State, now = Date.now()) {
+  return s.products
+    .filter((p) => p.owner && !p.closed)
+    .flatMap((p) =>
+      joinersOf(s, p.id, now)
+        .filter((r) => r.status === "requested")
+        .map((request) => ({ p, request })),
+    );
+}
+/** When the next scheduled request arrives, or Infinity if none are due. */
+export function nextArrival(s: State, now = Date.now()) {
+  return Math.min(
+    ...Object.values(s.joinRequests)
+      .flat()
+      .map((r) => (r.status === "requested" ? Date.parse(r.at) : NaN))
+      .filter((t) => t > now),
+    Infinity,
+  );
+}
+/** Everyone the host let in, whether or not they've collected yet. */
 export const acceptedJoiners = (s: State, id: string) =>
-  (s.joinRequests[id] || []).filter((r) => r.status === "accepted");
+  (s.joinRequests[id] || []).filter(
+    (r) => r.status === "accepted" || r.status === "collected",
+  );
 const activeRequest = (r: JoinRequest) =>
-  r.status === "requested" || r.status === "accepted";
+  r.status === "requested" ||
+  r.status === "accepted" ||
+  r.status === "collected";
 
 /** A neighbour asks to join a split Tom hosts, optionally arriving later. */
 export function requestToJoin(
@@ -794,6 +819,39 @@ export function removeJoiner(s: State, id: string, person: string): State {
   if (s.products.find((q) => q.id === id)?.purchased) return s;
   return setJoiner(s, id, person, "accepted", "removed", 1);
 }
+/**
+ * A joiner scans the host's code after the bundle is bought. Once everyone
+ * accepted has collected, the split is complete and closes.
+ */
+export function collectJoiner(s: State, id: string, person: string): State {
+  const p = s.products.find((q) => q.id === id);
+  const requests = s.joinRequests[id] || [];
+  if (
+    !p?.owner ||
+    p.closed ||
+    !p.purchased ||
+    !requests.some((r) => r.person === person && r.status === "accepted")
+  )
+    return s;
+  const updated = requests.map((r) =>
+    r.person === person && r.status === "accepted"
+      ? { ...r, status: "collected" as const }
+      : r,
+  );
+  const done = !updated.some((r) => r.status === "accepted");
+  return {
+    ...s,
+    products: done
+      ? s.products.map((q) => (q.id === id ? { ...q, closed: true } : q))
+      : s.products,
+    joinRequests: { ...s.joinRequests, [id]: updated },
+  };
+}
+/** A hosted split everyone has collected from. */
+export const hostedComplete = (s: State, p: Product) =>
+  p.owner &&
+  p.closed &&
+  (s.joinRequests[p.id] || []).some((r) => r.status === "collected");
 /** Older saves stored a joined demo neighbour as a flag. */
 export function migrateJoins(s: State): State {
   if (s.joinRequests && !s.joinedHosts) return s;

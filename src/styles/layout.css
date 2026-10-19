@@ -78,7 +78,12 @@
   color: var(--brand);
 }
 
-.shortcuts span:last-child {
+.shortcuts button {
+  position: relative;
+}
+
+/* The label, not the icon or a badge's screen-reader text. */
+.shortcuts button > span:nth-of-type(2) {
   font-size: 11px;
 }
 
@@ -163,6 +168,7 @@
 }
 
 .bottom-nav button > span {
+  position: relative;
   padding: 3px 14px;
   border-radius: 20px;
 }
@@ -396,5 +402,49 @@
 @media (max-width: 899px) {
   .app-frame {
     height: 100dvh;
+  }
+}
+
+/* "!" on a tab, segment or shortcut when join requests need an answer. */
+.alert-badge {
+  position: absolute;
+  top: -4px;
+  right: 4px;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid var(--canvas);
+  background: #d92d20;
+  color: white;
+  font:
+    800 11px/1 Inter,
+    sans-serif;
+  animation: badge-pop 260ms var(--ease-out);
+}
+.shortcuts .alert-badge {
+  top: -2px;
+  right: -2px;
+}
+.segmented .alert-badge,
+.alert-badge.inline {
+  position: static;
+  display: inline-grid;
+  margin-left: 6px;
+  vertical-align: -3px;
+  border: 0;
+}
+.alert-badge.inline {
+  margin: 0 2px 0 0;
+}
+@keyframes badge-pop {
+  from {
+    transform: scale(0.4);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .alert-badge {
+    animation: none;
   }
 }
