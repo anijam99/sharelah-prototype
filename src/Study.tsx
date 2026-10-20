@@ -18,6 +18,34 @@ const names: Record<CreateVariant, string> = {
   A: "step by step",
   B: "one page",
 };
+/** The task, worded identically on the intro screen and the side panel. */
+function TaskText({ round }: { round: number }) {
+  return (
+    <>
+      <p>
+        {round === 0
+          ? "Imagine you bought a bulk pack and want to split it with a neighbour."
+          : "You’ll do the same task again, this time on a slightly different version of the app."}
+      </p>
+      <ol>
+        <li>
+          Tap the <strong>Share</strong> icon and start a split from a price tag
+          by <strong>taking a picture</strong> of any price tag.
+        </li>
+        <li>
+          Share a split for <strong>Oat milk (1 L)</strong> from FairPrice: a
+          pack of <strong>6</strong> for <strong>S$12.00</strong>, sharing{" "}
+          <strong>2</strong>. Choose any pickup point, day and time, then
+          publish.
+        </li>
+        <li>
+          When a neighbour asks to join, <strong>accept</strong> them. Buy the
+          bundle, then hand it over; the pickup code is scanned for you.
+        </li>
+      </ol>
+    </>
+  );
+}
 const SCAN_DELAY_MS = 3000,
   RATING_DELAY_MS = 1800;
 const likert = [
@@ -175,31 +203,10 @@ export function Study({
             <h2>
               {study.current === 0 ? "Share a split" : "Now do it once more"}
             </h2>
-            <p>
-              {study.current === 0
-                ? "Imagine you spotted a multibuy deal and want to split it with a neighbour."
-                : "You’ll do the same task again, this time on a slightly different version of the app."}
-            </p>
-            <ol>
-              <li>
-                From Home, open <strong>Spotted deals</strong> and find the{" "}
-                <strong>TOP liquid laundry detergent</strong> (2 for S$21 at
-                FairPrice).
-              </li>
-              <li>
-                Tap <strong>Start a split from this deal</strong> and share{" "}
-                <strong>1 of the 2 bottles</strong>. Choose any pickup point,
-                day and time, then publish.
-              </li>
-              <li>
-                When a neighbour asks to join, <strong>accept</strong> them. Buy
-                the bundle, then hand it over; the pickup code is scanned for
-                you.
-              </li>
-            </ol>
+            <TaskText round={study.current} />
             <p className="fine">
-              These steps stay visible beside the app. Work as you normally
-              would.
+              These instructions stay visible beside the app. Work as you
+              normally would.
             </p>
             <Button disabled={busy} onClick={begin}>
               {busy ? "Getting ready…" : "Start task"}
@@ -284,63 +291,25 @@ export function Study({
   );
 }
 
-const steps = [
-  "Open Spotted deals and find the TOP laundry detergent",
-  "Tap “Start a split from this deal” and publish a split for 1 of the 2 bottles",
-  "When Jerry asks to join, accept him",
-  "Tap “Mark purchased & notify”",
-  "Jerry scans your pickup code, and the split completes",
-];
-
-/** The task steps, kept in view beside the app for the whole session. */
+/** The task, kept in view beside the app for the whole session. */
 export function StudyPanel({
   study,
-  path,
   compact,
 }: {
   study: StudyState;
-  path: string;
   compact: boolean;
 }) {
-  const { state } = useStore(),
-    mine = state.products.find(hostedByParticipant),
-    jerry =
-      mine &&
-      (state.joinRequests[mine.id] || []).find((r) => r.person === "jerry"),
-    active = study.phase === "task",
-    done = [
-      active && (path.startsWith("/create") || !!mine),
-      active && !!mine,
-      active && (jerry?.status === "accepted" || jerry?.status === "collected"),
-      active && !!mine?.purchased,
-      active && !!mine && hostedComplete(state, mine),
-    ],
-    current = done.indexOf(false);
-  const list = (
-    <ol>
-      {steps.map((text, i) => (
-        <li
-          key={text}
-          className={done[i] ? "done" : i === current ? "now" : ""}
-          aria-current={i === current ? "step" : undefined}
-        >
-          {text}
-        </li>
-      ))}
-    </ol>
-  );
   const heading = `Task ${Math.min(2, study.current + 1)} of 2`;
   return compact ? (
     <details className="study-panel compact">
-      <summary>{heading} · view steps</summary>
-      {list}
+      <summary>{heading} · view instructions</summary>
+      <TaskText round={study.current} />
     </details>
   ) : (
     <aside className="study-panel" aria-label="Task instructions">
       <span className="eyebrow">{heading}</span>
-      <h2>Your task</h2>
-      <p className="fine">Share a split of TOP detergent and complete it.</p>
-      {list}
+      <h2>{study.current === 0 ? "Share a split" : "Now do it once more"}</h2>
+      <TaskText round={study.current} />
     </aside>
   );
 }

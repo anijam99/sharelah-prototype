@@ -400,16 +400,6 @@
   gap: 10px;
   color: var(--muted);
 }
-.study-panel li.now {
-  color: var(--ink);
-  font-weight: 600;
-}
-.study-panel li.now::marker {
-  color: var(--brand);
-}
-.study-panel li.done {
-  text-decoration: line-through;
-}
 .study-panel.compact {
   width: auto;
   padding: 8px 16px;

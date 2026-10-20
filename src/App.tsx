@@ -238,7 +238,7 @@ function Root() {
             </Empty>
           </>
         )}
-        {study && mobile && <StudyPanel study={study} path={path} compact />}
+        {study && mobile && <StudyPanel study={study} compact />}
         {study && <Study study={study} setStudy={setStudy} path={path} />}
         {tab && (
           <Navigation
@@ -249,9 +249,7 @@ function Root() {
           />
         )}
       </section>
-      {study && !mobile && (
-        <StudyPanel study={study} path={path} compact={false} />
-      )}
+      {study && !mobile && <StudyPanel study={study} compact={false} />}
       {modal && (
         <Modals
           key={JSON.stringify(modal)}

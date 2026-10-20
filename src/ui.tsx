@@ -456,7 +456,16 @@ export function Sheet({
     lastFocus = useRef<HTMLElement | null>(null);
   useEffect(() => {
     lastFocus.current = document.activeElement as HTMLElement;
-    ref.current?.showModal();
+    const dialog = ref.current;
+    dialog?.showModal();
+    // Sit over the app frame wherever it is (a side panel can shift it).
+    const frame = document.querySelector(".app-frame")?.getBoundingClientRect();
+    if (dialog && frame && window.matchMedia("(min-width: 900px)").matches) {
+      dialog.style.left = frame.left + "px";
+      dialog.style.right = "auto";
+      dialog.style.width = frame.width + "px";
+      dialog.style.margin = "0";
+    }
     return () => {
       ref.current?.close();
       lastFocus.current?.focus({ preventScroll: true });

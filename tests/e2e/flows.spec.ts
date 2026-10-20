@@ -1259,22 +1259,31 @@ test("/a runs UI A then UI B, times each task and uploads both ratings", async (
     [1, "A"],
     [2, "B"],
   ] as const) {
-    await expect(page.getByText(`TASK ${round} OF 2`, { exact: true })).toBeVisible();
+    await expect(
+      page.getByText(`TASK ${round} OF 2`, { exact: true }),
+    ).toBeVisible();
     await page.getByRole("button", { name: "Start task" }).click();
     await expect(page.locator(".study")).toHaveCount(0);
-    await page.evaluate(() => (location.hash = "#/deal/photo-top-reference"));
+    await page.getByRole("button", { name: "Share" }).click();
     await page
-      .getByRole("button", { name: "Start a split from this deal" })
+      .getByRole("button", { name: /Start a split from a price tag/ })
       .click();
+    await page
+      .locator('input[type="file"]')
+      .setInputFiles("public/assets/bag.png");
+    await page.getByLabel("Item name").fill("Oat milk");
+    await page.getByLabel("One portion").fill("1 L");
+    await page.getByLabel("Store").fill("FairPrice");
     if (ui === "A") {
       await expect(page.getByText("Step 1 of 4")).toBeVisible();
-      for (const name of [
-        "Set portions & price",
-        "Arrange pickup",
-        "Review split",
-      ])
-        await page.getByRole("button", { name }).click();
+      await page.getByRole("button", { name: "Set portions & price" }).click();
     } else await expect(page.getByText("Step 1 of 4")).toHaveCount(0);
+    await page.getByLabel("Bundle size").selectOption("6");
+    await page.getByLabel("Bundle price (S$)").fill("12");
+    await page.getByLabel("Items to share").selectOption("2");
+    if (ui === "A")
+      for (const name of ["Arrange pickup", "Review split"])
+        await page.getByRole("button", { name }).click();
     await page.getByRole("button", { name: "Publish split" }).click();
     await page
       .getByRole("button", { name: "Accept", exact: true })
@@ -1310,8 +1319,13 @@ test("/a runs UI A then UI B, times each task and uploads both ratings", async (
 test("/b shows UI B first", async ({ page }) => {
   await page.goto("/b");
   await page.getByRole("button", { name: "Start task" }).click();
-  await expect(page.locator(".study")).toHaveCount(0);
-  await page.evaluate(() => (location.hash = "#/create/1"));
+  await page.getByRole("button", { name: "Share" }).click();
+  await page
+    .getByRole("button", { name: /Start a split from a price tag/ })
+    .click();
+  await page
+    .locator('input[type="file"]')
+    .setInputFiles("public/assets/bag.png");
   await expect(
     page.getByRole("region", { name: /Portions & price/ }),
   ).toBeVisible();
