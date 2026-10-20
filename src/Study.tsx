@@ -33,10 +33,10 @@ function TaskText({ round }: { round: number }) {
           by <strong>taking a picture</strong> of any price tag.
         </li>
         <li>
-          Share a split for <strong>Oat milk (1 L)</strong> from FairPrice: a
-          pack of <strong>6</strong> for <strong>S$12.00</strong>, sharing{" "}
-          <strong>2</strong>. Choose any pickup point, day and time, then
-          publish.
+          Share a split for <strong>TOP liquid laundry detergent</strong> from
+          FairPrice: 2 bottles for <strong>S$21.00</strong>, sharing{" "}
+          <strong>1</strong>. Tap the TOP detergent suggestion to prefill the
+          details, then choose any pickup point, day and time, and publish.
         </li>
         <li>
           When a neighbour asks to join, <strong>accept</strong> them. Buy the
@@ -154,7 +154,7 @@ export function Study({
   async function begin() {
     setBusy(true);
     purchasedAt.current = 0;
-    await reset("fresh");
+    await reset("seeded");
     go("/", "Home", true);
     setStudy((s) => ({
       ...s,

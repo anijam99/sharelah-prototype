@@ -1271,16 +1271,11 @@ test("/a runs UI A then UI B, times each task and uploads both ratings", async (
     await page
       .locator('input[type="file"]')
       .setInputFiles("public/assets/bag.png");
-    await page.getByLabel("Item name").fill("Oat milk");
-    await page.getByLabel("One portion").fill("1 L");
-    await page.getByLabel("Store").fill("FairPrice");
+    await page.getByRole("button", { name: /TOP/ }).click();
     if (ui === "A") {
       await expect(page.getByText("Step 1 of 4")).toBeVisible();
       await page.getByRole("button", { name: "Set portions & price" }).click();
     } else await expect(page.getByText("Step 1 of 4")).toHaveCount(0);
-    await page.getByLabel("Bundle size").selectOption("6");
-    await page.getByLabel("Bundle price (S$)").fill("12");
-    await page.getByLabel("Items to share").selectOption("2");
     if (ui === "A")
       for (const name of ["Arrange pickup", "Review split"])
         await page.getByRole("button", { name }).click();

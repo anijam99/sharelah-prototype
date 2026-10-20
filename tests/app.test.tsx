@@ -328,7 +328,7 @@ it("validates a new listing, computes its portions, publishes it, and resets onl
   click(/Start a split manually/);
   click("Set portions & price");
   expect(screen.getByRole("alert").textContent).toContain("Add an item");
-  click("Samyang Buldak bowl noodles");
+  click(/TOP/);
   click("Set portions & price");
   fireEvent.change(screen.getByLabelText("Bundle price (S$)"), {
     target: { value: "10.01" },
@@ -637,20 +637,20 @@ it("the one-page layout flags each incomplete section and publishes the same spl
     "Add an item",
   );
   expect(within(section("Pickup")).getByRole("alert")).toBeTruthy();
-  click("Samyang Buldak bowl noodles");
+  click(/TOP/);
   // Filling the example clears the errors and fills the bundle price.
   expect(within(section("Item")).queryByRole("alert")).toBeNull();
   expect(
     (screen.getByLabelText("Bundle price (S$)") as HTMLInputElement).value,
-  ).toBe("6.4");
+  ).toBe("21");
   fireEvent.change(screen.getByLabelText("Pickup point"), {
     target: { value: "Bugis+ · Main entrance" },
   });
   click("Publish split");
   const p = saved().products.find((p: any) => p.owner);
   expect(p).toMatchObject({
-    title: "Samyang Buldak bowl noodles",
-    itemCents: 320,
+    title: expect.stringContaining("TOP"),
+    itemCents: 1050,
   });
   expect(screen.getByRole("heading", { name: "Split published" })).toBeTruthy();
   localStorage.removeItem("sharelah-create-variant");

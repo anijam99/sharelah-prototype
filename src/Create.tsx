@@ -470,29 +470,31 @@ function ItemFields({
         Use a saved price-tag photo
       </button>
       <div className="chips wrap" aria-label="Use an example item">
-        {seedProducts.slice(0, 3).map((q) => (
-          <button
-            key={q.id}
-            className="chip"
-            onClick={() => {
-              change({
-                title: q.title,
-                portion: q.portion,
-                art: q.art,
-                photo: q.photo,
-                category: q.category,
-                store: q.store,
-                bundleCents: q.bundleCents,
-                bundleCount: q.bundleCount,
-                shareCount: q.shareCount,
-                retailCents: q.retailCents,
-              });
-              fillExample();
-            }}
-          >
-            {q.title}
-          </button>
-        ))}
+        {seedProducts
+          .filter((q) => q.id === "det")
+          .map((q) => (
+            <button
+              key={q.id}
+              className="chip"
+              onClick={() => {
+                change({
+                  title: q.title,
+                  portion: q.portion,
+                  art: q.art,
+                  photo: p.photo ?? q.photo,
+                  category: q.category,
+                  store: q.store,
+                  bundleCents: q.bundleCents,
+                  bundleCount: q.bundleCount,
+                  shareCount: q.shareCount,
+                  retailCents: q.retailCents,
+                });
+                fillExample();
+              }}
+            >
+              {q.title}
+            </button>
+          ))}
       </div>
       <label>
         Item name

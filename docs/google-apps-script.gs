@@ -6,8 +6,18 @@ const HEADERS = [
 ];
 function doPost(e) {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
-  if (sheet.getLastRow() === 0) sheet.appendRow(HEADERS);
   const data = JSON.parse(e.postData.contents);
-  sheet.appendRow(HEADERS.map((h) => (data[h] === undefined ? "" : data[h])));
+  // Use the sheet's own header row, adding any column it is missing, so rows
+  // always line up under the right heading even if the headers are old.
+  const width = Math.max(sheet.getLastColumn(), 1);
+  let header = sheet.getLastRow()
+    ? sheet.getRange(1, 1, 1, width).getValues()[0].filter(String)
+    : [];
+  const missing = HEADERS.filter((h) => !header.includes(h));
+  if (missing.length) {
+    sheet.getRange(1, header.length + 1, 1, missing.length).setValues([missing]);
+    header = header.concat(missing);
+  }
+  sheet.appendRow(header.map((h) => (data[h] === undefined ? "" : data[h])));
   return ContentService.createTextOutput("ok");
 }
