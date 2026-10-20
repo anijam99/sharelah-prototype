@@ -339,16 +339,9 @@
   flex-direction: column;
   gap: 8px;
 }
-.study-time {
-  margin: 0;
-  font-family: var(--display);
-  font-size: 56px;
-  line-height: 1;
-  color: var(--brand);
-}
 .likert {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 6px;
 }
 .likert button {
@@ -370,4 +363,16 @@
   justify-content: space-between;
   gap: 8px;
   color: var(--muted);
+}
+.study-comment {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.study-comment textarea {
+  font: inherit;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  resize: vertical;
 }

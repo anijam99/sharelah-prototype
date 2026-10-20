@@ -26,13 +26,11 @@ const names: Record<CreateVariant, string> = {
 const SCAN_DELAY_MS = 3000,
   RATING_DELAY_MS = 1800;
 const likert = [
-  "Very dissatisfied",
-  "Dissatisfied",
-  "Slightly dissatisfied",
-  "Neutral",
-  "Slightly satisfied",
-  "Satisfied",
-  "Very satisfied",
+  "Very difficult",
+  "Difficult",
+  "Neither easy nor difficult",
+  "Easy",
+  "Very easy",
 ];
 
 /** Splits made by the participant have UUID ids; seeded ones do not. */
@@ -66,6 +64,7 @@ export function Study({
       study.uploaded ? "sent" : "idle",
     ),
     [rating, setRating] = useState<number>(0),
+    [comment, setComment] = useState(""),
     purchasedAt = useRef(0);
   const mine = state.products.find(hostedByParticipant);
 
@@ -133,9 +132,10 @@ export function Study({
   }
   function submitRating() {
     const rounds = study.rounds.map((r, i) =>
-      i === study.current ? { ...r, rating } : r,
+      i === study.current ? { ...r, rating, comment: comment.trim() } : r,
     ) as StudyState["rounds"];
     setRating(0);
+    setComment("");
     if (study.current === 0)
       setStudy((s) => ({
         ...s,
@@ -192,13 +192,9 @@ export function Study({
         {study.phase === "rating" && (
           <>
             <span className="eyebrow">TASK {study.current + 1} COMPLETE</span>
-            <h2>You finished in</h2>
-            <p className="study-time">{seconds.toFixed(1)}s</p>
-            <p>
-              Overall, how satisfied were you with using this version of the
-              app?
-            </p>
-            <div className="likert" role="radiogroup" aria-label="Satisfaction">
+            <h2>Tell us about that version</h2>
+            <p>Overall, how easy was it to use this version of the app?</p>
+            <div className="likert" role="radiogroup" aria-label="Ease of use">
               {likert.map((label, i) => (
                 <button
                   key={label}
@@ -213,12 +209,25 @@ export function Study({
               ))}
             </div>
             <div className="likert-ends">
-              <small>1 · Very dissatisfied</small>
-              <small>7 · Very satisfied</small>
+              <small>1 · Very difficult</small>
+              <small>5 · Very easy</small>
             </div>
-            <Button disabled={!rating} onClick={submitRating}>
+            <label className="study-comment">
+              What did you like or find frustrating? What would you change?
+              <textarea
+                rows={4}
+                maxLength={2000}
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+              />
+            </label>
+            <Button
+              disabled={!rating || !comment.trim()}
+              onClick={submitRating}
+            >
               {study.current === 0 ? "Next task" : "Submit"}
             </Button>
+            <p className="fine">Task time: {seconds.toFixed(1)}s</p>
           </>
         )}
         {study.phase === "done" && (

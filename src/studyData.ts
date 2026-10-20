@@ -5,7 +5,13 @@ import type { CreateVariant } from "./Create";
  * /b runs B then A. Progress lives in localStorage so a refresh resumes it.
  */
 export type StudyRoute = "a" | "b";
-export type Round = { ui: CreateVariant; seconds?: number; rating?: number };
+export type Round = {
+  ui: CreateVariant;
+  seconds?: number;
+  /** Ease of use, 1–5. */
+  rating?: number;
+  comment?: string;
+};
 export type Study = {
   participant: string;
   route: StudyRoute;
@@ -67,10 +73,12 @@ export function studyRow(s: Study) {
     route: "/" + s.route,
     first_ui: s.rounds[0].ui,
     second_ui: s.rounds[1].ui,
+    ui_a_ease: of("A").rating ?? "",
+    ui_a_comment: of("A").comment ?? "",
+    ui_b_ease: of("B").rating ?? "",
+    ui_b_comment: of("B").comment ?? "",
     ui_a_time_sec: of("A").seconds ?? "",
-    ui_a_satisfaction: of("A").rating ?? "",
     ui_b_time_sec: of("B").seconds ?? "",
-    ui_b_satisfaction: of("B").rating ?? "",
     user_agent: navigator.userAgent,
   };
 }

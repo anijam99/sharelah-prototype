@@ -1,8 +1,8 @@
 // Paste into the Google Sheet's Extensions → Apps Script, then deploy as a Web app.
 const HEADERS = [
   "timestamp", "participant_id", "route", "first_ui", "second_ui",
-  "ui_a_time_sec", "ui_a_satisfaction", "ui_b_time_sec", "ui_b_satisfaction",
-  "user_agent",
+  "ui_a_ease", "ui_a_comment", "ui_b_ease", "ui_b_comment",
+  "ui_a_time_sec", "ui_b_time_sec", "user_agent",
 ];
 function doPost(e) {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];

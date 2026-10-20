@@ -1283,7 +1283,8 @@ test("/a runs UI A then UI B, times each task and uploads both ratings", async (
     await expect(
       page.getByText("Task " + round + " complete", { exact: false }),
     ).toBeVisible({ timeout: 15_000 });
-    await expect(page.locator(".study-time")).toContainText("s");
+    await expect(page.getByText(/Task time: [\d.]+s/)).toBeVisible();
+    await page.getByLabel(/What did you like/).fill("Felt fine");
     await page.getByRole("radio", { name: /^5,/ }).click();
     await page
       .getByRole("button", { name: round === 1 ? "Next task" : "Submit" })
@@ -1297,8 +1298,9 @@ test("/a runs UI A then UI B, times each task and uploads both ratings", async (
     route: "/a",
     first_ui: "A",
     second_ui: "B",
-    ui_a_satisfaction: 5,
-    ui_b_satisfaction: 5,
+    ui_a_ease: 5,
+    ui_a_comment: "Felt fine",
+    ui_b_ease: 5,
   });
   expect(posts[0].ui_a_time_sec).toBeGreaterThan(0);
 });
