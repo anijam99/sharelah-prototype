@@ -7,6 +7,7 @@ import { confirmationVariant } from "./ReservationCountdown";
 import { isPerson, people } from "./people";
 import {
   acceptedJoiners,
+  areas,
   buyBy,
   cancelReservation,
   removeJoiner,
@@ -257,10 +258,21 @@ function CreateSheet({ close }: { close: () => void }) {
 }
 
 function AreaSheet({ close }: { close: () => void }) {
-  const { state, update } = useStore();
+  const { state, update } = useStore(),
+    [query, setQuery] = useState("");
+  const matches = areas.filter((a) =>
+    a.toLowerCase().includes(query.trim().toLowerCase()),
+  );
   return (
     <Sheet title="Your neighbourhood" onClose={close}>
-      {["Bugis", "Bras Basah", "Tampines"].map((area) => (
+      <input
+        type="search"
+        aria-label="Search neighbourhoods"
+        placeholder="Search neighbourhoods"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+      />
+      {matches.map((area) => (
         <Row
           key={area}
           title={area}
@@ -275,6 +287,7 @@ function AreaSheet({ close }: { close: () => void }) {
           {area === state.area && <Check />}
         </Row>
       ))}
+      {!matches.length && <p className="muted">No neighbourhood matches.</p>}
     </Sheet>
   );
 }

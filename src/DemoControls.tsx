@@ -6,6 +6,7 @@ import {
   acceptRequest,
   cancelReservation,
   collectJoiner,
+  areas,
   owned,
   requestToJoin,
   simulatePurchase,
@@ -53,7 +54,7 @@ export function DemoControls({
               value={state.area}
               onChange={(e) => update((s) => ({ ...s, area: e.target.value }))}
             >
-              {["Bugis", "Bras Basah", "Tampines"].map((area) => (
+              {areas.map((area) => (
                 <option key={area}>{area}</option>
               ))}
             </select>

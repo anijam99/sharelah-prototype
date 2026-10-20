@@ -2,12 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "./ui";
 import { useStore } from "./store";
 import { go } from "./router";
-import {
-  acceptJoiner,
-  collectJoiner,
-  hostedComplete,
-  type Product,
-} from "./model";
+import { collectJoiner, hostedComplete, type Product } from "./model";
 import {
   loadStudy,
   saveStudy,
@@ -53,7 +48,9 @@ export function useStudy(route: StudyRoute | null) {
 export function Study({
   study,
   setStudy,
+  path,
 }: {
+  path: string;
   study: StudyState;
   setStudy: (fn: (s: StudyState) => StudyState) => void;
 }) {
@@ -68,21 +65,30 @@ export function Study({
     purchasedAt = useRef(0);
   const mine = state.products.find(hostedByParticipant);
 
-  // Jerry joins by himself, then scans the pickup code once the host has bought.
+  // The clock starts when the participant opens the start-a-split flow, which
+  // is where UI A and UI B first differ.
+  useEffect(() => {
+    if (
+      study.phase === "task" &&
+      !study.taskStart &&
+      path.startsWith("/create")
+    )
+      setStudy((s) => ({ ...s, taskStart: Date.now() }));
+  }, [study.phase, study.taskStart, path, setStudy]);
+
+  // Jerry's request is answered by the participant; once they have bought the
+  // bundle, Jerry scans the pickup code on his own.
   useEffect(() => {
     if (study.phase !== "task" || study.taskEnd) return;
     const timer = window.setInterval(() => {
-      if (!mine || mine.closed) return;
-      const jerry = (state.joinRequests[mine.id] || []).find(
-        (r) => r.person === "jerry",
+      if (!mine || mine.closed || !mine.purchased) return;
+      const accepted = (state.joinRequests[mine.id] || []).some(
+        (r) => r.person === "jerry" && r.status === "accepted",
       );
-      if (jerry?.status === "requested" && !(Date.parse(jerry.at) > Date.now()))
-        update((s) => acceptJoiner(s, mine.id, "jerry"));
-      if (jerry?.status === "accepted" && mine.purchased) {
-        purchasedAt.current ||= Date.now();
-        if (Date.now() - purchasedAt.current >= SCAN_DELAY_MS)
-          update((s) => collectJoiner(s, mine.id, "jerry"));
-      }
+      if (!accepted) return;
+      purchasedAt.current ||= Date.now();
+      if (Date.now() - purchasedAt.current >= SCAN_DELAY_MS)
+        update((s) => collectJoiner(s, mine.id, "jerry"));
     }, 400);
     return () => window.clearInterval(timer);
   }, [study.phase, study.taskEnd, mine, state.joinRequests, update]);
@@ -90,7 +96,13 @@ export function Study({
   // The clock stops the moment the split completes.
   const complete = !!mine && hostedComplete(state, mine);
   useEffect(() => {
-    if (study.phase !== "task" || study.taskEnd || !complete) return;
+    if (
+      study.phase !== "task" ||
+      study.taskEnd ||
+      !complete ||
+      !study.taskStart
+    )
+      return;
     const end = Date.now();
     setStudy((s) => ({
       ...s,
@@ -119,7 +131,7 @@ export function Study({
     setStudy((s) => ({
       ...s,
       phase: "task",
-      taskStart: Date.now(),
+      taskStart: 0,
       taskEnd: 0,
     }));
     setBusy(false);
@@ -165,24 +177,29 @@ export function Study({
             </h2>
             <p>
               {study.current === 0
-                ? "Imagine you bought a bulk pack and want to split it with a neighbour."
+                ? "Imagine you spotted a multibuy deal and want to split it with a neighbour."
                 : "You’ll do the same task again, this time on a slightly different version of the app."}
             </p>
             <ol>
               <li>
-                Share a split for <strong>Oat milk (1 L)</strong> from
-                FairPrice: a pack of <strong>6</strong> for{" "}
-                <strong>S$12.00</strong>, sharing <strong>2</strong>. Choose any
-                pickup point, day and time.
+                From Home, open <strong>Spotted deals</strong> and find the{" "}
+                <strong>TOP liquid laundry detergent</strong> (2 for S$21 at
+                FairPrice).
               </li>
               <li>
-                A neighbour will join automatically. Buy the pack, then hand it
-                over; the pickup code is scanned for you.
+                Tap <strong>Start a split from this deal</strong> and share{" "}
+                <strong>1 of the 2 bottles</strong>. Choose any pickup point,
+                day and time, then publish.
+              </li>
+              <li>
+                When a neighbour asks to join, <strong>accept</strong> them. Buy
+                the bundle, then hand it over; the pickup code is scanned for
+                you.
               </li>
             </ol>
             <p className="fine">
-              Your time starts when you tap the button and stops when the split
-              completes. Work as you normally would.
+              These steps stay visible beside the app. Work as you normally
+              would.
             </p>
             <Button disabled={busy} onClick={begin}>
               {busy ? "Getting ready…" : "Start task"}
@@ -264,5 +281,66 @@ export function Study({
         )}
       </div>
     </div>
+  );
+}
+
+const steps = [
+  "Open Spotted deals and find the TOP laundry detergent",
+  "Tap “Start a split from this deal” and publish a split for 1 of the 2 bottles",
+  "When Jerry asks to join, accept him",
+  "Tap “Mark purchased & notify”",
+  "Jerry scans your pickup code, and the split completes",
+];
+
+/** The task steps, kept in view beside the app for the whole session. */
+export function StudyPanel({
+  study,
+  path,
+  compact,
+}: {
+  study: StudyState;
+  path: string;
+  compact: boolean;
+}) {
+  const { state } = useStore(),
+    mine = state.products.find(hostedByParticipant),
+    jerry =
+      mine &&
+      (state.joinRequests[mine.id] || []).find((r) => r.person === "jerry"),
+    active = study.phase === "task",
+    done = [
+      active && (path.startsWith("/create") || !!mine),
+      active && !!mine,
+      active && (jerry?.status === "accepted" || jerry?.status === "collected"),
+      active && !!mine?.purchased,
+      active && !!mine && hostedComplete(state, mine),
+    ],
+    current = done.indexOf(false);
+  const list = (
+    <ol>
+      {steps.map((text, i) => (
+        <li
+          key={text}
+          className={done[i] ? "done" : i === current ? "now" : ""}
+          aria-current={i === current ? "step" : undefined}
+        >
+          {text}
+        </li>
+      ))}
+    </ol>
+  );
+  const heading = `Task ${Math.min(2, study.current + 1)} of 2`;
+  return compact ? (
+    <details className="study-panel compact">
+      <summary>{heading} · view steps</summary>
+      {list}
+    </details>
+  ) : (
+    <aside className="study-panel" aria-label="Task instructions">
+      <span className="eyebrow">{heading}</span>
+      <h2>Your task</h2>
+      <p className="fine">Share a split of TOP detergent and complete it.</p>
+      {list}
+    </aside>
   );
 }

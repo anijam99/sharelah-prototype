@@ -20,7 +20,7 @@ import { Chat, Directions, MySplit, Offer, Pickup, Problem } from "./Journey";
 import { Create, createVariant, type CreateVariant } from "./Create";
 import { go, parseRoute, useRoute } from "./router";
 import { nextArrival, pendingRequests } from "./model";
-import { Study, useStudy } from "./Study";
+import { Study, StudyPanel, useStudy } from "./Study";
 import { studyRoute } from "./studyData";
 
 function Navigation({
@@ -238,7 +238,8 @@ function Root() {
             </Empty>
           </>
         )}
-        {study && <Study study={study} setStudy={setStudy} />}
+        {study && mobile && <StudyPanel study={study} path={path} compact />}
+        {study && <Study study={study} setStudy={setStudy} path={path} />}
         {tab && (
           <Navigation
             active={active}
@@ -248,6 +249,9 @@ function Root() {
           />
         )}
       </section>
+      {study && !mobile && (
+        <StudyPanel study={study} path={path} compact={false} />
+      )}
       {modal && (
         <Modals
           key={JSON.stringify(modal)}

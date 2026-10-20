@@ -1259,13 +1259,12 @@ test("/a runs UI A then UI B, times each task and uploads both ratings", async (
     [1, "A"],
     [2, "B"],
   ] as const) {
-    await expect(page.getByText(`TASK ${round} OF 2`)).toBeVisible();
+    await expect(page.getByText(`TASK ${round} OF 2`, { exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Start task" }).click();
     await expect(page.locator(".study")).toHaveCount(0);
-    await page.evaluate(() => (location.hash = "#/create/1"));
+    await page.evaluate(() => (location.hash = "#/deal/photo-top-reference"));
     await page
-      .getByRole("button", { name: /Oat milk|Chobani|TOP/ })
-      .first()
+      .getByRole("button", { name: "Start a split from this deal" })
       .click();
     if (ui === "A") {
       await expect(page.getByText("Step 1 of 4")).toBeVisible();
@@ -1277,6 +1276,9 @@ test("/a runs UI A then UI B, times each task and uploads both ratings", async (
         await page.getByRole("button", { name }).click();
     } else await expect(page.getByText("Step 1 of 4")).toHaveCount(0);
     await page.getByRole("button", { name: "Publish split" }).click();
+    await page
+      .getByRole("button", { name: "Accept", exact: true })
+      .click({ timeout: 15_000 });
     await page
       .getByRole("button", { name: "Mark purchased & notify" })
       .click({ timeout: 15_000 });

@@ -445,6 +445,43 @@ export function initialState(
     }),
   );
 }
+/** Singapore neighbourhoods offered in the area picker; sample splits exist only in Bugis. */
+export const areas = [
+  "Ang Mo Kio",
+  "Bedok",
+  "Bishan",
+  "Bras Basah",
+  "Bugis",
+  "Bukit Batok",
+  "Bukit Merah",
+  "Bukit Panjang",
+  "Bukit Timah",
+  "Buona Vista",
+  "Changi",
+  "Chinatown",
+  "Clementi",
+  "Dhoby Ghaut",
+  "Geylang",
+  "Hougang",
+  "Jurong East",
+  "Jurong West",
+  "Kallang",
+  "Little India",
+  "Marina Bay",
+  "Novena",
+  "Orchard",
+  "Pasir Ris",
+  "Punggol",
+  "Queenstown",
+  "Sembawang",
+  "Sengkang",
+  "Serangoon",
+  "Tampines",
+  "Tanjong Pagar",
+  "Toa Payoh",
+  "Woodlands",
+  "Yishun",
+];
 export const money = (cents: number) => "S$" + (cents / 100).toFixed(2);
 /** Charged once per reservation, however many portions it holds. */
 export const SERVICE_FEE_CENTS = 15;
