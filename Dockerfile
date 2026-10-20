@@ -3,6 +3,8 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --no-audit --no-fund
 COPY . .
+ARG VITE_SHEETS_URL
+ENV VITE_SHEETS_URL=$VITE_SHEETS_URL
 RUN node scripts/vendor-fonts.mjs && npm run build
 
 FROM nginx:stable-alpine

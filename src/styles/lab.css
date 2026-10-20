@@ -310,3 +310,64 @@
     display: none;
   }
 }
+
+/* A/B study overlay (/a and /b). */
+.study {
+  position: absolute;
+  inset: 0;
+  z-index: 100;
+  background: var(--canvas);
+  display: flex;
+  align-items: center;
+  overflow-y: auto;
+}
+.study-card {
+  width: 100%;
+  padding: 28px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.study-card h2 {
+  margin: 0;
+  font-family: var(--display);
+}
+.study-card ol {
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.study-time {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 56px;
+  line-height: 1;
+  color: var(--brand);
+}
+.likert {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
+.likert button {
+  min-height: 48px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #fff;
+  font: inherit;
+  font-weight: 600;
+  color: var(--ink);
+}
+.likert button.on {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: #fff;
+}
+.likert-ends {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--muted);
+}

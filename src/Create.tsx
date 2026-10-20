@@ -15,6 +15,7 @@ import {
 } from "./model";
 import { savePhoto, useStore } from "./store";
 import { back, finish, go } from "./router";
+import { studyRoute } from "./studyData";
 
 /** A/B test: A walks through four steps; B shows every field on one page. */
 export type CreateVariant = "A" | "B";
@@ -196,7 +197,7 @@ export function Create({
         { ...s, products: [...s.products, product], createDraft: {} },
         id,
         "jerry",
-        new Date(Date.now() + 8000).toISOString(),
+        new Date(Date.now() + (studyRoute() ? 3000 : 8000)).toISOString(),
       ),
     );
     finish("/hosting/" + id + "?published=1");

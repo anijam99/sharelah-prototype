@@ -1244,3 +1244,71 @@ test("after buying, simulating Jerry's scan completes the hosted split", async (
     }),
   ).toBeVisible();
 });
+
+test("/a runs UI A then UI B, times each task and uploads both ratings", async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  const posts: any[] = [];
+  await page.route("https://script.google.com/**", (route) => {
+    posts.push(JSON.parse(route.request().postData()!));
+    return route.fulfill({ status: 200, body: "ok" });
+  });
+  await page.goto("/a");
+  for (const [round, ui] of [
+    [1, "A"],
+    [2, "B"],
+  ] as const) {
+    await expect(page.getByText(`TASK ${round} OF 2`)).toBeVisible();
+    await page.getByRole("button", { name: "Start task" }).click();
+    await expect(page.locator(".study")).toHaveCount(0);
+    await page.evaluate(() => (location.hash = "#/create/1"));
+    await page
+      .getByRole("button", { name: /Oat milk|Chobani|TOP/ })
+      .first()
+      .click();
+    if (ui === "A") {
+      await expect(page.getByText("Step 1 of 4")).toBeVisible();
+      for (const name of [
+        "Set portions & price",
+        "Arrange pickup",
+        "Review split",
+      ])
+        await page.getByRole("button", { name }).click();
+    } else await expect(page.getByText("Step 1 of 4")).toHaveCount(0);
+    await page.getByRole("button", { name: "Publish split" }).click();
+    await page
+      .getByRole("button", { name: "Mark purchased & notify" })
+      .click({ timeout: 15_000 });
+    await expect(
+      page.getByText("Task " + round + " complete", { exact: false }),
+    ).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator(".study-time")).toContainText("s");
+    await page.getByRole("radio", { name: /^5,/ }).click();
+    await page
+      .getByRole("button", { name: round === 1 ? "Next task" : "Submit" })
+      .click();
+  }
+  await expect(
+    page.getByText("Your responses have been recorded."),
+  ).toBeVisible();
+  expect(posts).toHaveLength(1);
+  expect(posts[0]).toMatchObject({
+    route: "/a",
+    first_ui: "A",
+    second_ui: "B",
+    ui_a_satisfaction: 5,
+    ui_b_satisfaction: 5,
+  });
+  expect(posts[0].ui_a_time_sec).toBeGreaterThan(0);
+});
+
+test("/b shows UI B first", async ({ page }) => {
+  await page.goto("/b");
+  await page.getByRole("button", { name: "Start task" }).click();
+  await expect(page.locator(".study")).toHaveCount(0);
+  await page.evaluate(() => (location.hash = "#/create/1"));
+  await expect(
+    page.getByRole("region", { name: /Portions & price/ }),
+  ).toBeVisible();
+});

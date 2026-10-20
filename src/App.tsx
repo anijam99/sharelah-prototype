@@ -20,6 +20,8 @@ import { Chat, Directions, MySplit, Offer, Pickup, Problem } from "./Journey";
 import { Create, createVariant, type CreateVariant } from "./Create";
 import { go, parseRoute, useRoute } from "./router";
 import { nextArrival, pendingRequests } from "./model";
+import { Study, useStudy } from "./Study";
+import { studyRoute } from "./studyData";
 
 function Navigation({
   active,
@@ -107,10 +109,13 @@ function Root() {
     "sharelah-home-variant",
     (v) => (v === "B" || v === "C" ? v : "A"),
   );
-  const [createLayout, selectCreateLayout] = useStoredVariant<CreateVariant>(
+  const [storedLayout, selectCreateLayout] = useStoredVariant<CreateVariant>(
     "sharelah-create-variant",
     createVariant,
   );
+  // On /a and /b the study decides which start-a-split layout is shown.
+  const [study, setStudy] = useStudy(studyRoute());
+  const createLayout = study ? study.rounds[study.current].ui : storedLayout;
   function selectHomeVariant(value: HomeVariant) {
     setHomeVariant(value);
     if (path === "/map" && value !== "A") go("/", undefined, true);
@@ -215,7 +220,7 @@ function Root() {
   }
   return (
     <div className="app-layout">
-      {!mobile && !testingPage && lab}
+      {!mobile && !testingPage && !study && lab}
       <section className="app-frame">
         {storageError && (
           <div className="storage-error" role="alert">
@@ -233,6 +238,7 @@ function Root() {
             </Empty>
           </>
         )}
+        {study && <Study study={study} setStudy={setStudy} />}
         {tab && (
           <Navigation
             active={active}

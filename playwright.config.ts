@@ -19,6 +19,8 @@ export default defineConfig({
     : {
         command: "npm run dev -- --port 5173",
         url: "http://127.0.0.1:5173",
+        // Lets the study test exercise the upload; the request is intercepted.
+        env: { VITE_SHEETS_URL: "https://script.google.com/macros/s/test/exec" },
         reuseExistingServer: !process.env.CI,
       },
 });
