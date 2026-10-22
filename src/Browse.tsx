@@ -57,14 +57,7 @@ export function Home({
               <h1 className="sr-only" tabIndex={-1}>
                 Nearby deals
               </h1>
-              <button
-                className="home-location"
-                onClick={() => open({ kind: "area" })}
-              >
-                <MapPin size={17} aria-hidden="true" />
-                <strong>{state.area}</strong>
-                <span>Change area ›</span>
-              </button>
+              <LocationControls open={open} />
             </>
           )}
           {combined && layout === "B" && <HomeMap products={products} />}
@@ -207,6 +200,18 @@ export function Home({
     </>
   );
 }
+/** The area picker, shared by Home and Map so both look the same. */
+function LocationControls({ open }: { open: OpenModal }) {
+  const { state } = useStore();
+  return (
+    <button className="home-location" onClick={() => open({ kind: "area" })}>
+      <MapPin size={17} aria-hidden="true" />
+      <strong>{state.area}</strong>
+      <span>Change area ›</span>
+    </button>
+  );
+}
+
 export function MapScreen({ open }: { open: OpenModal }) {
   const { state } = useStore(),
     products = visibleProducts(state),
@@ -220,18 +225,15 @@ export function MapScreen({ open }: { open: OpenModal }) {
       <TopHeader title="Map" />
       <main className="page-scroll">
         <div className="content">
-          <div className="map-controls">
-            <button className="chip" onClick={() => open({ kind: "area" })}>
-              <MapPin size={17} />
-              {state.area}⌄
-            </button>
-            <button className="chip" onClick={() => open({ kind: "filters" })}>
-              {state.radius < 1000 ? "500 m" : state.radius / 1000 + " km"}{" "}
-              radius⌄
-            </button>
-          </div>
+          <LocationControls open={open} />
           <div className="map-heading">
-            <span>Drag the map to explore</span>
+            <button
+              className="text-button"
+              onClick={() => open({ kind: "filters" })}
+            >
+              {state.radius < 1000 ? "500 m" : state.radius / 1000 + " km"}{" "}
+              radius ›
+            </button>
             <button
               className="text-button"
               onClick={() => setRecenter((n) => n + 1)}

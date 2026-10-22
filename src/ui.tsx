@@ -191,19 +191,16 @@ export function Header({
     </header>
   );
 }
+/** The same brand bar on every tab; other tabs add their title beneath it. */
 export function TopHeader({ title }: { title?: string }) {
   const { state } = useStore();
   return (
-    <header className="top-header">
-      {title ? (
-        <h1 tabIndex={-1}>{title}</h1>
-      ) : (
+    <>
+      <header className="top-header">
         <a className="wordmark" href="#/">
           <img src="/assets/brand.svg" width="36" height="36" alt="" />
           sharelah.
         </a>
-      )}
-      {!title && (
         <div className="shortcuts">
           <button onClick={() => go("/saved")}>
             <Icon name="saved" />
@@ -215,8 +212,13 @@ export function TopHeader({ title }: { title?: string }) {
             <AlertBadge count={pendingRequests(state).length} />
           </button>
         </div>
+      </header>
+      {title && (
+        <h1 className="tab-title" tabIndex={-1}>
+          {title}
+        </h1>
       )}
-    </header>
+    </>
   );
 }
 export function Row({
@@ -224,15 +226,23 @@ export function Row({
   detail,
   onClick,
   children,
+  icon,
 }: {
   title: ReactNode;
   detail?: ReactNode;
   onClick?: () => void;
   children?: ReactNode;
+  /** Optional leading icon, shown in a tinted circle. */
+  icon?: ReactNode;
 }) {
   const content = (
     <>
-      <span>
+      {icon && (
+        <span className="row-icon" aria-hidden="true">
+          {icon}
+        </span>
+      )}
+      <span className={icon ? "row-text" : undefined}>
         <strong>{title}</strong>
         {detail && <small>{detail}</small>}
       </span>

@@ -33,8 +33,12 @@
   gap: 16px;
 }
 
-.top-header h1 {
-  font-size: 28px;
+.tab-title {
+  flex: none;
+  margin: 0;
+  padding: 4px 20px 8px;
+  font: 700 28px/1.15 var(--display);
+  letter-spacing: -0.5px;
 }
 
 .top-header {
@@ -342,6 +346,7 @@
 
 @media (max-width: 375px) {
   .top-header,
+  .tab-title,
   .page-header {
     padding-left: 16px;
     padding-right: 16px;

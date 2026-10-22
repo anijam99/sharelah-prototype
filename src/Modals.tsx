@@ -1,5 +1,13 @@
 import { useState, type ReactNode } from "react";
-import { Check, Minus, Plus, Star } from "lucide-react";
+import {
+  Camera,
+  Check,
+  Megaphone,
+  Minus,
+  PencilLine,
+  Plus,
+  Star,
+} from "lucide-react";
 import { useStore } from "./store";
 import { Button, Row, Sheet } from "./ui";
 import { finish, go } from "./router";
@@ -239,16 +247,19 @@ function CreateSheet({ close }: { close: () => void }) {
   return (
     <Sheet title="What would you like to share?" onClose={close}>
       <Row
+        icon={<Camera size={30} strokeWidth={2.2} />}
         title="Start a split from a price tag"
         detail="Photograph a bundle deal, then share portions with neighbours"
         onClick={start("/capture")}
       />
       <Row
+        icon={<PencilLine size={30} strokeWidth={2.2} />}
         title="Start a split manually"
         detail="Enter a bundle you plan to buy and share"
         onClick={start("/create/1")}
       />
       <Row
+        icon={<Megaphone size={30} strokeWidth={2.2} />}
         title="Post a spotted deal"
         detail="Tell neighbours about a good price. No pickup needed."
         onClick={start("/report-deal")}
