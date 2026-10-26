@@ -8,6 +8,10 @@ export type StudyRoute = "a" | "b";
 export type Round = {
   ui: CreateVariant;
   seconds?: number;
+  /** Screens visited during the task, counting the first create screen. */
+  pages?: number;
+  /** Times a Next/Publish tap was blocked by a validation message. */
+  errors?: number;
   /** Ease of use, 1–5. */
   rating?: number;
   comment?: string;
@@ -18,14 +22,114 @@ export type Study = {
   startedAt: string;
   /** Index into rounds of the one in progress. */
   current: number;
-  phase: "intro" | "task" | "rating" | "done";
+  phase:
+    | "welcome"
+    | "profile"
+    | "intro"
+    | "task"
+    | "rating"
+    | "compare"
+    | "post"
+    | "done";
   /** Epoch ms when the current task started; 0 until the participant begins. */
   taskStart: number;
-  /** Epoch ms when the current split completed; 0 while in progress. */
+  /** Epoch ms when Jerry collected and the round ended; 0 while in progress. */
   taskEnd: number;
   rounds: [Round, Round];
+  /** Asked once before task 1. */
+  age?: string;
+  occupation?: string;
+  /** Confidence sharing a bulk buy through an app, 1–10, before and after. */
+  preConfidence?: number;
+  postConfidence?: number;
+  /** "In real life" pop-ups already acknowledged in this round. */
+  narrated?: Narration[];
+  /** Epoch ms when the split was published, which stops the task clock. */
+  publishedAt?: number;
+  /** After both tasks: which layout they'd use, why, and in their words. */
+  preferred?: CreateVariant | "none";
+  themes?: Theme[];
+  preferenceComment?: string;
+  completedAt?: string;
   uploaded: boolean;
 };
+
+/**
+ * Reasons offered for the preferred version. Keys go to the spreadsheet for
+ * analysis; labels are what participants read.
+ */
+export const themes = {
+  Intuitive: "Easier to understand",
+  Efficient: "Quicker to finish",
+  Layout: "Clearer layout",
+  Convenient: "Less scrolling or tapping",
+  Recoverable: "Easier to check and fix details",
+  Familiar: "Felt more familiar",
+  Modern: "Looked more modern",
+  Other: "Something else",
+} as const;
+export type Theme = keyof typeof themes;
+
+export const ageGroups = [
+  "Under 18",
+  "18–24",
+  "25–34",
+  "35–44",
+  "45–54",
+  "55–64",
+  "65 or older",
+  "Prefer not to say",
+];
+export const occupations = [
+  "Student",
+  "Tech / IT",
+  "Business / finance",
+  "Healthcare",
+  "Education",
+  "Retail / service",
+  "Creative / design",
+  "Trades / logistics",
+  "Homemaker",
+  "Retired",
+  "Not working",
+  "Other",
+  "Prefer not to say",
+];
+
+/** Jerry's steps, each explained by an "in real life" pop-up. */
+export type Narration = "purchase" | "scan";
+
+/** Rough device details from the browser, so no one has to type them. */
+export function deviceInfo(ua = navigator.userAgent) {
+  const os = /iPhone|iPad|iPod/.test(ua)
+    ? "iOS"
+    : /Android/.test(ua)
+      ? "Android"
+      : /Mac OS X/.test(ua)
+        ? "macOS"
+        : /Windows/.test(ua)
+          ? "Windows"
+          : /Linux/.test(ua)
+            ? "Linux"
+            : "Other";
+  const browser = /Edg\//.test(ua)
+    ? "Edge"
+    : /SamsungBrowser/.test(ua)
+      ? "Samsung Internet"
+      : /CriOS|Chrome\//.test(ua)
+        ? "Chrome"
+        : /FxiOS|Firefox\//.test(ua)
+          ? "Firefox"
+          : /Safari\//.test(ua)
+            ? "Safari"
+            : "Other";
+  const device = /iPad|Tablet/.test(ua)
+    ? "Tablet"
+    : /Mobi|iPhone|Android/.test(ua)
+      ? "Mobile"
+      : "Desktop";
+  return { device, os, browser };
+}
 
 const KEY = "sharelah-study-v1";
 
@@ -41,7 +145,7 @@ export function newStudy(route: StudyRoute): Study {
     route,
     startedAt: new Date().toISOString(),
     current: 0,
-    phase: "intro",
+    phase: "welcome",
     taskStart: 0,
     taskEnd: 0,
     rounds: [{ ui: order[0] }, { ui: order[1] }],
@@ -66,10 +170,15 @@ export function saveStudy(study: Study) {
 
 /** One spreadsheet row per participant. */
 export function studyRow(s: Study) {
-  const of = (ui: CreateVariant) => s.rounds.find((r) => r.ui === ui)!;
+  const of = (ui: CreateVariant) => s.rounds.find((r) => r.ui === ui)!,
+    device = deviceInfo();
   return {
     timestamp: new Date().toISOString(),
     participant_id: s.participant,
+    age_group: s.age ?? "",
+    occupation: s.occupation ?? "",
+    pre_confidence: s.preConfidence ?? "",
+    post_confidence: s.postConfidence ?? "",
     route: "/" + s.route,
     first_ui: s.rounds[0].ui,
     second_ui: s.rounds[1].ui,
@@ -79,6 +188,22 @@ export function studyRow(s: Study) {
     ui_b_comment: of("B").comment ?? "",
     ui_a_time_sec: of("A").seconds ?? "",
     ui_b_time_sec: of("B").seconds ?? "",
+    ui_a_pages: of("A").pages ?? "",
+    ui_b_pages: of("B").pages ?? "",
+    ui_a_errors: of("A").errors ?? "",
+    ui_b_errors: of("B").errors ?? "",
+    preferred_version:
+      s.preferred === "none" ? "No preference" : (s.preferred ?? ""),
+    preference_themes: (s.themes || []).join("; "),
+    preference_comment: s.preferenceComment ?? "",
+    started_at: s.startedAt,
+    completed_at: s.completedAt ?? "",
+    total_duration_sec: s.completedAt
+      ? Math.round((Date.parse(s.completedAt) - Date.parse(s.startedAt)) / 1000)
+      : "",
+    device_category: device.device,
+    os: device.os,
+    browser: device.browser,
     user_agent: navigator.userAgent,
   };
 }

@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Star, TriangleAlert } from "lucide-react";
 import { Pizza } from "./Pizza";
 import { useStore } from "./store";
+import { studyRoute } from "./studyData";
 import { Button, Header, QRCode, Row, useNow } from "./ui";
 import { go } from "./router";
 import { isPerson, people, profileSummary, reviewsFor } from "./people";
@@ -165,17 +166,19 @@ export function Hosting({
               <p>Show this after your neighbour has checked their item.</p>
               <QRCode value={`sharelah:pickup:${p.id}:${p.code}`} />
               <strong className="pickup-number">{p.code}</strong>
-              {accepted.map((r) => (
-                <Button
-                  key={r.person}
-                  kind="secondary"
-                  onClick={() =>
-                    update((s) => collectJoiner(s, p.id, r.person))
-                  }
-                >
-                  Simulate {nameOf(r)} scanning the code
-                </Button>
-              ))}
+              {/* In the A/B study Jerry scans after an "in real life" pop-up. */}
+              {!studyRoute() &&
+                accepted.map((r) => (
+                  <Button
+                    key={r.person}
+                    kind="secondary"
+                    onClick={() =>
+                      update((s) => collectJoiner(s, p.id, r.person))
+                    }
+                  >
+                    Simulate {nameOf(r)} scanning the code
+                  </Button>
+                ))}
             </div>
           )}
           <Row title={p.title} detail={p.portion} />

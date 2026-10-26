@@ -89,11 +89,11 @@ The tester persona is fixed as Tom Chua. Jerry hosts every seeded split and asks
 
 The same cards are available locally in `public/testing/pickup-codes.html`.
 
-| Item                                 | Initial state                                  | Pickup number |
-| ------------------------------------ | ---------------------------------------------- | ------------- |
-| Chobani blueberry Greek yoghurt      | Ready for pickup                               | 482913        |
-| TOP liquid laundry detergent | Available; reserve then simulate host purchase | 635271        |
-| Samyang Buldak bowl noodles          | Available; reserve then simulate host purchase | 729418        |
+| Item                            | Initial state                                  | Pickup number |
+| ------------------------------- | ---------------------------------------------- | ------------- |
+| Chobani blueberry Greek yoghurt | Ready for pickup                               | 482913        |
+| TOP liquid laundry detergent    | Available; reserve then simulate host purchase | 635271        |
+| Samyang Buldak bowl noodles     | Available; reserve then simulate host purchase | 729418        |
 
 Before the study, test on the actual participant phones over HTTPS: allow/deny permission, capture and retake a shelf photo, upload an image, scan a printed code, enter a wrong number, complete pickup, and navigate away while the camera is running. Check the keyboard and map panning in Safari on iPhone and Chrome on Android. Read `VERIFICATION.md` for the checks completed during implementation and the remaining environment-dependent checks.
 
@@ -128,6 +128,8 @@ Chobani blueberry yoghurt and TOP detergent details expose Compare prices & trav
 ### Start a split experiment
 
 The prototype lab’s **Start a split A/B** selector persists under `sharelah-create-variant`. **A · Step by step** keeps the four-screen flow (item, portions, pickup, review). **B · One page** shows the same fields in three numbered sections on one scrolling page with a single **Publish split** button; publishing with missing details marks every incomplete section and scrolls to the first. Both layouts use the same numbered section cards (Item, Portions & price, Pickup), fields and validation rules, so only the layout differs; A adds a read-only review screen built from the same cards. Each A screen fits a phone without scrolling (checked at 390×844, 375×667 and 390×664, including the /a study bar), so scrolling is unique to B. A dashed **Demo autofill** button fills in the TOP detergent sample for demos and study tasks. The price-tag camera (and the pickup QR scanner) fill the screen without scrolling. In the price-tag camera, a small, translucent simulated AR tag “finds” a price tag after about 1.5 seconds and shows its per-item price beside it (2 for S$21.00 → S$10.50 each); nothing is read from the camera feed.
+
+**A/B study (`/a`, `/b`).** The session follows a script: a welcome explaining ShareLah and that we’re testing the app, not them; an “about you” screen with age group, occupation (both allow “Prefer not to say”) and a 1–10 confidence question about sharing a bulk buy with a neighbour through an app; a background note before task 1; and the same confidence question again after both tasks, before the thank-you. Each then does the same task in both layouts (order counterbalanced), rating ease (1–5) with a comment after each. Task time, pages and blocked Next/Publish taps are measured only from choosing _Start a split_ until the split is published, the part where the layouts differ. After publishing, Jerry’s request appears on screen to accept; the next steps (buying the bundle, Jerry scanning your code) are each explained by an “In real life” pop-up that appears 5 seconds after the screen changes; Jerry only scans after that pop-up, and the _Simulate scanning_ button is hidden during the study. A final step asks which version they would use (first, second or no preference), what made it better (themes: easier to understand, quicker to finish, clearer layout, less scrolling or tapping, easier to check and fix details, felt more familiar, looked more modern, something else) and why, in their own words; the open question quotes the themes they picked. Without asking anything extra, each row also records pages visited and blocked Next/Publish taps per task, start and finish time, total duration, and device category, OS and browser from the user agent. Columns are listed in `docs/google-apps-script.gs`.
 
 The confirmation and home/map tests are not used in the current study, so the lab folds them under **Inactive tests**. They still work when expanded, and the lab remembers whether that section is open. Switching mid-flow keeps what you’ve entered. This test doesn’t interact with the confirmation or home/map tests, so all three selectors stay available together.
 

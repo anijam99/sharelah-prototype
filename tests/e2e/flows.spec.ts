@@ -1241,7 +1241,7 @@ test("after buying, simulating Jerry's scan completes the hosted split", async (
 test("/a runs UI A then UI B, times each task and uploads both ratings", async ({
   page,
 }) => {
-  test.setTimeout(120_000);
+  test.setTimeout(150_000);
   const posts: any[] = [];
   await page.route("https://script.google.com/**", (route) => {
     posts.push(JSON.parse(route.request().postData()!));
@@ -1252,6 +1252,15 @@ test("/a runs UI A then UI B, times each task and uploads both ratings", async (
     [1, "A"],
     [2, "B"],
   ] as const) {
+    if (round === 1) {
+      await page.getByRole("button", { name: "Get started" }).click();
+      const next = page.getByRole("button", { name: "Continue" });
+      await page.getByLabel("Age").selectOption("25–34");
+      await page.getByLabel("Occupation").selectOption("Tech / IT");
+      await expect(next).toBeDisabled();
+      await page.getByRole("radio", { name: /^4/ }).click();
+      await next.click();
+    }
     await expect(
       page.getByText(`TASK ${round} OF 2`, { exact: true }),
     ).toBeVisible();
@@ -1273,12 +1282,26 @@ test("/a runs UI A then UI B, times each task and uploads both ratings", async (
       for (const name of ["Arrange pickup", "Review split"])
         await page.getByRole("button", { name }).click();
     await page.getByRole("button", { name: "Publish split" }).click();
+    // Each of Jerry's steps is explained by an "in real life" pop-up that
+    // appears 5 seconds after the screen changes.
+    const ok = page.getByRole("button", { name: "OK", exact: true });
     await page
       .getByRole("button", { name: "Accept", exact: true })
       .click({ timeout: 15_000 });
-    await page
-      .getByRole("button", { name: "Mark purchased & notify" })
-      .click({ timeout: 15_000 });
+    for (const [title, action] of [
+      ["Time to buy the bundle", "Mark purchased & notify"],
+      ["Jerry is on his way", ""],
+    ] as const) {
+      await expect(page.getByRole("heading", { name: title })).toBeVisible({
+        timeout: 15_000,
+      });
+      await ok.click();
+      if (action)
+        await page.getByRole("button", { name: action, exact: true }).click();
+    }
+    await expect(
+      page.getByRole("button", { name: /Simulate Jerry scanning/ }),
+    ).toHaveCount(0);
     await expect(
       page.getByText("Task " + round + " complete", { exact: false }),
     ).toBeVisible({ timeout: 15_000 });
@@ -1286,9 +1309,25 @@ test("/a runs UI A then UI B, times each task and uploads both ratings", async (
     await page.getByLabel(/What did you like/).fill("Felt fine");
     await page.getByRole("radio", { name: /^5,/ }).click();
     await page
-      .getByRole("button", { name: round === 1 ? "Next task" : "Submit" })
+      .getByRole("button", { name: round === 1 ? "Next task" : "Continue" })
       .click();
   }
+  // Final comparison: version, reasons, then why in their own words.
+  await expect(
+    page.getByRole("heading", { name: "Which version would you use?" }),
+  ).toBeVisible();
+  const submit = page.getByRole("button", { name: "Continue" });
+  await page.getByRole("radio", { name: /The second version/ }).click();
+  await expect(submit).toBeDisabled();
+  await page.getByRole("button", { name: "Clearer layout" }).click();
+  await page.getByRole("button", { name: "Quicker to finish" }).click();
+  await page
+    .getByLabel(/You picked: Clearer layout, Quicker to finish/)
+    .fill("Could see everything at once");
+  await page.getByRole("button", { name: "Continue" }).click();
+  // Same confidence question as before the tasks.
+  await page.getByRole("radio", { name: /^7/ }).click();
+  await page.getByRole("button", { name: "Submit" }).click();
   await expect(
     page.getByText("Your responses have been recorded."),
   ).toBeVisible();
@@ -1300,12 +1339,28 @@ test("/a runs UI A then UI B, times each task and uploads both ratings", async (
     ui_a_ease: 5,
     ui_a_comment: "Felt fine",
     ui_b_ease: 5,
+    preferred_version: "B",
+    age_group: "25–34",
+    occupation: "Tech / IT",
+    pre_confidence: 4,
+    post_confidence: 7,
+    preference_themes: "Layout; Efficient",
+    preference_comment: "Could see everything at once",
+    device_category: "Mobile",
   });
   expect(posts[0].ui_a_time_sec).toBeGreaterThan(0);
+  // A walks through more screens than B by design.
+  expect(posts[0].ui_a_pages).toBeGreaterThan(posts[0].ui_b_pages);
+  expect(posts[0].total_duration_sec).toBeGreaterThan(0);
 });
 
 test("/b shows UI B first", async ({ page }) => {
   await page.goto("/b");
+  await page.getByRole("button", { name: "Get started" }).click();
+  await page.getByLabel("Age").selectOption("Prefer not to say");
+  await page.getByLabel("Occupation").selectOption("Student");
+  await page.getByRole("radio", { name: /^5/ }).click();
+  await page.getByRole("button", { name: "Continue" }).click();
   await page.getByRole("button", { name: "Start task" }).click();
   await page.getByRole("button", { name: "Share" }).click();
   await page

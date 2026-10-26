@@ -121,6 +121,9 @@ function Root() {
   // On /a and /b the study decides which start-a-split layout is shown.
   const [study, setStudy] = useStudy(studyRoute());
   const createLayout = study ? study.rounds[study.current].ui : storedLayout;
+  // The task panel appears once the welcome and "about you" screens are done.
+  const showPanel =
+    !!study && study.phase !== "welcome" && study.phase !== "profile";
   function selectHomeVariant(value: HomeVariant) {
     setHomeVariant(value);
     if (path === "/map" && value !== "A") go("/", undefined, true);
@@ -243,7 +246,7 @@ function Root() {
             </Empty>
           </>
         )}
-        {study && mobile && <StudyPanel study={study} compact />}
+        {study && mobile && showPanel && <StudyPanel study={study} compact />}
         {study && <Study study={study} setStudy={setStudy} path={path} />}
         {tab && (
           <Navigation
@@ -255,7 +258,9 @@ function Root() {
           />
         )}
       </section>
-      {study && !mobile && <StudyPanel study={study} compact={false} />}
+      {study && !mobile && showPanel && (
+        <StudyPanel study={study} compact={false} />
+      )}
       {modal && (
         <Modals
           key={JSON.stringify(modal)}

@@ -51,6 +51,10 @@ const arSample = {
   unit: money(Math.round(sample.bundleCents / (sample.bundleCount || 2))),
 };
 
+/** Lets the A/B study count blocked Next/Publish taps. */
+export const VALIDATION_EVENT = "sharelah:validation";
+const flagValidation = () => window.dispatchEvent(new Event(VALIDATION_EVENT));
+
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
 /** Both layouts validate the same rules, so only the layout differs. */
@@ -156,8 +160,10 @@ export function Create({
       found.item ||
       (stage >= 2 && found.portions) ||
       (stage >= 3 && found.pickup);
-    if (message) setError(message);
-    else jump(stage + 1);
+    if (message) {
+      setError(message);
+      flagValidation();
+    } else jump(stage + 1);
   }
   function publishDeal() {
     if (
@@ -198,6 +204,7 @@ export function Create({
       (s) => found[s],
     );
     if (first) {
+      flagValidation();
       setError(
         onePage
           ? "Some details need attention. Check the highlighted sections."

@@ -9,10 +9,16 @@ import {
   studyCsv,
   uploadStudy,
   SHEETS_URL,
+  themes,
+  ageGroups,
+  occupations,
+  type Narration,
   type Study as StudyState,
   type StudyRoute,
+  type Round,
+  type Theme,
 } from "./studyData";
-import type { CreateVariant } from "./Create";
+import { VALIDATION_EVENT, type CreateVariant } from "./Create";
 
 const names: Record<CreateVariant, string> = {
   A: "step by step",
@@ -40,15 +46,49 @@ function TaskText({ round }: { round: number }) {
           publish.
         </li>
         <li>
-          When a neighbour asks to join, <strong>accept</strong> them. Buy the
-          bundle, then hand it over; the pickup code is scanned for you.
+          When a neighbour asks to join, <strong>accept</strong> them, then
+          follow the <strong>In real life</strong> notes to buy the bundle and
+          hand it over.
         </li>
       </ol>
     </>
   );
 }
-const SCAN_DELAY_MS = 3000,
-  RATING_DELAY_MS = 1800;
+/** How each layout is described when asking which one people preferred. */
+const layoutHint: Record<CreateVariant, string> = {
+  A: "Several short screens, one step at a time",
+  B: "Everything on one scrolling page",
+};
+/** Update the round in progress. */
+function withRound(
+  s: StudyState,
+  change: Partial<Round> | ((r: Round) => Partial<Round>),
+): StudyState {
+  return {
+    ...s,
+    rounds: s.rounds.map((r, i) =>
+      i === s.current
+        ? { ...r, ...(typeof change === "function" ? change(r) : change) }
+        : r,
+    ) as StudyState["rounds"],
+  };
+}
+const RATING_DELAY_MS = 1800,
+  /** Let people see the new screen before the pop-up explains it. */
+  NARRATION_DELAY_MS = 5000,
+  SCAN_MS = 1500;
+
+/** What happens in real life at each of Jerry's steps. */
+const narrations: Record<Narration, { title: string; body: string }> = {
+  purchase: {
+    title: "Time to buy the bundle",
+    body: "Pretend you've gone to FairPrice and bought the 2-bottle bundle. When you're done, tap Mark purchased & notify.",
+  },
+  scan: {
+    title: "Jerry is on his way",
+    body: "Jerry walks over to the pickup point and scans the pickup code on your screen. Tap OK to see the scan happen.",
+  },
+};
 const likert = [
   "Very difficult",
   "Difficult",
@@ -56,6 +96,45 @@ const likert = [
   "Easy",
   "Very easy",
 ];
+
+/** A 1–10 confidence question, asked before and after the tasks. */
+function ConfidenceScale({
+  question,
+  value,
+  onChange,
+}: {
+  question: string;
+  value: number;
+  onChange: (n: number) => void;
+}) {
+  return (
+    <div className="confidence">
+      <p id="confidence-q">{question}</p>
+      <div
+        className="scale-ten"
+        role="radiogroup"
+        aria-labelledby="confidence-q"
+      >
+        {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
+          <button
+            key={n}
+            role="radio"
+            aria-checked={value === n}
+            aria-label={`${n}${n === 1 ? ", not confident at all" : n === 10 ? ", very confident" : ""}`}
+            className={value === n ? "on" : ""}
+            onClick={() => onChange(n)}
+          >
+            {n}
+          </button>
+        ))}
+      </div>
+      <div className="likert-ends">
+        <small>1 · Not confident at all</small>
+        <small>10 · Very confident</small>
+      </div>
+    </div>
+  );
+}
 
 /** Splits made by the participant have UUID ids; seeded ones do not. */
 export const hostedByParticipant = (p: Product) =>
@@ -91,58 +170,100 @@ export function Study({
     ),
     [rating, setRating] = useState<number>(0),
     [comment, setComment] = useState(""),
-    purchasedAt = useRef(0);
+    [preferred, setPreferred] = useState<CreateVariant | "none">(),
+    [picked, setPicked] = useState<Theme[]>([]),
+    [why, setWhy] = useState(""),
+    [showing, setShowing] = useState<Narration | null>(null),
+    [age, setAge] = useState(study.age || ""),
+    [occupation, setOccupation] = useState(study.occupation || ""),
+    [preConfidence, setPreConfidence] = useState(study.preConfidence || 0),
+    [postConfidence, setPostConfidence] = useState(0);
   const mine = state.products.find(hostedByParticipant);
 
-  // The clock starts when the participant opens the start-a-split flow, which
-  // is where UI A and UI B first differ.
+  // Task time runs from choosing "Start a split" (from a price tag or
+  // manually) until the split is published: the part where A and B differ.
   useEffect(() => {
     if (
       study.phase === "task" &&
       !study.taskStart &&
-      path.startsWith("/create")
+      (path.startsWith("/create") || path.startsWith("/capture"))
     )
-      setStudy((s) => ({ ...s, taskStart: Date.now() }));
-  }, [study.phase, study.taskStart, path, setStudy]);
-
-  // Jerry's request is answered by the participant; once they have bought the
-  // bundle, Jerry scans the pickup code on his own.
-  useEffect(() => {
-    if (study.phase !== "task" || study.taskEnd) return;
-    const timer = window.setInterval(() => {
-      if (!mine || mine.closed || !mine.purchased) return;
-      const accepted = (state.joinRequests[mine.id] || []).some(
-        (r) => r.person === "jerry" && r.status === "accepted",
+      setStudy((s) =>
+        withRound({ ...s, taskStart: Date.now() }, { pages: 1, errors: 0 }),
       );
-      if (!accepted) return;
-      purchasedAt.current ||= Date.now();
-      if (Date.now() - purchasedAt.current >= SCAN_DELAY_MS)
-        update((s) => collectJoiner(s, mine.id, "jerry"));
-    }, 400);
-    return () => window.clearInterval(timer);
-  }, [study.phase, study.taskEnd, mine, state.joinRequests, update]);
-
-  // The clock stops the moment the split completes.
-  const complete = !!mine && hostedComplete(state, mine);
+  }, [study.phase, study.taskStart, path, setStudy]);
   useEffect(() => {
     if (
       study.phase !== "task" ||
-      study.taskEnd ||
-      !complete ||
-      !study.taskStart
+      !study.taskStart ||
+      study.publishedAt ||
+      !mine
     )
       return;
-    const end = Date.now();
-    setStudy((s) => ({
-      ...s,
-      taskEnd: end,
-      rounds: s.rounds.map((r, i) =>
-        i === s.current
-          ? { ...r, seconds: Math.round((end - s.taskStart) / 100) / 10 }
-          : r,
-      ) as StudyState["rounds"],
-    }));
-  }, [complete, study.phase, study.taskEnd, study.taskStart, setStudy]);
+    const at = Date.now();
+    setStudy((s) =>
+      withRound(
+        { ...s, publishedAt: at },
+        { seconds: Math.round((at - s.taskStart) / 100) / 10 },
+      ),
+    );
+  }, [mine, study.phase, study.taskStart, study.publishedAt, setStudy]);
+
+  // While timing, count each new screen and each blocked Next/Publish tap.
+  const counting =
+      study.phase === "task" && !!study.taskStart && !study.publishedAt,
+    lastPath = useRef(path);
+  useEffect(() => {
+    if (counting && path !== lastPath.current)
+      setStudy((s) => withRound(s, (r) => ({ pages: (r.pages || 0) + 1 })));
+    lastPath.current = path;
+  }, [counting, path, setStudy]);
+  useEffect(() => {
+    if (!counting) return;
+    const blocked = () =>
+      setStudy((s) => withRound(s, (r) => ({ errors: (r.errors || 0) + 1 })));
+    window.addEventListener(VALIDATION_EVENT, blocked);
+    return () => window.removeEventListener(VALIDATION_EVENT, blocked);
+  }, [counting, setStudy]);
+
+  // After publishing, each of Jerry's steps gets an "in real life" pop-up,
+  // 5 seconds after the screen changes so people see it first.
+  const jerry = mine
+      ? (state.joinRequests[mine.id] || []).find((r) => r.person === "jerry")
+      : undefined,
+    accepted = jerry?.status === "accepted",
+    done = study.narrated || [],
+    next: Narration | null =
+      study.phase !== "task" || study.taskEnd || !mine
+        ? null
+        : accepted && !mine.purchased && !done.includes("purchase")
+          ? "purchase"
+          : accepted && mine.purchased && !done.includes("scan")
+            ? "scan"
+            : null;
+  useEffect(() => {
+    setShowing(null);
+    if (!next) return;
+    const timer = window.setTimeout(() => setShowing(next), NARRATION_DELAY_MS);
+    return () => window.clearTimeout(timer);
+  }, [next]);
+  function acknowledge(step: Narration) {
+    setShowing(null);
+    setStudy((s) => ({ ...s, narrated: [...(s.narrated || []), step] }));
+    // Jerry's scan only happens once they've read what it means.
+    if (step === "scan" && mine)
+      window.setTimeout(
+        () => update((s) => collectJoiner(s, mine.id, "jerry")),
+        SCAN_MS,
+      );
+  }
+
+  // The round ends when Jerry has collected; then ask for the rating.
+  const complete = !!mine && hostedComplete(state, mine);
+  useEffect(() => {
+    if (study.phase !== "task" || study.taskEnd || !complete) return;
+    setStudy((s) => ({ ...s, taskEnd: Date.now() }));
+  }, [complete, study.phase, study.taskEnd, setStudy]);
   useEffect(() => {
     if (study.phase !== "task" || !study.taskEnd) return;
     const timer = window.setTimeout(
@@ -154,7 +275,6 @@ export function Study({
 
   async function begin() {
     setBusy(true);
-    purchasedAt.current = 0;
     await reset("seeded");
     go("/", "Home", true);
     setStudy((s) => ({
@@ -162,6 +282,8 @@ export function Study({
       phase: "task",
       taskStart: 0,
       taskEnd: 0,
+      narrated: [],
+      publishedAt: 0,
     }));
     setBusy(false);
   }
@@ -186,28 +308,147 @@ export function Study({
         taskStart: 0,
         taskEnd: 0,
       }));
-    else {
-      const finished = { ...study, rounds, phase: "done" as const };
-      setStudy(() => finished);
-      void send(finished);
-    }
+    else setStudy((s) => ({ ...s, rounds, phase: "compare" }));
+  }
+  function submitCompare() {
+    setStudy((s) => ({
+      ...s,
+      preferred,
+      themes: picked,
+      preferenceComment: why.trim(),
+      phase: "post",
+    }));
+  }
+  function submitPost() {
+    const finished: StudyState = {
+      ...study,
+      postConfidence,
+      completedAt: new Date().toISOString(),
+      phase: "done",
+    };
+    setStudy(() => finished);
+    void send(finished);
   }
 
-  if (study.phase === "task") return null;
+  if (study.phase === "task")
+    return showing ? (
+      <div
+        className="narration"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="narration-title"
+      >
+        <div className="narration-card">
+          <span className="eyebrow">IN REAL LIFE</span>
+          <h2 id="narration-title">{narrations[showing].title}</h2>
+          <p>{narrations[showing].body}</p>
+          <Button onClick={() => acknowledge(showing)}>OK</Button>
+        </div>
+      </div>
+    ) : null;
   const seconds = round.seconds ?? 0;
   return (
     <div className="study" role="dialog" aria-modal="true">
       <div className="study-card">
+        {study.phase === "welcome" && (
+          <>
+            <span className="eyebrow">WELCOME</span>
+            <h2>Hello, and thank you for joining us!</h2>
+            <p>
+              Today you’ll try an early version of <strong>ShareLah</strong>, an
+              app for splitting bulk buys with neighbours. When a shop has a “2
+              for S$21” deal but you only need one, ShareLah helps you find
+              someone nearby to share it with, so nobody overbuys or pays full
+              price.
+            </p>
+            <p>
+              We’re testing the app, not you. There are no right or wrong
+              answers, and anything confusing is exactly what we want to hear
+              about. It takes about 10 minutes, and your answers are anonymous.
+            </p>
+            <Button
+              onClick={() => setStudy((s) => ({ ...s, phase: "profile" }))}
+            >
+              Get started
+            </Button>
+          </>
+        )}
+        {study.phase === "profile" && (
+          <>
+            <span className="eyebrow">BEFORE WE START</span>
+            <h2>A little about you</h2>
+            <fieldset className="about-you">
+              <legend className="sr-only">About you</legend>
+              <label>
+                Age
+                <select value={age} onChange={(e) => setAge(e.target.value)}>
+                  <option value="" disabled>
+                    Choose…
+                  </option>
+                  {ageGroups.map((a) => (
+                    <option key={a}>{a}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Occupation
+                <select
+                  value={occupation}
+                  onChange={(e) => setOccupation(e.target.value)}
+                >
+                  <option value="" disabled>
+                    Choose…
+                  </option>
+                  {occupations.map((o) => (
+                    <option key={o}>{o}</option>
+                  ))}
+                </select>
+              </label>
+            </fieldset>
+            <ConfidenceScale
+              question="How confident would you feel sharing a bulk buy with a neighbour you haven’t met, using an app?"
+              value={preConfidence}
+              onChange={setPreConfidence}
+            />
+            <Button
+              disabled={!age || !occupation || !preConfidence}
+              onClick={() =>
+                setStudy((s) => ({
+                  ...s,
+                  age,
+                  occupation,
+                  preConfidence,
+                  phase: "intro",
+                }))
+              }
+            >
+              Continue
+            </Button>
+          </>
+        )}
         {study.phase === "intro" && (
           <>
             <span className="eyebrow">TASK {study.current + 1} OF 2</span>
             <h2>
               {study.current === 0 ? "Share a split" : "Now do it once more"}
             </h2>
+            {study.current === 0 && (
+              <div className="study-background">
+                <strong>Background</strong>
+                <p>
+                  In ShareLah, a host buys a bundle and shares part of it.
+                  Neighbours ask to join, the host accepts them, buys the
+                  bundle, and hands each portion over at a pickup point by
+                  scanning a code. In this task, you’re the host and Jerry is
+                  your neighbour.
+                </p>
+              </div>
+            )}
             <TaskText round={study.current} />
             <p className="fine">
               These instructions stay visible beside the app. Work as you
-              normally would.
+              normally would. The task ends by itself once Jerry has collected
+              his portion.
             </p>
             <Button disabled={busy} onClick={begin}>
               {busy ? "Getting ready…" : "Start task"}
@@ -250,15 +491,121 @@ export function Study({
               disabled={!rating || !comment.trim()}
               onClick={submitRating}
             >
-              {study.current === 0 ? "Next task" : "Submit"}
+              {study.current === 0 ? "Next task" : "Continue"}
             </Button>
             <p className="fine">Task time: {seconds.toFixed(1)}s</p>
+          </>
+        )}
+        {study.phase === "compare" && (
+          <>
+            <span className="eyebrow">LAST QUESTION</span>
+            <h2>Which version would you use?</h2>
+            <p>
+              You shared a split twice. The two versions differed only in how
+              the form was laid out.
+            </p>
+            <div
+              className="preference"
+              role="radiogroup"
+              aria-label="Preferred version"
+            >
+              {study.rounds.map((r, i) => (
+                <button
+                  key={r.ui}
+                  role="radio"
+                  aria-checked={preferred === r.ui}
+                  className={preferred === r.ui ? "on" : ""}
+                  onClick={() => setPreferred(r.ui)}
+                >
+                  <strong>The {i === 0 ? "first" : "second"} version</strong>
+                  <small>{layoutHint[r.ui]}</small>
+                </button>
+              ))}
+              <button
+                role="radio"
+                aria-checked={preferred === "none"}
+                className={preferred === "none" ? "on" : ""}
+                onClick={() => {
+                  setPreferred("none");
+                  setPicked([]);
+                }}
+              >
+                <strong>No preference</strong>
+              </button>
+            </div>
+            {preferred && preferred !== "none" && (
+              <fieldset className="themes">
+                <legend>What made it better? Choose any that apply.</legend>
+                <div className="chips wrap">
+                  {(Object.keys(themes) as Theme[]).map((t) => (
+                    <button
+                      key={t}
+                      className={
+                        "chip" + (picked.includes(t) ? " selected" : "")
+                      }
+                      aria-pressed={picked.includes(t)}
+                      onClick={() =>
+                        setPicked((p) =>
+                          p.includes(t) ? p.filter((x) => x !== t) : [...p, t],
+                        )
+                      }
+                    >
+                      {themes[t]}
+                    </button>
+                  ))}
+                </div>
+              </fieldset>
+            )}
+            {preferred && (
+              <label className="study-comment">
+                {preferred === "none"
+                  ? "Did anything feel different between the two?"
+                  : picked.length
+                    ? `You picked: ${picked.map((t) => themes[t]).join(", ")}. What made it feel that way?`
+                    : "Tell us more about why."}
+                <textarea
+                  rows={4}
+                  maxLength={2000}
+                  value={why}
+                  onChange={(e) => setWhy(e.target.value)}
+                />
+              </label>
+            )}
+            <Button
+              disabled={
+                !preferred ||
+                (preferred !== "none" && !picked.length) ||
+                !why.trim()
+              }
+              onClick={submitCompare}
+            >
+              Continue
+            </Button>
+          </>
+        )}
+        {study.phase === "post" && (
+          <>
+            <span className="eyebrow">ONE LAST THING</span>
+            <h2>How do you feel now?</h2>
+            <ConfidenceScale
+              question="Now that you’ve tried ShareLah, how confident would you feel sharing a bulk buy with a neighbour you haven’t met, using an app?"
+              value={postConfidence}
+              onChange={setPostConfidence}
+            />
+            <Button disabled={!postConfidence} onClick={submitPost}>
+              Submit
+            </Button>
           </>
         )}
         {study.phase === "done" && (
           <>
             <span className="eyebrow">ALL DONE</span>
             <h2>Thank you!</h2>
+            <p>
+              Thanks again for your time today. Your answers show us where
+              ShareLah works and where it gets in the way, and they’ll shape the
+              next version of the app.
+            </p>
             {upload === "sending" && <p>Saving your responses…</p>}
             {upload === "sent" && <p>Your responses have been recorded.</p>}
             {upload === "failed" && (
