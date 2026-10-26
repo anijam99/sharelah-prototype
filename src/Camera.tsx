@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   Camera as CameraIcon,
   SwitchCamera,
@@ -7,12 +7,22 @@ import {
   ScanLine,
 } from "lucide-react";
 import { compressPhoto, decodeQR, imageDataFromFile } from "./qr";
+/** What the simulated AR overlay "recognises" on the shelf. */
+export type ArPriceTag = { title: string; deal: string; unit: string };
+const AR_LOCK_MS = 1600;
+
 export function Camera({
   mode,
+  ar,
+  extra,
   onPhoto,
   onCode,
 }: {
   mode: "photo" | "qr";
+  /** Simulated AR: shows this tag's per-item price over the live feed. */
+  ar?: ArPriceTag;
+  /** Another way to supply a photo, shown beside "Choose a photo". */
+  extra?: ReactNode;
   onPhoto?: (blob: Blob) => void;
   onCode?: (code: string) => boolean;
 }) {
@@ -28,7 +38,17 @@ export function Camera({
     [error, setError] = useState(""),
     [flash, setFlash] = useState(false),
     [canFlash, setCanFlash] = useState(false),
-    [attempt, setAttempt] = useState(0);
+    [attempt, setAttempt] = useState(0),
+    [arLocked, setArLocked] = useState(false);
+  // Simulated AR: nothing is read from the feed. A moment after the camera
+  // opens, the overlay "finds" the sample price tag and shows the unit price.
+  const showAr = !!ar && mode === "photo" && running;
+  useEffect(() => {
+    setArLocked(false);
+    if (!showAr) return;
+    const timer = window.setTimeout(() => setArLocked(true), AR_LOCK_MS);
+    return () => window.clearTimeout(timer);
+  }, [showAr, facing]);
   function stop() {
     stream.current?.getTracks().forEach((t) => t.stop());
     stream.current = null;
@@ -200,14 +220,32 @@ export function Camera({
     <div className="camera">
       <div className="viewfinder">
         <video ref={video} muted playsInline aria-label="Live camera preview" />
-        <div className="camera-guide">
-          <ScanLine size={44} />
+        <div className={"camera-guide" + (arLocked ? " locked" : "")}>
+          {!arLocked && <ScanLine size={44} />}
           <span>
             {mode === "qr"
               ? "Keep the host’s QR code inside the frame"
-              : "Fit the item and price tag inside the frame"}
+              : arLocked
+                ? "Price tag found · take a photo to use it"
+                : "Fit the item and price tag inside the frame"}
           </span>
         </div>
+        {showAr && (
+          <div className="ar-layer" aria-live="polite">
+            {arLocked ? (
+              <div className="ar-tag" role="status">
+                <small>{ar.title}</small>
+                <span className="ar-deal">{ar.deal}</span>
+                <strong>
+                  {ar.unit}
+                  <em> each</em>
+                </strong>
+              </div>
+            ) : (
+              <span className="ar-scanning">Looking for a price tag…</span>
+            )}
+          </div>
+        )}
         {!running && !error && (
           <span className="camera-loading">Opening camera…</span>
         )}
@@ -264,14 +302,17 @@ export function Camera({
           </button>
         )}
       </div>
-      <button
-        className="secondary full"
-        onClick={() => file.current?.click()}
-        disabled={busy}
-      >
-        <Upload size={19} />
-        {busy ? "Reading photo…" : "Choose a photo"}
-      </button>
+      <div className="camera-alt">
+        <button
+          className="secondary"
+          onClick={() => file.current?.click()}
+          disabled={busy}
+        >
+          <Upload size={19} />
+          {busy ? "Reading photo…" : "Choose a photo"}
+        </button>
+        {extra}
+      </div>
       <input
         ref={file}
         type="file"

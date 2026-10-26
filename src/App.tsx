@@ -19,7 +19,7 @@ import { Hosting } from "./Hosting";
 import { Chat, Directions, MySplit, Offer, Pickup, Problem } from "./Journey";
 import { Create, createVariant, type CreateVariant } from "./Create";
 import { go, parseRoute, useRoute } from "./router";
-import { nextArrival, pendingRequests } from "./model";
+import { nextArrival, pendingRequests, readyAlerts } from "./model";
 import { Study, StudyPanel, useStudy } from "./Study";
 import { studyRoute } from "./studyData";
 
@@ -28,12 +28,15 @@ function Navigation({
   openCreate,
   combinedHome = false,
   requests = 0,
+  ready = 0,
 }: {
   active: string;
   openCreate: () => void;
   combinedHome?: boolean;
   /** Join requests waiting on the Splits tab. */
   requests?: number;
+  /** Joined portions that just became ready to collect. */
+  ready?: number;
 }) {
   return (
     <nav className="bottom-nav" aria-label="Main navigation">
@@ -57,7 +60,9 @@ function Navigation({
           >
             <span>
               <Icon name={icon} />
-              {icon === "splits" && <AlertBadge count={requests} />}
+              {icon === "splits" && (
+                <AlertBadge count={requests} ready={ready} />
+              )}
             </span>
             <small>{label}</small>
           </button>
@@ -245,6 +250,7 @@ function Root() {
             active={active}
             openCreate={() => setModal({ kind: "create" })}
             requests={pendingRequests(state).length}
+            ready={readyAlerts(state).length}
             combinedHome={homeVariant !== "A"}
           />
         )}

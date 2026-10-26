@@ -18,6 +18,8 @@ import {
   quantityOf,
   savingFor,
   simulatePurchase,
+  readyAlerts,
+  seeReady,
   spottedLabel,
   spottedPhrase,
   statusLabel,
@@ -160,6 +162,38 @@ describe("Reservation lifecycle", () => {
         expect(p.hostCents + p.itemCents * share).toBe(1001);
         expect(p.neighbourTotal).toBe(p.itemCents + 15);
       }
+  });
+  it("notifies you once when the host buys a bundle you've joined", () => {
+    const base = initialState();
+    const s = {
+      ...base,
+      reservations: {
+        ...base.reservations,
+        det: {
+          status: "reserved" as const,
+          method: "PayNow",
+          createdAt: new Date().toISOString(),
+        },
+      },
+    };
+    const bought = simulatePurchase(s, "det");
+    expect(bought.reservations.det.status).toBe("ready");
+    expect(readyAlerts(bought).map((p) => p.id)).toEqual(["det"]);
+    expect(bought.messages.det.at(-1)?.body).toMatch(/ready to collect/);
+    expect(readyAlerts(seeReady(bought, "det"))).toEqual([]);
+  });
+  it("hides splits you've completed from discovery", () => {
+    const s = initialState();
+    const ids = (state: typeof s) => visibleProducts(state).map((p) => p.id);
+    expect(ids(s)).toContain("yog");
+    const done = {
+      ...s,
+      reservations: {
+        ...s.reservations,
+        yog: { ...s.reservations.yog!, status: "completed" as const },
+      },
+    };
+    expect(ids(done)).not.toContain("yog");
   });
   it("filters the catalog by query, category, radius and neighbourhood", () => {
     const s = initialState();

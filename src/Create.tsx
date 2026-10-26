@@ -1,9 +1,10 @@
 import { Pizza } from "./Pizza";
 import { dealCategories } from "./dealCatalog";
 import { CachedPhotos } from "./CachedPhotos";
-import { useState, type ReactNode } from "react";
+import { useId, useState, type ReactNode } from "react";
+import { Images, Sparkles } from "lucide-react";
 import { Camera } from "./Camera";
-import { Art, Button, Header, Photo, PriceRows, Row } from "./ui";
+import { Art, Button, Header, Photo } from "./ui";
 import {
   allocation,
   money,
@@ -25,6 +26,32 @@ export const createVariant = (value: unknown): CreateVariant =>
 const stageNames = ["Item", "Portions", "Pickup", "Review"];
 type Change = (values: Partial<Product>) => void;
 type Section = "item" | "portions" | "pickup";
+
+/** Section titles and hints, shared by both layouts so only the layout differs. */
+const sections: Record<Section, { n: number; title: string; hint: string }> = {
+  item: { n: 1, title: "Item", hint: "What you’re buying in bulk, and where." },
+  portions: {
+    n: 2,
+    title: "Portions & price",
+    hint: "Keep what you need and share the rest.",
+  },
+  pickup: { n: 3, title: "Pickup", hint: "Where and when neighbours collect." },
+};
+
+/** The sample used by the demo autofill and the simulated AR price tag. */
+const sample = seedProducts.find((q) => q.id === "det")!;
+
+/**
+ * Simulated AR: the price-tag camera "recognises" the sample's shelf tag and
+ * shows the per-item price. Nothing is read from the camera feed.
+ */
+const arSample = {
+  title: sample.title,
+  deal: `${sample.bundleCount} for ${money(sample.bundleCents)}`,
+  unit: money(Math.round(sample.bundleCents / (sample.bundleCount || 2))),
+};
+
+const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
 /** Both layouts validate the same rules, so only the layout differs. */
 function problems(p: Product): Partial<Record<Section, string>> {
@@ -66,9 +93,12 @@ export function Create({
       Partial<Record<Section, string>>
     >({}),
     [saving, setSaving] = useState(false),
-    [camera, setCamera] = useState(
-      (mode === "camera" || mode === "deal") && !state.createDraft.photo,
-    ),
+    // "From a price tag" always opens the camera, even if an earlier draft
+    // (or the demo autofill) already left a photo behind.
+    [camera, setCamera] = useState(mode === "camera" || mode === "deal"),
+    // A posted deal starts empty every time (Demo autofill fills it in); it
+    // never shares the saved Start-a-split draft.
+    [dealDraft, setDealDraft] = useState<Partial<Product>>({}),
     [cachedPhotos, setCachedPhotos] = useState(false),
     // Remounts the uncontrolled price inputs when an example fills them in.
     [filled, setFilled] = useState(0);
@@ -86,10 +116,14 @@ export function Create({
     photo: undefined,
     sourceDealId: undefined,
     area: state.area,
-    ...state.createDraft,
+    ...(mode === "deal" ? dealDraft : state.createDraft),
   };
   function change(values: Partial<Product>) {
-    update((s) => ({ ...s, createDraft: { ...s.createDraft, ...values } }));
+    if (mode === "deal") setDealDraft((d) => ({ ...d, ...values }));
+    else
+      update((s) => ({ ...s, createDraft: { ...s.createDraft, ...values } }));
+    // An edit answers the last message, so don't leave it on screen.
+    setError("");
   }
   /** Editing a section clears its single-page error. */
   const changeIn =
@@ -154,7 +188,6 @@ export function Create({
         },
         ...s.deals,
       ],
-      createDraft: {},
     }));
     finish("/deal/" + id, "/");
   }
@@ -255,26 +288,32 @@ export function Create({
             : back(!onePage && stage > 1 ? "/create/" + (stage - 1) : "/")
         }
       />
-      <main className="page-scroll">
+      <main className={"page-scroll" + (camera ? " capture-page" : "")}>
         <div className="content create-content">
           {camera ? (
-            <>
-              <h2>Found a good deal?</h2>
-              <p className="muted">
-                Photograph the shelf label, then check and enter the item and
-                price.
+            <div className="capture-screen">
+              <p className="capture-intro">
+                Point at the shelf label, then take a photo.
               </p>
-              <button
-                className="text-button"
-                onClick={() => setCachedPhotos(true)}
-              >
-                Use a saved price-tag photo
-              </button>
-              <Camera mode="photo" onPhoto={(blob) => void attach(blob)} />
+              <Camera
+                mode="photo"
+                ar={mode === "deal" ? undefined : arSample}
+                onPhoto={(blob) => void attach(blob)}
+                extra={
+                  <button
+                    className="secondary"
+                    aria-label="Use a saved price-tag photo"
+                    onClick={() => setCachedPhotos(true)}
+                  >
+                    <Images size={19} aria-hidden="true" />
+                    Saved photos
+                  </button>
+                }
+              />
               {saving && <p role="status">Saving your photo…</p>}
               <ErrorNotice message={error} />
-              <Button
-                kind="secondary"
+              <button
+                className="text-button capture-skip"
                 disabled={saving}
                 onClick={() => {
                   setCamera(false);
@@ -282,8 +321,8 @@ export function Create({
                 }}
               >
                 Continue without a photo
-              </Button>
-            </>
+              </button>
+            </div>
           ) : mode === "deal" ? (
             <>
               <p className="muted">
@@ -293,84 +332,75 @@ export function Create({
               {itemFields}
               <ErrorNotice message={error} />
             </>
-          ) : onePage ? (
-            <>
-              <h2>What are you sharing?</h2>
-              <p className="fine">
-                Fill in the three sections below, then publish.
-              </p>
-              <CreateSection
-                n={1}
-                id="item"
-                title="Item"
-                error={sectionErrors.item}
-              >
-                {itemFields}
-              </CreateSection>
-              <CreateSection
-                n={2}
-                id="portions"
-                title="Portions & price"
-                error={sectionErrors.portions}
-              >
-                <PortionFields
-                  key={"portions" + filled}
-                  p={p}
-                  change={changeIn("portions")}
-                />
-              </CreateSection>
-              <CreateSection
-                n={3}
-                id="pickup"
-                title="Pickup"
-                error={sectionErrors.pickup}
-              >
-                <PickupFields p={p} change={changeIn("pickup")} />
-              </CreateSection>
-              <ErrorNotice message={error} />
-            </>
           ) : (
+            // A shows one section per screen; B stacks the same sections on
+            // one scrolling page. Everything else is identical.
             <>
-              <h2>
-                {stage === 1
-                  ? "What are you sharing?"
-                  : stage === 2
-                    ? "One for you. More to share."
-                    : stage === 3
-                      ? "When and where?"
-                      : null}
-              </h2>
-              <p className="fine">Step {stage} of 4</p>
-              <ol className="steps">
-                {stageNames.map((s, i) => (
-                  <li
-                    key={s}
-                    className={i + 1 <= stage ? "done" : ""}
-                    aria-current={i + 1 === stage ? "step" : undefined}
-                  >
-                    <span>
-                      {i + 1} {s}
+              {onePage ? (
+                <p className="create-intro">
+                  Fill in the three sections, then publish.
+                </p>
+              ) : (
+                <div className="create-progress">
+                  <p className="create-intro">
+                    Step {stage} of 4
+                    <span className="step-name">
+                      {" "}
+                      · {stageNames[stage - 1]}
                     </span>
-                    <i />
-                  </li>
-                ))}
-              </ol>
-              {stage === 1 && itemFields}
-              {stage === 2 && (
-                <>
-                  <Row title={p.title} detail={p.portion} />
-                  <PortionFields p={p} change={change} />
-                </>
+                  </p>
+                  <ol className="steps">
+                    {stageNames.map((s, i) => (
+                      <li
+                        key={s}
+                        className={i + 1 <= stage ? "done" : ""}
+                        aria-current={i + 1 === stage ? "step" : undefined}
+                      >
+                        <span>
+                          {i + 1} {s}
+                        </span>
+                        <i />
+                      </li>
+                    ))}
+                  </ol>
+                </div>
               )}
-              {stage === 3 && <PickupFields p={p} change={change} />}
-              {stage === 4 && <ReviewSummary p={p} jump={jump} />}
-              <ErrorNotice message={error} />
+              {(onePage || stage === 1) && (
+                <CreateSection
+                  id="item"
+                  error={onePage ? sectionErrors.item : error}
+                >
+                  {itemFields}
+                </CreateSection>
+              )}
+              {(onePage || stage === 2) && (
+                <CreateSection
+                  id="portions"
+                  error={onePage ? sectionErrors.portions : error}
+                >
+                  <PortionFields
+                    key={"portions" + filled}
+                    p={p}
+                    change={changeIn("portions")}
+                  />
+                </CreateSection>
+              )}
+              {(onePage || stage === 3) && (
+                <CreateSection
+                  id="pickup"
+                  error={onePage ? sectionErrors.pickup : error}
+                >
+                  <PickupFields p={p} change={changeIn("pickup")} />
+                </CreateSection>
+              )}
+              {!onePage && stage === 4 && <ReviewSummary p={p} jump={jump} />}
+              {(onePage || stage === 4) && <ErrorNotice message={error} />}
             </>
           )}
         </div>
       </main>
       {!camera && (
-        <footer className="action-bar">
+        <footer className="action-bar create-actions">
           <Button
             disabled={saving}
             onClick={
@@ -405,30 +435,35 @@ function ErrorNotice({ message }: { message: string }) {
   ) : null;
 }
 
-/** One numbered block of the single-page form. */
+/** One numbered section card, used by both layouts and the review step. */
 function CreateSection({
-  n,
   id,
-  title,
   error,
+  action,
   children,
 }: {
-  n: number;
   id: Section;
-  title: string;
   error?: string;
+  action?: ReactNode;
   children: ReactNode;
 }) {
+  const { n, title, hint } = sections[id];
   return (
     <section
       id={"create-" + id}
       className={"create-section" + (error ? " invalid" : "")}
       aria-labelledby={"create-" + id + "-title"}
     >
-      <h3 id={"create-" + id + "-title"}>
-        <span aria-hidden="true">{n}</span>
-        {title}
-      </h3>
+      <header>
+        <span className="section-number" aria-hidden="true">
+          {n}
+        </span>
+        <div>
+          <h3 id={"create-" + id + "-title"}>{title}</h3>
+          {!action && <p>{hint}</p>}
+        </div>
+        {action}
+      </header>
       {error && (
         <p className="notice error" role="alert">
           {error}
@@ -454,92 +489,99 @@ function ItemFields({
   chooseSaved: () => void;
   deal: boolean;
 }) {
+  const nameId = useId();
   return (
     <>
       <div className="photo-entry">
         {p.photo ? (
           <Photo id={p.photo} alt="Photographed price tag" />
         ) : (
-          <Art p={p} large />
+          <Art p={p} />
         )}
-        <button className="text-button" onClick={takePhoto}>
-          {p.photo ? "Retake photo" : "Add a price-tag photo"}
-        </button>
+        <div className="photo-actions">
+          <strong>Price-tag photo</strong>
+          <button className="text-button" onClick={takePhoto}>
+            {p.photo ? "Retake photo" : "Add a price-tag photo"}
+          </button>
+          <button className="text-button" onClick={chooseSaved}>
+            Use a saved price-tag photo
+          </button>
+        </div>
       </div>
-      <button className="text-button" onClick={chooseSaved}>
-        Use a saved price-tag photo
-      </button>
-      <div className="chips wrap" aria-label="Use an example item">
-        {seedProducts
-          .filter((q) => q.id === "det")
-          .map((q) => (
-            <button
-              key={q.id}
-              className="chip"
-              onClick={() => {
-                change({
-                  title: q.title,
-                  portion: q.portion,
-                  art: q.art,
-                  photo: p.photo ?? q.photo,
-                  category: q.category,
-                  store: q.store,
-                  bundleCents: q.bundleCents,
-                  bundleCount: q.bundleCount,
-                  shareCount: q.shareCount,
-                  retailCents: q.retailCents,
-                });
-                fillExample();
-              }}
-            >
-              {q.title}
-            </button>
-          ))}
-      </div>
-      <label>
-        Item name
+      <div className="field">
+        <div className="field-label-row">
+          <label htmlFor={nameId}>Item name</label>
+          <button
+            className="demo-autofill"
+            aria-label={`Demo autofill: ${sample.title} (for demo purposes only)`}
+            title="For demo purposes only. Fills in a sample item and price."
+            onClick={() => {
+              change({
+                title: sample.title,
+                portion: sample.portion,
+                art: sample.art,
+                photo: p.photo ?? sample.photo,
+                category: sample.category,
+                store: sample.store,
+                bundleCents: sample.bundleCents,
+                bundleCount: sample.bundleCount,
+                shareCount: sample.shareCount,
+                retailCents: sample.retailCents,
+              });
+              fillExample();
+            }}
+          >
+            <Sparkles size={13} aria-hidden="true" />
+            Demo autofill
+          </button>
+        </div>
         <input
+          id={nameId}
           value={p.title}
           maxLength={70}
           placeholder="e.g. Greek yoghurt"
           onChange={(e) => change({ title: e.target.value })}
         />
-      </label>
-      <label>
-        One portion
-        <input
-          value={p.portion}
-          maxLength={70}
-          placeholder="e.g. 1 sealed tub · 150 g"
-          onChange={(e) => change({ portion: e.target.value })}
-        />
-      </label>
-      <p className="fine">
-        Each portion is one sealed item.
-        {deal ? "" : " You’ll choose how many to share."}
-      </p>
-      <label>
-        Store
-        <input
-          value={p.store}
-          maxLength={100}
-          placeholder="Store and branch"
-          onChange={(e) => change({ store: e.target.value })}
-        />
-      </label>
-      <label>
-        Category
-        <select
-          value={p.category}
-          onChange={(e) => change({ category: e.target.value })}
-        >
-          {dealCategories
-            .filter((c) => c !== "All")
-            .map((c) => (
-              <option key={c}>{c}</option>
-            ))}
-        </select>
-      </label>
+      </div>
+      <div className="field">
+        <label>
+          One portion
+          <input
+            value={p.portion}
+            maxLength={70}
+            placeholder="e.g. 1 sealed tub · 150 g"
+            aria-describedby="portion-hint"
+            onChange={(e) => change({ portion: e.target.value })}
+          />
+        </label>
+        <small id="portion-hint" className="field-hint">
+          Each portion is one sealed item.
+        </small>
+      </div>
+      <div className="field-row">
+        <label>
+          Store
+          <input
+            value={p.store}
+            maxLength={100}
+            placeholder="Store and branch"
+            onChange={(e) => change({ store: e.target.value })}
+          />
+        </label>
+        <label>
+          Category
+          <select
+            value={p.category}
+            onChange={(e) => change({ category: e.target.value })}
+          >
+            {dealCategories
+              .filter((c) => c !== "All")
+              .map((c) => (
+                <option key={c}>{c}</option>
+              ))}
+          </select>
+        </label>
+      </div>
       {deal && (
         <label>
           Advertised price (S$)
@@ -548,7 +590,7 @@ function ItemFields({
             min="0.01"
             max="9999"
             step="0.01"
-            defaultValue={p.bundleCents / 100}
+            defaultValue={p.bundleCents ? p.bundleCents / 100 : ""}
             onChange={(e) =>
               change({ bundleCents: parsePrice(e.target.value) })
             }
@@ -565,35 +607,40 @@ function PortionFields({ p, change }: { p: Product; change: Change }) {
     prices = allocation(p.bundleCents, count, share);
   return (
     <>
-      <label>
-        Bundle size
-        <select
-          value={count}
-          onChange={(e) =>
-            change({
-              bundleCount: +e.target.value,
-              shareCount: Math.min(share, +e.target.value - 1),
-            })
-          }
-        >
-          {[2, 3, 4, 5, 6, 8, 10, 12, 20].map((n) => (
-            <option key={n} value={n}>
-              {n} items
-            </option>
-          ))}
-        </select>
-      </label>
-      <label>
-        Bundle price (S$)
-        <input
-          type="number"
-          min="0.01"
-          max="9999"
-          step="0.01"
-          defaultValue={p.bundleCents / 100}
-          onChange={(e) => change({ bundleCents: parsePrice(e.target.value) })}
-        />
-      </label>
+      <div className="field-row">
+        <label>
+          Bundle size
+          <select
+            value={count}
+            onChange={(e) =>
+              change({
+                bundleCount: +e.target.value,
+                shareCount: Math.min(share, +e.target.value - 1),
+              })
+            }
+          >
+            {[2, 3, 4, 5, 6, 8, 10, 12, 20].map((n) => (
+              <option key={n} value={n}>
+                {n} items
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Bundle price (S$)
+          <input
+            type="number"
+            inputMode="decimal"
+            min="0.01"
+            max="9999"
+            step="0.01"
+            defaultValue={p.bundleCents ? p.bundleCents / 100 : ""}
+            onChange={(e) =>
+              change({ bundleCents: parsePrice(e.target.value) })
+            }
+          />
+        </label>
+      </div>
       <label>
         Items to share
         <select
@@ -602,30 +649,36 @@ function PortionFields({ p, change }: { p: Product; change: Change }) {
         >
           {Array.from({ length: count - 1 }, (_, i) => i + 1).map((n) => (
             <option key={n} value={n}>
-              {n} item{n !== 1 ? "s" : ""}
+              {plural(n, "item")}
             </option>
           ))}
         </select>
       </label>
-      <Pizza count={count} taken={share} />
-      <div className="allocation">
-        <div>
-          <small>YOU KEEP</small>
-          <strong>{count - share}</strong>
-          <span>{money(prices.hostCents)}</span>
-        </div>
-        <div>
-          <small>NEIGHBOURS GET</small>
-          <strong>{share}</strong>
-          <span>{money(prices.itemCents)} each</span>
-        </div>
+      <div className="split-preview">
+        <Pizza count={count} taken={share} />
+        <dl className="allocation">
+          <div>
+            <dt>You keep</dt>
+            <dd>
+              <strong>{count - share}</strong>
+              {money(prices.hostCents)}
+            </dd>
+          </div>
+          <div>
+            <dt>Neighbours get</dt>
+            <dd>
+              <strong>{share}</strong>
+              {money(prices.itemCents)} each
+            </dd>
+          </div>
+        </dl>
       </div>
-      <div className="panel tint">
+      <div className="neighbour-pays">
         <span>Each neighbour pays</span>
-        <h2>{money(prices.neighbourTotal)} per person</h2>
-        <p className="fine">Includes the portion + {serviceFee} service fee</p>
+        <strong>{money(prices.neighbourTotal)}</strong>
+        <small>Their portion + {serviceFee} service fee</small>
       </div>
-      <p className="fine">
+      <p className="field-hint">
         You buy the multipack for {money(p.bundleCents)}. Any rounding
         difference stays in your share.
       </p>
@@ -652,29 +705,32 @@ function PickupFields({ p, change }: { p: Product; change: Change }) {
           onChange={(e) => change({ address: e.target.value })}
         />
       </label>
-      <label>
-        Day
-        <select
-          value={p.date}
-          onChange={(e) => change({ date: e.target.value })}
-        >
-          <option>Today</option>
-          <option>Tomorrow</option>
-        </select>
-      </label>
-      <label>
-        Time window
-        <input
-          value={p.time}
-          maxLength={60}
-          placeholder="e.g. 6:30–6:45 pm"
-          onChange={(e) => change({ time: e.target.value })}
-        />
-      </label>
+      <div className="field-row">
+        <label>
+          Day
+          <select
+            value={p.date}
+            onChange={(e) => change({ date: e.target.value })}
+          >
+            <option>Today</option>
+            <option>Tomorrow</option>
+          </select>
+        </label>
+        <label>
+          Time window
+          <input
+            value={p.time}
+            maxLength={60}
+            placeholder="e.g. 6:30–6:45 pm"
+            onChange={(e) => change({ time: e.target.value })}
+          />
+        </label>
+      </div>
       <label>
         Meeting note
         <textarea
           value={p.note}
+          rows={2}
           maxLength={300}
           onChange={(e) => change({ note: e.target.value })}
         />
@@ -683,53 +739,69 @@ function PickupFields({ p, change }: { p: Product; change: Change }) {
   );
 }
 
+/** Step 4 of layout A: the same section cards, read-only, each with Edit. */
 function ReviewSummary({ p, jump }: { p: Product; jump: (n: number) => void }) {
   const count = p.bundleCount || 2,
     share = p.shareCount || 1,
     prices = allocation(p.bundleCents, count, share);
+  const edit = (n: number, what: string) => (
+    <button
+      className="text-button section-edit"
+      aria-label={"Edit " + what}
+      onClick={() => jump(n)}
+    >
+      Edit
+    </button>
+  );
   return (
     <>
-      <Row title={p.title} detail={p.portion} onClick={() => jump(1)} />
-      <div className="panel">
-        <h3>Portions &amp; price</h3>
+      <CreateSection id="item" action={edit(1, "item")}>
+        <div className="review-item">
+          {p.photo ? <Photo id={p.photo} alt={p.title} /> : <Art p={p} />}
+          <div>
+            <strong>{p.title}</strong>
+            <span>{p.portion}</span>
+            <small>
+              {p.store} · {p.category}
+            </small>
+          </div>
+        </div>
+      </CreateSection>
+      <CreateSection id="portions" action={edit(2, "portions")}>
         <div className="price-rows">
           <div>
             <span>Bundle</span>
             <strong>
-              {count} items · {money(p.bundleCents)}
+              {plural(count, "item")} · {money(p.bundleCents)}
             </strong>
           </div>
           <div>
             <span>You keep</span>
             <strong>
-              {count - share} items · {money(prices.hostCents)}
+              {plural(count - share, "item")} · {money(prices.hostCents)}
             </strong>
           </div>
           <div>
             <span>Neighbours get</span>
             <strong>
-              {share} items · {money(prices.itemCents)} each
+              {plural(share, "item")} · {money(prices.itemCents)} each
             </strong>
           </div>
+          <div className="total">
+            <strong>Each neighbour pays</strong>
+            <strong>{money(prices.neighbourTotal)}</strong>
+          </div>
         </div>
-        <PriceRows p={{ ...p, itemCents: prices.itemCents }} />
-        <button className="text-button" onClick={() => jump(2)}>
-          Edit portions ›
-        </button>
-      </div>
-      <Row
-        title={p.place}
-        detail={
-          <>
-            {p.address}
-            <br />
-            {p.date} · {p.time}
-            <br />
-            {p.note}
-          </>
-        }
-        onClick={() => jump(3)}
-      />
+      </CreateSection>
+      <CreateSection id="pickup" action={edit(3, "pickup")}>
+        <div className="review-pickup">
+          <strong>{p.place}</strong>
+          <span>
+            {p.address} · {p.date}, {p.time}
+          </span>
+          {p.note && <small>“{p.note}”</small>}
+        </div>
+      </CreateSection>
     </>
   );
 }

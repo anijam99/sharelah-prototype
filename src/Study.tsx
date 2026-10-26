@@ -35,8 +35,9 @@ function TaskText({ round }: { round: number }) {
         <li>
           Share a split for <strong>TOP liquid laundry detergent</strong> from
           FairPrice: 2 bottles for <strong>S$21.00</strong>, sharing{" "}
-          <strong>1</strong>. Tap the TOP detergent suggestion to prefill the
-          details, then choose any pickup point, day and time, and publish.
+          <strong>1</strong>. Tap the <strong>Demo autofill</strong> button to
+          prefill the details, then choose any pickup point, day and time, and
+          publish.
         </li>
         <li>
           When a neighbour asks to join, <strong>accept</strong> them. Buy the

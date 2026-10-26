@@ -1,9 +1,8 @@
 import { dealCategories } from "./dealCatalog";
-import { SplitPrice } from "./DealPrice";
 import { DealRow, matchesDeal } from "./Deals";
 import { Fragment, useState } from "react";
 import { HomeMap } from "./HomeMap";
-import { MapPin, Navigation, Search, SlidersHorizontal } from "lucide-react";
+import { MapPin, Search, SlidersHorizontal } from "lucide-react";
 import { AlertBadge, Art, Button, Card, Empty, TopHeader } from "./ui";
 import { go } from "./router";
 import { TileMap } from "./TileMap";
@@ -13,6 +12,7 @@ import {
   hostedComplete,
   money,
   pendingRequests,
+  readyAlerts,
   releasedByHost,
   owned,
   statusLabel,
@@ -42,7 +42,11 @@ export function Home({
     );
   const combined = layout !== "A" && !search && !saved;
   const products = saved
-    ? state.products.filter((p) => state.saved.includes(p.id))
+    ? state.products.filter(
+        (p) =>
+          state.saved.includes(p.id) &&
+          state.reservations[p.id]?.status !== "completed",
+      )
     : visibleProducts(state, search ? query : "", category);
   const deals = state.deals.filter((d) =>
     matchesDeal(d, search ? query : "", category),
@@ -57,31 +61,35 @@ export function Home({
               <h1 className="sr-only" tabIndex={-1}>
                 Nearby deals
               </h1>
-              <LocationControls open={open} />
+              <LocationControls open={open} filters />
             </>
           )}
           {combined && layout === "B" && <HomeMap products={products} />}
-          {!saved &&
-            (search ? (
-              <label className="search-box">
-                <Search size={21} />
-                <input
-                  aria-label="Search splits and deals"
-                  value={query}
-                  autoFocus
-                  placeholder="Search splits and deals"
-                  onChange={(e) => {
-                    setQuery(e.target.value);
-                    sessionStorage.setItem("sharelah-search", e.target.value);
-                  }}
-                />
-              </label>
-            ) : (
-              <button className="search-box" onClick={() => go("/search")}>
-                <Search size={21} />
-                <span>Search splits and deals</span>
-              </button>
-            ))}
+          {!saved && (
+            <div className="search-row">
+              {search ? (
+                <label className="search-box">
+                  <Search size={21} />
+                  <input
+                    aria-label="Search splits and deals"
+                    value={query}
+                    autoFocus
+                    placeholder="Search splits and deals"
+                    onChange={(e) => {
+                      setQuery(e.target.value);
+                      sessionStorage.setItem("sharelah-search", e.target.value);
+                    }}
+                  />
+                </label>
+              ) : (
+                <button className="search-box" onClick={() => go("/search")}>
+                  <Search size={21} />
+                  <span>Search splits and deals</span>
+                </button>
+              )}
+              {search && <FilterButton open={open} />}
+            </div>
+          )}
           {!saved && (
             <>
               <div className="chips categories">
@@ -99,17 +107,6 @@ export function Home({
                   </button>
                 ))}
               </div>
-              <button
-                className="filter-bar"
-                onClick={() => open({ kind: "filters" })}
-              >
-                <SlidersHorizontal size={17} />
-                <span>Filters</span>
-                <span>
-                  {state.radius < 1000 ? "500 m" : state.radius / 1000 + " km"}
-                </span>
-                <span>{state.sort}</span>
-              </button>
             </>
           )}
           <div className="section-heading">
@@ -200,118 +197,145 @@ export function Home({
     </>
   );
 }
-/** The area picker, shared by Home and Map so both look the same. */
-function LocationControls({ open }: { open: OpenModal }) {
+const radiusLabel = (radius: number) =>
+  radius < 1000 ? radius + " m" : radius / 1000 + " km";
+
+/** Opens the radius and sort sheet. Sits beside search, or beside the area on Map. */
+function FilterButton({ open }: { open: OpenModal }) {
   const { state } = useStore();
   return (
-    <button className="home-location" onClick={() => open({ kind: "area" })}>
-      <MapPin size={17} aria-hidden="true" />
-      <strong>{state.area}</strong>
-      <span>Change area ›</span>
+    <button
+      className="filter-button"
+      aria-label={`Filters · ${radiusLabel(state.radius)} radius, ${state.sort}`}
+      title="Filters"
+      onClick={() => open({ kind: "filters" })}
+    >
+      <SlidersHorizontal size={20} aria-hidden="true" />
     </button>
   );
 }
 
+/** The area picker, shared by Home and Map so both look the same. */
+function LocationControls({
+  open,
+  filters = false,
+}: {
+  open: OpenModal;
+  filters?: boolean;
+}) {
+  const { state } = useStore();
+  return (
+    <div className="location-row">
+      <button className="home-location" onClick={() => open({ kind: "area" })}>
+        <MapPin size={17} aria-hidden="true" />
+        <strong>
+          {state.area}{" "}
+          <span className="location-radius">({radiusLabel(state.radius)})</span>
+        </strong>
+        <span>Change area ›</span>
+      </button>
+      {filters && <FilterButton open={open} />}
+    </div>
+  );
+}
+
+/** The split to reselect when returning to the Map from one of its pages. */
+const MAP_RETURN = "sharelah-map-return";
+
 export function MapScreen({ open }: { open: OpenModal }) {
-  const { state } = useStore(),
-    products = visibleProducts(state),
-    [selected, setSelected] = useState(
-      sessionStorage.getItem("sharelah-map-selected") || "yog",
+  const { state } = useStore();
+  // Splits you've joined come first (same order as Splits → Joined) and stay
+  // on the map even outside the radius, so it can guide you to each pickup.
+  const joined = state.products.filter(
+      (p) =>
+        owned(state.reservations[p.id]) &&
+        state.reservations[p.id].status !== "completed",
     ),
-    [recenter, setRecenter] = useState(0);
-  const p = products.find((p) => p.id === selected) || products[0];
+    nearby = visibleProducts(state).filter((p) => !joined.includes(p)),
+    products = [...joined, ...nearby],
+    // Opens on your first joined split. A tapped pin is only restored when
+    // you come back from its details or directions.
+    [selected, setSelected] = useState(() => {
+      const back = sessionStorage.getItem(MAP_RETURN) || "";
+      sessionStorage.removeItem(MAP_RETURN);
+      return back;
+    });
+  const p = products.find((p) => p.id === selected) || joined[0] || products[0];
+  const mine = !!p && owned(state.reservations[p.id]);
+  const leaveTo = (path: string) => {
+    sessionStorage.setItem(MAP_RETURN, p!.id);
+    go(path);
+  };
+  const details = () => leaveTo("/" + (mine ? "split" : "offer") + "/" + p!.id);
+  const directions = () => leaveTo("/directions/" + p!.id);
   return (
     <>
       <TopHeader title="Map" />
-      <main className="page-scroll">
+      <main className="page-scroll map-page">
         <div className="content">
-          <LocationControls open={open} />
-          <div className="map-heading">
-            <button
-              className="text-button"
-              onClick={() => open({ kind: "filters" })}
-            >
-              {state.radius < 1000 ? "500 m" : state.radius / 1000 + " km"}{" "}
-              radius ›
-            </button>
-            <button
-              className="text-button"
-              onClick={() => setRecenter((n) => n + 1)}
-            >
-              <Navigation size={16} />
-              Near me
-            </button>
-          </div>
-          <TileMap
-            products={products}
-            reservations={state.reservations}
-            selected={p?.id}
-            recenter={recenter}
-            radius={state.radius}
-            remember
-            onSelect={(id) => {
-              setSelected(id);
-              sessionStorage.setItem("sharelah-map-selected", id);
-            }}
-          />
-          {p ? (
-            <div className="panel map-selected">
-              <div className="product-line">
-                <Art p={p} />
-                <div>
-                  <h3>{p.title}</h3>
-                  {owned(state.reservations[p.id]) && (
-                    <span className="membership">In your splits</span>
+          <div className="map-stage">
+            <LocationControls open={open} filters />
+            <TileMap
+              products={products}
+              reservations={state.reservations}
+              selected={p?.id}
+              route={mine ? p?.id : undefined}
+              radius={state.radius}
+              remember
+              onSelect={setSelected}
+            />
+            {p ? (
+              <div className="panel map-selected">
+                <div className="product-line">
+                  <Art p={p} />
+                  <div>
+                    <h3 title={p.title}>{p.title}</h3>
+                    <p>
+                      {p.place} · {Math.ceil(p.distance / 70)} min walk
+                    </p>
+                    <small>
+                      {mine && (
+                        <span className="membership">In your splits</span>
+                      )}{" "}
+                      {mine
+                        ? statusLabel(state.reservations[p.id]) + " · " + p.time
+                        : money(total(p)) + " total"}
+                    </small>
+                  </div>
+                </div>
+                <div className="two-buttons">
+                  {/* For your own splits the map is a way to get there, so
+                      Directions leads. */}
+                  {mine ? (
+                    <>
+                      <Button onClick={directions}>Directions</Button>
+                      <Button kind="secondary" onClick={details}>
+                        View my split
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button onClick={details}>View details</Button>
+                      <Button kind="secondary" onClick={directions}>
+                        Directions
+                      </Button>
+                    </>
                   )}
-                  <p>{p.place}</p>
-                  <small>
-                    {owned(state.reservations[p.id])
-                      ? statusLabel(state.reservations[p.id])
-                      : money(total(p)) + " total"}
-                  </small>
                 </div>
               </div>
-              <SplitPrice
-                p={p}
-                offer={state.deals.find((d) => d.id === p.sourceDealId)}
-              />
-              <div className="two-buttons">
-                <Button
-                  onClick={() =>
-                    go(
-                      "/" +
-                        (owned(state.reservations[p.id]) ? "split" : "offer") +
-                        "/" +
-                        p.id,
-                    )
-                  }
-                >
-                  {owned(state.reservations[p.id])
-                    ? state.reservations[p.id]?.status === "completed"
-                      ? "View receipt"
-                      : "View my split"
-                    : "View details"}
-                </Button>
-                <Button
-                  kind="secondary"
-                  onClick={() => go("/directions/" + p.id)}
-                >
-                  Directions
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <Empty
-              title="No splits in this area"
-              action={
-                <Button onClick={() => open({ kind: "area" })}>
-                  Choose another area
-                </Button>
-              }
-            >
-              Check another neighbourhood or widen your radius.
-            </Empty>
-          )}
+            ) : (
+              <Empty
+                title="No splits in this area"
+                action={
+                  <Button onClick={() => open({ kind: "area" })}>
+                    Choose another area
+                  </Button>
+                }
+              >
+                Check another neighbourhood or widen your radius.
+              </Empty>
+            )}
+          </div>
           <h2>More nearby</h2>
           <p className="muted">Browse available splits in this area.</p>
           {products
@@ -358,6 +382,9 @@ export function Splits() {
                 {t}
                 {t === "Hosting" && (
                   <AlertBadge count={pendingRequests(state).length} />
+                )}
+                {t === "Joined" && (
+                  <AlertBadge count={0} ready={readyAlerts(state).length} />
                 )}
               </button>
             ))}

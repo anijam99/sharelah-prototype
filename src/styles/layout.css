@@ -33,14 +33,6 @@
   gap: 16px;
 }
 
-.tab-title {
-  flex: none;
-  margin: 0;
-  padding: 4px 20px 8px;
-  font: 700 28px/1.15 var(--display);
-  letter-spacing: -0.5px;
-}
-
 .top-header {
   flex: none;
   min-height: calc(60px + env(safe-area-inset-top, 0px));
@@ -346,7 +338,6 @@
 
 @media (max-width: 375px) {
   .top-header,
-  .tab-title,
   .page-header {
     padding-left: 16px;
     padding-right: 16px;

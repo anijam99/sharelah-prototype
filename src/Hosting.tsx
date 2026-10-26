@@ -159,11 +159,6 @@ export function Hosting({
               you’ll review each request before anyone joins.
             </p>
           )}
-          <Row title={p.title} detail={p.portion} />
-          <div className="panel">
-            <HostPriceRows p={p} />
-          </div>
-          <Row title={p.place} detail={p.date + " · " + p.time} />
           {!p.closed && p.purchased && (
             <div className="panel center">
               <h3>Your pickup code</h3>
@@ -183,11 +178,11 @@ export function Hosting({
               ))}
             </div>
           )}
-          {!p.closed && !p.purchased && accepted.length > 0 && (
-            <Button onClick={() => update((s) => simulatePurchase(s, p.id))}>
-              Mark purchased &amp; notify
-            </Button>
-          )}
+          <Row title={p.title} detail={p.portion} />
+          <div className="panel">
+            <HostPriceRows p={p} />
+          </div>
+          <Row title={p.place} detail={p.date + " · " + p.time} />
           {!p.closed && !p.purchased && (
             <Button
               kind="secondary"
@@ -198,6 +193,14 @@ export function Hosting({
           )}
         </div>
       </main>
+      {/* The next thing to do stays pinned at the bottom of the screen. */}
+      {!p.closed && !p.purchased && accepted.length > 0 && (
+        <footer className="action-bar">
+          <Button onClick={() => update((s) => simulatePurchase(s, p.id))}>
+            Mark purchased &amp; notify
+          </Button>
+        </footer>
+      )}
     </>
   );
 }

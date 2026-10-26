@@ -44,6 +44,7 @@ export function TileMap({
   remember = false,
   pickup = false,
   radius,
+  route,
 }: {
   products: Product[];
   reservations?: State["reservations"];
@@ -53,6 +54,8 @@ export function TileMap({
   remember?: boolean;
   pickup?: boolean;
   radius?: number;
+  /** Draws a dashed walking line from "You" to this product's pickup. */
+  route?: string;
 }) {
   const container = useRef<HTMLDivElement>(null);
   const map = useRef<L.Map | null>(null);
@@ -97,6 +100,9 @@ export function TileMap({
       scrollWheelZoom: false,
       minZoom: 13,
       maxZoom: 19,
+      // Quarter steps let "fit the radius" frame it snugly; the +/- buttons
+      // still move a whole level.
+      zoomSnap: 0.25,
       zoomAnimation: !reducedMotion(),
       fadeAnimation: !reducedMotion(),
       markerZoomAnimation: !reducedMotion(),
@@ -206,6 +212,11 @@ export function TileMap({
     };
   }, [products, reservations, selected, pickup, zoomRevision]);
 
+  const routeTo = products.find((p) => p.id === route),
+    [routeLat, routeLng] = routeTo ? position(routeTo) : [NaN, NaN];
+  // Read when framing the radius, without re-framing on every selection.
+  const routeAt = useRef<L.LatLngTuple | null>(null);
+  routeAt.current = Number.isFinite(routeLat) ? [routeLat, routeLng] : null;
   useEffect(() => {
     if (!map.current || pickup) return;
     if (radius) {
@@ -217,8 +228,12 @@ export function TileMap({
         dashArray: "5 6",
         interactive: false,
       }).addTo(map.current);
-      map.current.fitBounds(circle.getBounds(), {
-        padding: [24, 24],
+      // Keep the pickup you're heading to in view too, with room for its pin.
+      const bounds = circle.getBounds();
+      if (routeAt.current) bounds.extend(routeAt.current);
+      map.current.fitBounds(bounds, {
+        paddingTopLeft: [16, 36],
+        paddingBottomRight: [16, 16],
         animate: !reducedMotion(),
         duration: 0.25,
       });
@@ -229,6 +244,22 @@ export function TileMap({
     if (recenter > 0)
       map.current.setView(DEMO_LOCATION, 16, { animate: !reducedMotion() });
   }, [radius, recenter, pickup]);
+
+  useEffect(() => {
+    if (!map.current || !Number.isFinite(routeLat)) return;
+    const line = L.polyline([DEMO_LOCATION, [routeLat, routeLng]], {
+      className: "walk-route",
+      color: "#c44212",
+      weight: 4,
+      opacity: 0.85,
+      dashArray: "2 9",
+      lineCap: "round",
+      interactive: false,
+    }).addTo(map.current);
+    return () => {
+      line.remove();
+    };
+  }, [routeLat, routeLng]);
 
   return (
     <div className={"tile-map " + (pickup ? "pickup-map" : "")}>

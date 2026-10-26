@@ -19,6 +19,7 @@ import {
   joinersOf,
   money,
   pendingRequests,
+  readyAlerts,
   owned,
   releasedByHost,
   savingFor,
@@ -51,16 +52,26 @@ export function Button({
   );
 }
 /** A "!" on a tab or shortcut when join requests need an answer. */
-export function AlertBadge({ count }: { count: number }) {
-  if (!count) return null;
+export function AlertBadge({
+  count,
+  ready = 0,
+}: {
+  count: number;
+  /** Portions that just became ready to collect. */
+  ready?: number;
+}) {
+  if (!count && !ready) return null;
+  const parts = [
+    count && `${count} join ${count === 1 ? "request" : "requests"}`,
+    ready &&
+      `${ready} ${ready === 1 ? "portion" : "portions"} ready to collect`,
+  ].filter(Boolean);
   return (
     <>
       <b className="alert-badge" aria-hidden="true">
         !
       </b>
-      <span className="sr-only">
-        , {count} join {count === 1 ? "request" : "requests"}
-      </span>
+      <span className="sr-only">, {parts.join(", ")}</span>
     </>
   );
 }
@@ -209,12 +220,17 @@ export function TopHeader({ title }: { title?: string }) {
           <button onClick={() => go("/messages")}>
             <Icon name="inbox" />
             <span>Inbox</span>
-            <AlertBadge count={pendingRequests(state).length} />
+            <AlertBadge
+              count={pendingRequests(state).length}
+              ready={readyAlerts(state).length}
+            />
           </button>
         </div>
       </header>
+      {/* The tab bar already shows where you are, so the title is for
+          screen readers only. */}
       {title && (
-        <h1 className="tab-title" tabIndex={-1}>
+        <h1 className="sr-only" tabIndex={-1}>
           {title}
         </h1>
       )}
@@ -310,7 +326,10 @@ export function Card({ p }: { p: Product }) {
           <small>Retail unknown</small>
         )}
         {p.retailCents > total(p) && (
-          <span>Save {money(p.retailCents - total(p))}</span>
+          <span className="saving-pill">
+            Save {money(p.retailCents - total(p))} ·{" "}
+            {Math.round((1 - total(p) / p.retailCents) * 100)}%
+          </span>
         )}
         <ChevronRight size={16} aria-hidden="true" />
       </div>
@@ -322,6 +341,15 @@ export function Card({ p }: { p: Product }) {
       </div>
       {p.owner && (!p.closed || hostedComplete(state, p)) && (
         <HostStrip p={p} requests={requests} />
+      )}
+      {!p.owner && r?.status === "ready" && r.readyAlert && (
+        <span className="host-strip alert">
+          <b aria-hidden="true">!</b>
+          <span>
+            <strong>{p.host} bought the bundle</strong>
+            <small>Your portion is ready to collect</small>
+          </span>
+        </span>
       )}
       <span className="sr-only">
         Per portion, including {serviceFee} fee.{" "}

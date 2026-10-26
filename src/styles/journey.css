@@ -55,8 +55,48 @@
   color: var(--ink);
 }
 
+/* Split status cards: a small pizza beside the text, so pickup details and
+   actions stay in view without scrolling. */
+.status-hero:has(> .sharing-pizza) {
+  padding: 16px;
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr);
+  column-gap: 14px;
+  row-gap: 4px;
+  align-items: center;
+}
+
+.status-hero > .sharing-pizza {
+  grid-row: 1 / span 4;
+  width: 76px;
+  margin: 0;
+}
+
+.status-hero:has(> .sharing-pizza) > :not(.sharing-pizza) {
+  grid-column: 2;
+}
+
+.status-hero:has(> .sharing-pizza) > .shared-edge {
+  grid-column: 1 / -1;
+  margin-top: 10px;
+}
+
+.status-hero:has(> .sharing-pizza) h2 {
+  font-size: 21px;
+  line-height: 25px;
+}
+
+.status-hero:has(> .sharing-pizza) p {
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.status-hero:has(> .sharing-pizza) > strong {
+  font-size: 15px;
+}
+
 .status-hero > strong {
-  font-size: 17px;
+  font-size: 15px;
   color: var(--pressed);
 }
 
@@ -188,6 +228,8 @@
 
 .inbox-group {
   display: grid;
+  /* Long previews truncate instead of widening the list. */
+  grid-template-columns: minmax(0, 1fr);
   gap: 8px;
 }
 
@@ -255,4 +297,19 @@
   text-align: center;
   font: 700 22px/1 var(--display);
   font-variant-numeric: tabular-nums;
+}
+
+/* Problem report: compact choices so the form fits without scrolling. */
+.problem-form {
+  gap: 12px;
+}
+.problem-form > h2 {
+  font-size: 24px;
+}
+.problem-form .choice {
+  min-height: 44px;
+  padding: 10px 14px;
+}
+.problem-form textarea {
+  min-height: 76px;
 }

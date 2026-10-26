@@ -31,18 +31,18 @@
 }
 
 .map-selected .product-art {
-  width: 64px;
-  height: 64px;
+  width: 56px;
+  height: 56px;
 }
 
 .map-selected .stamp {
-  width: 64px;
-  height: 64px;
+  width: 56px;
+  height: 56px;
 }
 
 .map-selected .packaging {
-  width: 56px;
-  height: 56px;
+  width: 50px;
+  height: 50px;
 }
 
 .map-selected .product-line p {
@@ -275,4 +275,141 @@
 .home-map-preview > svg {
   flex: none;
   color: var(--brand);
+}
+
+/* Map tab: the map fills the screen above the selected split, so its
+   buttons are always visible without scrolling; the list sits below. */
+.map-page {
+  container-type: size;
+}
+
+.map-stage {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  /* Minus .content's top and bottom padding. */
+  height: calc(100cqh - 36px);
+  min-height: 420px;
+}
+
+.map-stage > .tile-map {
+  flex: 1;
+  min-height: 180px;
+  display: flex;
+  flex-direction: column;
+}
+
+.map-stage .map-viewport {
+  flex: 1;
+  height: auto;
+  min-height: 0;
+}
+
+.map-stage > .map-selected {
+  flex: none;
+  gap: 10px;
+  padding: 12px 14px;
+}
+
+.map-selected .product-line {
+  gap: 12px;
+}
+
+.map-selected .product-line h3 {
+  font-size: 16px;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.map-selected .product-line p {
+  margin: 2px 0;
+}
+
+.map-selected .product-line .membership {
+  padding: 1px 6px;
+  font-size: 10px;
+  vertical-align: 1px;
+}
+
+.map-selected .product-line small {
+  display: block;
+  font-size: 12px;
+}
+
+.map-selected .two-buttons .button,
+.map-selected .two-buttons button {
+  min-height: 46px;
+}
+
+.walk-route {
+  animation: walk-route 1.2s linear infinite;
+}
+
+@keyframes walk-route {
+  to {
+    stroke-dashoffset: -11;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .walk-route {
+    animation: none;
+  }
+}
+
+/* Pickup directions: the map grows to fill the screen above the details. */
+.directions-page {
+  container-type: size;
+}
+
+.directions-stage {
+  /* .content is border-box, so its padding is already inside this height. */
+  height: 100cqh;
+  min-height: 360px;
+  gap: 12px;
+}
+
+.directions-stage > .tile-map {
+  flex: 1;
+  min-height: 160px;
+  display: flex;
+  flex-direction: column;
+}
+
+.directions-stage .map-viewport {
+  flex: 1;
+  height: auto;
+  min-height: 0;
+}
+
+.directions-info h2 {
+  margin: 0;
+  font-size: 22px;
+  line-height: 1.2;
+}
+
+.directions-info p {
+  margin: 2px 0 0;
+  color: var(--muted);
+}
+
+.directions-facts {
+  gap: 10px;
+  padding: 12px 14px;
+}
+
+.directions-facts > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.directions-facts strong {
+  font-size: 15px;
+}
+
+.directions-facts small {
+  font-size: 13px;
 }

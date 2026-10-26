@@ -366,7 +366,7 @@ it("opens the camera for a deal report and offers a usable permission-denied fal
     expect.objectContaining({ audio: false }),
   );
   click("Continue without a photo");
-  click("TOP liquid laundry detergent");
+  click(/Demo autofill/);
   fireEvent.change(screen.getByLabelText("Advertised price (S$)"), {
     target: { value: "12.50" },
   });

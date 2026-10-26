@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { Flag } from "lucide-react";
+import { Flag, Info, Package, Store, Tag } from "lucide-react";
+import { Pizza } from "./Pizza";
+import { dealPrice } from "./dealCatalog";
 import { useStore } from "./store";
 import { Button, Empty, Header, Photo } from "./ui";
 import { go } from "./router";
 import { CompareButton } from "./Compare";
-import { DealPrice } from "./DealPrice";
 import { photoSource } from "./dealPhotos";
 import { ReportButton, ReportedNotice, ReportSheet } from "./ReportListing";
 import { money, postedByYou, spottedLabel, type Deal } from "./model";
@@ -23,6 +24,14 @@ export function DealPage({ id }: { id: string }) {
       </>
     );
   const canSplit = !d.sourceFile || (d.bundleCount && d.priceCents > 0);
+  const saving =
+      d.originalCents && d.priceCents > 0 && d.originalCents > d.priceCents
+        ? Math.round((1 - d.priceCents / d.originalCents) * 100)
+        : 0,
+    each =
+      d.bundleCount && d.bundleCount > 1 && d.priceCents > 0
+        ? money(Math.round(d.priceCents / d.bundleCount))
+        : null;
   return (
     <>
       <Header
@@ -36,85 +45,112 @@ export function DealPage({ id }: { id: string }) {
         }
       />
       <main className="page-scroll">
-        <div className="content offer-content">
+        <div className="content deal-page">
           <ReportedNotice
             reportKey={reportKey}
             edit={() => setReporting(true)}
           />
-          <section className="deal-hero" aria-label="Deal">
-            <span className="eyebrow brand-text">
-              {postedByYou(d)
-                ? "POSTED BY YOU"
-                : d.sourceFile
-                  ? "PHOTOGRAPHED DEAL"
-                  : "SPOTTED BY A NEIGHBOUR"}
-            </span>
-            <h2>{d.title}</h2>
-            <DealPrice deal={d} />
-          </section>
-          <div className="fact-grid">
-            <div className="fact">
-              <small>Store</small> <strong>{d.store}</strong>{" "}
-              <span>{d.sourceFile ? "Branch from photo" : d.area}</span>
-            </div>
-            <div className="fact">
-              <small>Pack</small> <strong>{d.portion}</strong>{" "}
-              <span>{d.category}</span>
-            </div>
-            {d.bundleCount && d.priceCents > 0 ? (
-              <div className="fact">
-                <small>Per item</small>{" "}
-                <strong>
-                  {money(Math.floor(d.priceCents / d.bundleCount))}
-                </strong>{" "}
-                <span>If you split it {d.bundleCount} ways</span>
-              </div>
-            ) : null}
-            <div className="fact">
-              <small>Spotted</small>{" "}
-              <strong>{spottedLabel(d.createdAt)}</strong>{" "}
-              <span>
-                {d.createdAt
-                  ? new Date(d.createdAt).toLocaleDateString("en-SG", {
-                      weekday: "short",
-                      day: "numeric",
-                      month: "short",
-                    })
-                  : "Not dated"}
+          {/* The photo leads: it's how neighbours check the price tag. */}
+          <figure className="deal-cover">
+            {d.photo ? (
+              <Photo
+                id={d.photo}
+                alt={d.title + " · source photo"}
+                className="deal-cover-photo"
+                detail
+              />
+            ) : (
+              <span className="deal-cover-empty" aria-hidden="true">
+                <Tag size={40} />
               </span>
+            )}
+            <figcaption>
+              <span className="deal-chip">
+                {postedByYou(d)
+                  ? "Posted by you"
+                  : d.sourceFile
+                    ? "Photographed deal"
+                    : "Spotted by a neighbour"}
+              </span>
+              <span className="deal-chip quiet">
+                Spotted{" "}
+                {spottedLabel(d.createdAt).replace(/^Today|^Yesterday/, (m) =>
+                  m.toLowerCase(),
+                )}
+              </span>
+            </figcaption>
+            {d.photo && d.sourceFile && (
+              <a
+                className="deal-cover-link"
+                aria-label="Open full photo to check the price tag"
+                href={photoSource(d.photo)}
+                target="_blank"
+                rel="noopener"
+              >
+                View price tag ↗
+              </a>
+            )}
+          </figure>
+          <section className="deal-summary" aria-label="Deal">
+            <h2>{d.title}</h2>
+            <p>
+              <Store size={15} aria-hidden="true" />
+              {d.store}
+            </p>
+            <p>
+              <Package size={15} aria-hidden="true" />
+              {d.portion} · {d.category}
+            </p>
+          </section>
+          <section className="deal-price-card" aria-label="Price">
+            <div className="deal-price-top">
+              <span className="offer-type">
+                {d.offerType || "Reported offer"}
+              </span>
+              {saving > 0 && (
+                <span className="saving-pill">
+                  Save {money(d.originalCents! - d.priceCents)} · {saving}%
+                </span>
+              )}
             </div>
-          </div>
-          <p className="fine trust-line">
-            Spotted deals are price tips: buy it yourself in store
-            {canSplit ? ", or start a split to share the bundle" : ""}. Prices
-            can change, so check before you go.
-          </p>
+            <div className="deal-price-main">
+              <strong>
+                {d.priceCents > 0 ? money(d.priceCents) : dealPrice(d)}
+              </strong>
+              {d.bundleCount && d.priceCents > 0 ? (
+                <span>for {d.bundleCount}</span>
+              ) : null}
+              {d.originalCents ? (
+                <del>{money(d.originalCents)}</del>
+              ) : (
+                <small>Original price not shown</small>
+              )}
+            </div>
+            {each && (
+              <div className="deal-split-line">
+                <Pizza count={d.bundleCount!} taken={d.bundleCount! - 1} />
+                <span>
+                  Split it {d.bundleCount} ways
+                  <small>Each person pays for one</small>
+                </span>
+                <strong>{each} each</strong>
+              </div>
+            )}
+          </section>
           {d.terms && !d.demo && (
-            <details className="panel price-details" open>
+            <details className="panel price-details">
               <summary>Offer conditions</summary>
               <p>{d.terms}</p>
             </details>
           )}
-          {d.photo && (
-            <figure className="deal-photo">
-              <Photo
-                id={d.photo}
-                alt={d.title + " · source photo"}
-                className="reported-photo"
-                detail
-              />
-              {d.sourceFile && (
-                <a
-                  className="text-button"
-                  href={photoSource(d.photo)}
-                  target="_blank"
-                  rel="noopener"
-                >
-                  Open full photo to check the price tag ↗
-                </a>
-              )}
-            </figure>
-          )}
+          <p className="deal-tip">
+            <Info size={16} aria-hidden="true" />
+            <span>
+              A price tip from a neighbour: buy it yourself
+              {canSplit ? " or start a split" : ""}. Prices can change, so check
+              in store.
+            </span>
+          </p>
           <CompareButton item={d} kind="deal" />
           <button className="report-row" onClick={() => setReporting(true)}>
             <Flag size={16} aria-hidden="true" />

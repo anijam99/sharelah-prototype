@@ -49,6 +49,8 @@ export type Reservation = {
   rating?: number;
   reviewComment?: string;
   reviewedAt?: string;
+  /** Unseen "your portion is ready" notice, cleared when you open the split. */
+  readyAlert?: boolean;
 };
 export type JoinRequest = {
   person: string;
@@ -591,7 +593,9 @@ export function settleRequests(s: State, now = Date.now()): State {
 function acceptedReservation(s: State, id: string): Reservation {
   const { decideAt, ...r } = s.reservations[id];
   const p = s.products.find((p) => p.id === id);
-  return { ...r, status: p?.purchased ? "ready" : "reserved" };
+  return p?.purchased
+    ? { ...r, status: "ready", readyAlert: true }
+    : { ...r, status: "reserved" };
 }
 /** Accept a pending request now (testing controls). */
 export function acceptRequest(s: State, id: string): State {
@@ -639,19 +643,48 @@ export function cancelReservation(
 }
 /** Demo: the host buys the bundle, so a waiting reservation becomes ready. */
 export function simulatePurchase(s: State, id: string): State {
+  const waiting = s.reservations[id]?.status === "reserved";
   return {
     ...s,
     products: s.products.map((q) =>
       q.id === id ? { ...q, purchased: true } : q,
     ),
-    reservations:
-      s.reservations[id]?.status === "reserved"
-        ? {
-            ...s.reservations,
-            [id]: { ...s.reservations[id], status: "ready" },
-          }
-        : s.reservations,
+    reservations: waiting
+      ? {
+          ...s.reservations,
+          [id]: { ...s.reservations[id], status: "ready", readyAlert: true },
+        }
+      : s.reservations,
+    // The host lets you know, so the update also shows up in Messages.
+    messages: waiting
+      ? {
+          ...s.messages,
+          [id]: [
+            ...(s.messages[id] || []),
+            {
+              id: `ready-${id}-${Date.now()}`,
+              body: "I’ve bought the bundle. Your portion is ready to collect!",
+              mine: false,
+              time: new Date().toISOString(),
+            },
+          ],
+        }
+      : s.messages,
   };
+}
+/** Joined splits that just became ready and haven't been opened yet. */
+export const readyAlerts = (s: State) =>
+  s.products.filter(
+    (p) =>
+      s.reservations[p.id]?.status === "ready" &&
+      s.reservations[p.id].readyAlert,
+  );
+/** Opening a split clears its "ready" notice. */
+export function seeReady(s: State, id: string): State {
+  const r = s.reservations[id];
+  if (!r?.readyAlert) return s;
+  const { readyAlert, ...rest } = r;
+  return { ...s, reservations: { ...s.reservations, [id]: rest } };
 }
 export function reportProblem(
   s: State,
@@ -709,6 +742,8 @@ export function visibleProducts(s: State, query = "", category = "All") {
       (p) =>
         !p.owner &&
         !p.closed &&
+        // Once you've collected a split it only lives in Splits → Past.
+        s.reservations[p.id]?.status !== "completed" &&
         p.area === s.area &&
         p.distance <= s.radius &&
         (category === "All" || p.category === category) &&

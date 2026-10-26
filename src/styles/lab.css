@@ -416,3 +416,60 @@
 .study-panel.compact ol {
   padding-top: 8px;
 }
+
+/* Start a split is the live test; the others are folded away. */
+.lab-test.active-test h2 {
+  margin-top: 10px;
+}
+
+.inactive-tests {
+  border-top: 1px solid var(--border);
+  margin-top: 18px;
+  padding-top: 14px;
+  font-size: 13px;
+}
+
+.inactive-tests > summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.inactive-tests > summary small {
+  display: block;
+  margin: 2px 0 0 16px;
+  font-weight: 400;
+  font-size: 11px;
+}
+
+.inactive-tests[open] > summary {
+  color: var(--ink);
+}
+
+.inactive-tests .lab-test {
+  margin-top: 14px;
+}
+
+.inactive-tests h2,
+.testing-lab .inactive-tests h2 {
+  font-size: 16px;
+  margin: 0 0 10px;
+}
+
+@media (max-width: 899px) {
+  .experiment-panel .lab-test.active-test h2 {
+    display: block;
+    font-size: 11px;
+    margin: 0 0 6px;
+  }
+}
+
+@media (max-height: 760px) {
+  .study-panel.compact {
+    padding: 4px 16px;
+    font-size: 13px;
+  }
+  .study-panel.compact summary {
+    min-height: 24px;
+  }
+}

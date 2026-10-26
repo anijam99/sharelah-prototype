@@ -1,4 +1,9 @@
-import { conversationStatus, pendingRequests, statusLabel } from "./model";
+import {
+  conversationStatus,
+  pendingRequests,
+  readyAlerts,
+  statusLabel,
+} from "./model";
 import { chatPartner, isPerson, people, profileSummary } from "./people";
 
 const groups = {
@@ -15,12 +20,40 @@ export function Inbox() {
   const threads = state.products.filter(
     (p) => conversationStatus(state, p) && state.messages[p.id]?.length,
   );
-  const requests = pendingRequests(state);
+  const requests = pendingRequests(state),
+    ready = readyAlerts(state);
   return (
     <>
       <Header title="Messages" />
       <main className="page-scroll">
         <div className="content">
+          {ready.length > 0 && (
+            <section className="inbox-group" aria-label="Ready to collect">
+              <h2>Ready to collect</h2>
+              {ready.map((p) => (
+                <Row
+                  key={p.id}
+                  title={
+                    <>
+                      <b className="alert-badge inline" aria-hidden="true">
+                        !
+                      </b>{" "}
+                      {p.host} bought the bundle
+                    </>
+                  }
+                  detail={
+                    <>
+                      <span className="conversation-status">{p.title}</span>
+                      <span className="conversation-preview">
+                        Your portion is ready · {p.place}, {p.time}
+                      </span>
+                    </>
+                  }
+                  onClick={() => go("/split/" + p.id)}
+                />
+              ))}
+            </section>
+          )}
           {requests.length > 0 && (
             <section className="inbox-group" aria-label="Join requests">
               <h2>Join requests</h2>

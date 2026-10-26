@@ -39,56 +39,215 @@
   display: none;
 }
 
-.photo-entry {
-  background: var(--paper);
-  padding: 16px;
-  border-radius: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  min-height: 132px;
+/* Shared by both layouts: compact photo row, paired fields, live preview. */
+.create-intro {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
 }
 
-.photo-entry > img,
-.photo-entry > .cropped-photo {
-  width: 140px;
-  height: 120px;
-  object-fit: cover;
-  border-radius: 12px;
+.create-progress .step-name {
+  display: none;
 }
 
-.allocation {
-  display: flex;
-  gap: 12px;
-}
-
-.allocation > div {
-  flex: 1;
+.create-progress {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  background: var(--paper);
-  border-radius: 16px;
-  padding: 16px;
   gap: 8px;
 }
 
-.allocation > div:last-child {
-  background: var(--tint);
+.photo-entry {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px;
+  border-radius: 16px;
+  background: var(--paper);
+}
+
+.photo-entry > img,
+.photo-entry > .cropped-photo,
+.photo-entry > .product-art,
+.review-item > img,
+.review-item > .cropped-photo,
+.review-item > .product-art {
+  flex: none;
+  width: 84px;
+  height: 84px;
+  object-fit: cover;
+  border-radius: 12px;
+  background: white;
+}
+
+.photo-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.photo-actions strong {
+  font-size: 15px;
+  margin-bottom: 2px;
+}
+
+.photo-actions .text-button {
+  min-height: 34px;
+  font-size: 14px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field-hint {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.field-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.field-row input,
+.field-row select {
+  min-width: 0;
+  width: 100%;
+}
+
+.field-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+/* Clearly not part of the product: a small dashed, neutral demo shortcut. */
+.demo-autofill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 28px;
+  padding: 3px 9px;
+  border: 1.5px dashed #a99c90;
+  border-radius: 999px;
+  background: #f4efe9;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+@media (hover: hover) {
+  .demo-autofill:hover {
+    border-color: var(--ink);
+    color: var(--ink);
+  }
+}
+
+.split-preview {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 16px;
+  border-radius: 16px;
+  background: var(--paper);
+}
+
+.split-preview .sharing-pizza {
+  flex: none;
+  width: 96px;
+  margin: 0;
+}
+
+.allocation {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  min-width: 0;
+}
+
+.allocation dt {
+  font-size: 11px;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.allocation dd {
+  margin: 2px 0 0;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 14px;
 }
 
 .allocation strong {
-  font: 800 40px/1.2 var(--display);
+  font: 800 26px/1 var(--display);
 }
 
-.allocation span {
+.neighbour-pays {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: baseline;
+  gap: 2px 12px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: var(--tint);
+}
+
+.neighbour-pays strong {
+  font: 800 24px/1.1 var(--display);
+  color: var(--brand);
+}
+
+.neighbour-pays small {
+  grid-column: 1 / -1;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.review-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.review-item > div,
+.review-pickup {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
   font-size: 15px;
 }
 
-.allocation small {
+.review-item strong,
+.review-pickup strong {
+  font-size: 16px;
+}
+
+.review-item small,
+.review-pickup small {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.review-subhead {
+  margin: 4px 0 -4px;
   font-size: 11px;
   letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--muted);
 }
 
 .camera {
@@ -159,6 +318,20 @@
   flex: 1;
 }
 
+.camera-alt {
+  display: flex;
+  gap: 8px;
+}
+
+.camera-alt > button {
+  flex: 1;
+  min-width: 0;
+  padding-left: 10px;
+  padding-right: 10px;
+  font-size: 15px;
+  white-space: nowrap;
+}
+
 @media (max-width: 375px) {
   .steps li {
     font-size: 12px;
@@ -187,12 +360,12 @@
   object-fit: contain;
 }
 
-/* B · One page: the same fields in numbered sections. */
+/* Numbered section card, used by both layouts and the review step. */
 .create-section {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding: 16px;
+  padding: 18px 16px;
   background: white;
   border-radius: 20px;
   box-shadow: var(--shadow);
@@ -203,12 +376,26 @@
     inset 0 0 0 2px #e3a08f,
     var(--shadow);
 }
-.create-section > h3 {
+.create-section > header {
   display: flex;
-  align-items: center;
-  gap: 10px;
+  align-items: flex-start;
+  gap: 12px;
 }
-.create-section > h3 > span {
+.create-section > header > div {
+  flex: 1;
+  min-width: 0;
+}
+.create-section h3 {
+  margin: 0;
+  font: 700 19px/28px var(--display);
+}
+.create-section > header p {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+.section-number {
+  flex: none;
   display: grid;
   place-items: center;
   width: 28px;
@@ -217,11 +404,328 @@
   background: var(--brand);
   color: white;
   font:
-    700 15px/1 Inter,
+    700 14px/1 Inter,
     sans-serif;
 }
-/* Chips are white; inside a white section they need an outline to read as buttons. */
-.create-section .chip {
-  border: 1px solid var(--border);
-  background: var(--canvas);
+.section-edit {
+  min-height: 28px;
+  font-weight: 600;
+}
+.create-section > .notice {
+  padding: 12px 14px;
+  font-size: 14px;
+}
+
+/* Simulated AR price tag over the live price-tag camera. */
+.camera-guide.locked {
+  border-color: #ffb27a;
+  box-shadow: 0 0 0 9999px #0000002e;
+  transition:
+    border-color 200ms var(--ease-out),
+    box-shadow 200ms var(--ease-out);
+}
+.ar-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.ar-scanning {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 5px 11px;
+  border-radius: 999px;
+  background: #00000080;
+  font-size: 12px;
+  white-space: nowrap;
+  animation: ar-pulse 1.2s ease-in-out infinite;
+}
+/* Small, see-through tag pinned beside the "found" price label. */
+.ar-tag {
+  position: absolute;
+  top: 24%;
+  right: 13%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  max-width: 46%;
+  padding: 6px 10px 7px;
+  border: 1px solid #ffffff80;
+  border-radius: 10px;
+  background: #fffcf873;
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  color: var(--ink);
+  box-shadow: 0 4px 14px #00000026;
+  animation:
+    ar-appear 320ms var(--ease-out) both,
+    ar-track 3.2s ease-in-out 320ms infinite;
+}
+.ar-tag small {
+  max-width: 100%;
+  font-size: 10px;
+  line-height: 1.2;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ar-deal {
+  font-size: 11px;
+  font-weight: 600;
+}
+.ar-tag strong {
+  font: 800 19px/1.05 var(--display);
+  color: var(--pressed);
+}
+.ar-tag em {
+  font:
+    600 11px Inter,
+    sans-serif;
+  font-style: normal;
+  color: var(--ink);
+}
+@keyframes ar-appear {
+  from {
+    opacity: 0;
+    transform: scale(0.85) translateY(6px);
+  }
+}
+@keyframes ar-track {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  30% {
+    transform: translate(3px, -2px);
+  }
+  65% {
+    transform: translate(-2px, 2px);
+  }
+}
+@keyframes ar-pulse {
+  50% {
+    opacity: 0.55;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ar-tag,
+  .ar-scanning {
+    animation: none;
+  }
+}
+
+/* Compact form sizing so each step-by-step screen fits a phone without
+   scrolling. Applied to both layouts so they look the same. */
+.create-content {
+  gap: 12px;
+}
+.create-section {
+  gap: 12px;
+  padding: 14px;
+}
+.create-section label {
+  gap: 5px;
+  font-size: 14px;
+}
+.create-section input,
+.create-section select {
+  min-height: 44px;
+  padding: 9px 12px;
+}
+.create-section textarea {
+  min-height: 64px;
+  padding: 9px 12px;
+}
+.create-section > header p {
+  margin-top: 0;
+}
+.create-section h3 {
+  font-size: 18px;
+  line-height: 26px;
+}
+.create-section .field {
+  gap: 4px;
+}
+.photo-entry {
+  padding: 8px;
+  gap: 12px;
+}
+.photo-entry > img,
+.photo-entry > .cropped-photo,
+.photo-entry > .product-art {
+  width: 64px;
+  height: 64px;
+}
+.photo-actions strong {
+  font-size: 14px;
+  margin: 0;
+}
+.photo-actions .text-button {
+  min-height: 26px;
+}
+.review-item > img,
+.review-item > .cropped-photo,
+.review-item > .product-art {
+  width: 60px;
+  height: 60px;
+}
+.create-section .price-rows {
+  gap: 8px;
+}
+.split-preview {
+  padding: 10px 14px;
+}
+.split-preview .sharing-pizza {
+  width: 84px;
+}
+.neighbour-pays {
+  padding: 10px 14px;
+}
+.create-progress {
+  gap: 6px;
+}
+.create-progress .steps li {
+  gap: 6px;
+}
+
+/* The placeholder art is drawn at 88px; scale it to the small thumbnails. */
+.photo-entry > .product-art > .stamp,
+.review-item > .product-art > .stamp {
+  width: 100%;
+  height: 100%;
+}
+.photo-entry > .product-art > .packaging,
+.review-item > .product-art > .packaging {
+  width: 88%;
+  height: 88%;
+}
+
+/* Short screens (iPhone SE, or any phone browser with its toolbars
+   showing): drop decorative extras and tighten spacing so each step still
+   fits without scrolling. */
+@media (max-height: 760px) {
+  .create-content {
+    gap: 8px;
+    padding-top: 2px;
+  }
+  .create-section {
+    gap: 8px;
+    padding: 10px 14px;
+  }
+  .create-section > header p,
+  .create-section .field > .field-hint,
+  .split-preview .sharing-pizza {
+    display: none;
+  }
+  .create-progress .step-name {
+    display: inline;
+  }
+  .create-section > header {
+    align-items: center;
+  }
+  .create-section > .notice {
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+  .allocation {
+    flex-direction: row;
+  }
+  .allocation > div {
+    flex: 1;
+  }
+  .review-item > img,
+  .review-item > .cropped-photo,
+  .review-item > .product-art {
+    width: 48px;
+    height: 48px;
+  }
+  /* The bars and the page title already say which step this is. */
+  .create-progress .steps span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+  .create-progress .steps li {
+    gap: 0;
+  }
+  .create-section .price-rows {
+    gap: 6px;
+  }
+  .create-actions {
+    padding-top: 8px;
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+  }
+}
+
+@media (max-height: 760px) {
+  .create-section .price-rows .total {
+    padding-top: 6px;
+  }
+}
+@media (max-height: 760px) {
+  .create-section h3 {
+    line-height: 22px;
+  }
+  .review-item > div,
+  .review-pickup {
+    line-height: 1.3;
+  }
+  .create-content {
+    gap: 6px;
+  }
+}
+
+/* Price-tag camera: the viewfinder takes whatever height is left, so the
+   whole screen fits without scrolling. */
+.capture-page {
+  container-type: size;
+}
+.capture-screen {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  height: calc(100cqh - 36px);
+  min-height: 440px;
+}
+.capture-intro {
+  margin: 0;
+  font-size: 14px;
+  color: var(--muted);
+}
+.capture-screen .camera {
+  flex: 1;
+  min-height: 0;
+  gap: 10px;
+}
+.capture-screen .viewfinder {
+  flex: 1;
+  height: auto;
+  max-height: none;
+  min-height: 180px;
+}
+.capture-screen .camera > .fine {
+  margin: 0;
+  font-size: 12px;
+}
+.capture-skip {
+  align-self: center;
+  min-height: 36px;
+  font-weight: 600;
+}
+
+.capture-screen > h2 {
+  margin: 0;
+  font-size: 22px;
+  line-height: 1.2;
+}
+
+.scan-start {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }

@@ -61,7 +61,10 @@ export function NeighbourProfile({ id }: { id: string }) {
   const summary = profileSummary(state, id);
   const reviews = reviewsFor(state, id);
   const listings = state.products.filter(
-    (p) => (id === "tom" ? p.owner : id === "jerry" && !p.owner) && !p.closed,
+    (p) =>
+      (id === "tom" ? p.owner : id === "jerry" && !p.owner) &&
+      !p.closed &&
+      state.reservations[p.id]?.status !== "completed",
   );
   return (
     <>

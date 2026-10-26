@@ -10,6 +10,7 @@ import {
   Camera as CameraIcon,
   Flag,
   Heart,
+  KeyRound,
   MessageCircle,
   Navigation,
   Send,
@@ -32,6 +33,7 @@ import {
   total,
   validateCode,
   type Product,
+  seeReady,
 } from "./model";
 import type { OpenModal } from "./Modals";
 export function Offer({ p, open }: { p: Product; open: OpenModal }) {
@@ -263,8 +265,13 @@ const released: Record<
   },
 };
 export function MySplit({ p, open }: { p: Product; open: OpenModal }) {
-  const { state } = useStore(),
+  const { state, update } = useStore(),
     r = state.reservations[p.id];
+  // Opening the split counts as seeing the "ready to collect" notice.
+  const unseen = !!r?.readyAlert;
+  useEffect(() => {
+    if (unseen) update((s) => seeReady(s, p.id));
+  }, [unseen, p.id, update]);
   if (!owned(r))
     return (
       <>
@@ -354,12 +361,6 @@ export function MySplit({ p, open }: { p: Product; open: OpenModal }) {
             </strong>
             <div className="shared-edge" />
           </div>
-          <CompareButton item={p} kind="offer" />
-          <Row
-            title={p.host + "’s profile"}
-            detail="View neighbour and reviews"
-            onClick={() => go("/neighbour/" + hostPerson(p))}
-          />
           {reported ? (
             <>
               <Row
@@ -438,6 +439,13 @@ export function MySplit({ p, open }: { p: Product; open: OpenModal }) {
               </button>
             </>
           )}
+          {/* Secondary extras come after the pickup details and actions. */}
+          <Row
+            title={p.host + "’s profile"}
+            detail="View neighbour and reviews"
+            onClick={() => go("/neighbour/" + hostPerson(p))}
+          />
+          <CompareButton item={p} kind="offer" />
         </div>
       </main>
       {!done && !reported && (
@@ -517,7 +525,11 @@ export function Pickup({
         }
         item={p.title}
       />
-      <main className="page-scroll">
+      <main
+        className={
+          "page-scroll" + (kind === "scan" && scan ? " capture-page" : "")
+        }
+      >
         <div className="content">
           {kind === "receipt" ? (
             verified ? (
@@ -613,27 +625,42 @@ export function Pickup({
               </form>
             </>
           ) : (
-            <>
+            <div className={scan ? "capture-screen" : "scan-start"}>
               <h2>Scan {p.host}’s pickup code</h2>
-              <p className="muted">
+              <p className="capture-intro">
                 Scanning finds your portion. You’ll confirm receipt before
                 payment is released.
               </p>
               {scan ? (
-                <Camera mode="qr" onCode={accept} />
+                <Camera
+                  mode="qr"
+                  onCode={accept}
+                  extra={
+                    <button
+                      className="secondary"
+                      aria-label="Enter pickup code instead"
+                      onClick={() => go("/code/" + p.id, "Scan")}
+                    >
+                      <KeyRound size={19} aria-hidden="true" />
+                      Enter code
+                    </button>
+                  }
+                />
               ) : (
-                <Button onClick={() => setScan(true)}>
-                  <CameraIcon />
-                  Open camera
-                </Button>
+                <>
+                  <Button onClick={() => setScan(true)}>
+                    <CameraIcon />
+                    Open camera
+                  </Button>
+                  <Button
+                    kind="secondary"
+                    onClick={() => go("/code/" + p.id, "Scan")}
+                  >
+                    Enter pickup code instead
+                  </Button>
+                </>
               )}
-              <Button
-                kind="secondary"
-                onClick={() => go("/code/" + p.id, "Scan")}
-              >
-                Enter pickup code instead
-              </Button>
-            </>
+            </div>
           )}
         </div>
       </main>
@@ -648,11 +675,11 @@ export function Problem({ p }: { p: Product }) {
     <>
       <Header title="Report a problem" item={p.title} />
       <main className="page-scroll">
-        <div className="content">
+        <div className="content problem-form">
           <h2>Let’s put this on hold.</h2>
           <p className="muted">
-            Tell us what happened. Your held payment won’t be released while the
-            report is open.
+            Your payment stays held while we look into it. We usually reply
+            within a day.
           </p>
           <fieldset>
             <legend>What went wrong?</legend>
@@ -674,31 +701,32 @@ export function Problem({ p }: { p: Product }) {
             ))}
           </fieldset>
           <label>
-            Anything else? <small>(optional)</small>
+            <span>
+              Anything else? <small>(optional)</small>
+            </span>
             <textarea
+              rows={3}
               maxLength={1000}
               value={note}
               onChange={(e) => setNote(e.target.value)}
               placeholder="Add the details that would help resolve this."
             />
           </label>
-          <div className="notice">
-            Our team usually replies within a day. Your payment stays held in
-            the meantime.
-          </div>
-          <Button
-            disabled={
-              !["ready", "reserved"].includes(state.reservations[p.id]?.status)
-            }
-            onClick={() => {
-              update((s) => reportProblem(s, p.id, reason, note));
-              finish("/split/" + p.id);
-            }}
-          >
-            Submit report
-          </Button>
         </div>
       </main>
+      <footer className="action-bar">
+        <Button
+          disabled={
+            !["ready", "reserved"].includes(state.reservations[p.id]?.status)
+          }
+          onClick={() => {
+            update((s) => reportProblem(s, p.id, reason, note));
+            finish("/split/" + p.id);
+          }}
+        >
+          Submit report
+        </Button>
+      </footer>
     </>
   );
 }
@@ -886,18 +914,36 @@ export function Directions({ p }: { p: Product }) {
   return (
     <>
       <Header title="Pickup directions" item={p.title} />
-      <main className="page-scroll">
-        <div className="content">
-          <TileMap products={[p]} selected={p.id} pickup />
-          <h2>{p.place}</h2>
-          <p>{p.address}</p>
-          <Row
-            title={`${p.distance} m · about ${Math.ceil(p.distance / 70)} minutes on foot`}
-            detail="Estimated from your location"
-          />
-          <Row title={p.date + " · " + p.time} detail={p.note} />
+      {/* The map takes the spare height so everything fits on one screen. */}
+      <main className="page-scroll directions-page">
+        <div className="content directions-stage">
+          <TileMap products={[p]} selected={p.id} route={p.id} pickup />
+          <div className="directions-info">
+            <h2>{p.place}</h2>
+            <p>{p.address}</p>
+          </div>
+          <div className="panel directions-facts">
+            <div>
+              <strong>
+                {p.distance} m · about {Math.ceil(p.distance / 70)} minutes on
+                foot
+              </strong>
+              <small>Estimated from your location</small>
+            </div>
+            <div>
+              <strong>{p.date + " · " + p.time}</strong>
+              {p.note && <small>{p.note}</small>}
+            </div>
+          </div>
+        </div>
+      </main>
+      <footer className="action-bar">
+        <div className="two-buttons">
+          <Button kind="secondary" onClick={() => back()}>
+            Back to split
+          </Button>
           <a
-            className="primary full"
+            className="primary"
             href={
               "https://www.google.com/maps/dir/?api=1&destination=" +
               encodeURIComponent(p.address + ", Singapore") +
@@ -906,13 +952,10 @@ export function Directions({ p }: { p: Product }) {
             target="_blank"
             rel="noreferrer"
           >
-            Open walking directions
+            Walking directions
           </a>
-          <Button kind="secondary" onClick={() => back()}>
-            Back to split
-          </Button>
         </div>
-      </main>
+      </footer>
     </>
   );
 }
