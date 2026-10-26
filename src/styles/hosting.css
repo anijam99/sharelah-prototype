@@ -116,3 +116,28 @@
 .host-strip.quiet {
   background: var(--canvas);
 }
+
+/* After a pickup scan: the neighbour's held payment now belongs to the host. */
+.payout {
+  display: flex;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: #e9f2e2;
+  color: #2f4524;
+}
+.payout > svg {
+  flex: none;
+  margin-top: 2px;
+  color: #3f5a30;
+}
+.payout strong {
+  display: block;
+  font: 800 20px/1.2 var(--display);
+  color: #3f5a30;
+}
+.payout p {
+  margin: 4px 0 0;
+  font-size: 14px;
+  line-height: 1.4;
+}

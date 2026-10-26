@@ -23,14 +23,7 @@ export type Study = {
   /** Index into rounds of the one in progress. */
   current: number;
   phase:
-    | "welcome"
-    | "profile"
-    | "intro"
-    | "task"
-    | "rating"
-    | "compare"
-    | "post"
-    | "done";
+    "welcome" | "profile" | "intro" | "task" | "rating" | "compare" | "done";
   /** Epoch ms when the current task started; 0 until the participant begins. */
   taskStart: number;
   /** Epoch ms when Jerry collected and the round ended; 0 while in progress. */
@@ -39,8 +32,6 @@ export type Study = {
   /** Asked once before task 1. */
   age?: string;
   occupation?: string;
-  /** Confidence sharing a bulk buy through an app, 1–10, after both tasks. */
-  postConfidence?: number;
   /** "In real life" pop-ups already acknowledged in this round. */
   narrated?: Narration[];
   /** Epoch ms when the split was published, which stops the task clock. */
@@ -176,7 +167,6 @@ export function studyRow(s: Study) {
     participant_id: s.participant,
     age_group: s.age ?? "",
     occupation: s.occupation ?? "",
-    post_confidence: s.postConfidence ?? "",
     route: "/" + s.route,
     first_ui: s.rounds[0].ui,
     second_ui: s.rounds[1].ui,

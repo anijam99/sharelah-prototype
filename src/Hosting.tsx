@@ -1,5 +1,5 @@
-import type { ReactNode } from "react";
-import { Star, TriangleAlert } from "lucide-react";
+import { useEffect, type ReactNode } from "react";
+import { Star, TriangleAlert, Wallet } from "lucide-react";
 import { Pizza } from "./Pizza";
 import { useStore } from "./store";
 import { studyRoute } from "./studyData";
@@ -39,7 +39,26 @@ export function Hosting({
     inSplit = requests.filter(
       (r) => r.status === "accepted" || r.status === "collected",
     ),
-    complete = hostedComplete(state, p);
+    complete = hostedComplete(state, p),
+    // Each scan releases that neighbour's held payment to the host.
+    collected = requests.filter((r) => r.status === "collected"),
+    releasedCents = collected.reduce(
+      (sum, r) => sum + p.itemCents * r.quantity,
+      0,
+    ),
+    names = collected.map((r) => nameOf(r)).join(" and ");
+  // A scan usually happens with the pickup code in view, further down the
+  // page; scroll up so the "payment released" message is seen.
+  const released = collected.length;
+  useEffect(() => {
+    if (!released) return;
+    document.querySelector("main.page-scroll")?.scrollTo({
+      top: 0,
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+        ? "auto"
+        : "smooth",
+    });
+  }, [released]);
   return (
     <>
       <Header
@@ -90,6 +109,20 @@ export function Hosting({
             </p>
             <div className="shared-edge" />
           </div>
+          {collected.length > 0 && (
+            <section className="payout" aria-label="Payment released">
+              <Wallet size={22} aria-hidden="true" />
+              <div>
+                <strong>{money(releasedCents)} released to you</strong>
+                <p>
+                  {names} scanned your pickup code, so the payment held for{" "}
+                  {collected.length === 1 ? "that portion" : "those portions"}{" "}
+                  has been released to you. It covers what you paid for their
+                  share of the bundle.
+                </p>
+              </div>
+            </section>
+          )}
           {!p.closed && pending.length > 0 && (
             <section className="joiner-section" aria-label="Requests to join">
               <h3>Requests to join</h3>
@@ -128,7 +161,7 @@ export function Hosting({
                 <JoinerCard key={r.person} request={r}>
                   <p className="fine">
                     {r.status === "collected"
-                      ? "Collected ✓"
+                      ? `Collected ✓ · ${money(p.itemCents * r.quantity)} paid to you`
                       : p.purchased
                         ? "Ready for pickup"
                         : "Waiting for you to buy"}

@@ -608,7 +608,7 @@
   font-size: 16px;
 }
 
-/* A/B study: welcome, background and the 1–10 confidence scale. */
+/* A/B study: welcome and background. */
 .study-background {
   padding: 12px 14px;
   border-radius: 14px;
@@ -616,32 +616,4 @@
 }
 .study-background p {
   margin: 4px 0 0;
-}
-.confidence {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.confidence > p {
-  margin: 0;
-  font-weight: 600;
-}
-.scale-ten {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 6px;
-}
-.scale-ten button {
-  min-height: 44px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: #fff;
-  font: inherit;
-  font-weight: 600;
-  color: var(--ink);
-}
-.scale-ten button.on {
-  background: var(--brand);
-  border-color: var(--brand);
-  color: #fff;
 }

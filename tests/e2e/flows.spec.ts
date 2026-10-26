@@ -1314,7 +1314,7 @@ test("/a runs UI A then UI B, times each task and uploads both ratings", async (
   await expect(
     page.getByRole("heading", { name: "Which version would you use?" }),
   ).toBeVisible();
-  const submit = page.getByRole("button", { name: "Continue" });
+  const submit = page.getByRole("button", { name: "Submit" });
   await page.getByRole("radio", { name: /The second version/ }).click();
   await expect(submit).toBeDisabled();
   await page.getByRole("button", { name: "Clearer layout" }).click();
@@ -1324,10 +1324,7 @@ test("/a runs UI A then UI B, times each task and uploads both ratings", async (
       /You picked: Clearer layout \(layout\), Quicker to finish \(efficient\)/,
     )
     .fill("Could see everything at once");
-  await page.getByRole("button", { name: "Continue" }).click();
-  // Same confidence question as before the tasks.
-  await page.getByRole("radio", { name: /^7/ }).click();
-  await page.getByRole("button", { name: "Submit" }).click();
+  await submit.click();
   await expect(
     page.getByText("Your responses have been recorded."),
   ).toBeVisible();
@@ -1342,7 +1339,6 @@ test("/a runs UI A then UI B, times each task and uploads both ratings", async (
     preferred_version: "B",
     age_group: "25–34",
     occupation: "Tech / IT",
-    post_confidence: 7,
     preference_themes: "Layout; Efficient",
     preference_comment: "Could see everything at once",
     device_category: "Mobile",

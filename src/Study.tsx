@@ -73,7 +73,7 @@ function withRound(
     ) as StudyState["rounds"],
   };
 }
-const RATING_DELAY_MS = 1800,
+const RATING_DELAY_MS = 5000, // Let them see the completed split before the survey.
   /** Let people see the new screen before the pop-up explains it. */
   NARRATION_DELAY_MS = 5000,
   SCAN_MS = 1500;
@@ -96,45 +96,6 @@ const likert = [
   "Easy",
   "Very easy",
 ];
-
-/** A 1–10 confidence question, asked before and after the tasks. */
-function ConfidenceScale({
-  question,
-  value,
-  onChange,
-}: {
-  question: string;
-  value: number;
-  onChange: (n: number) => void;
-}) {
-  return (
-    <div className="confidence">
-      <p id="confidence-q">{question}</p>
-      <div
-        className="scale-ten"
-        role="radiogroup"
-        aria-labelledby="confidence-q"
-      >
-        {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
-          <button
-            key={n}
-            role="radio"
-            aria-checked={value === n}
-            aria-label={`${n}${n === 1 ? ", not confident at all" : n === 10 ? ", very confident" : ""}`}
-            className={value === n ? "on" : ""}
-            onClick={() => onChange(n)}
-          >
-            {n}
-          </button>
-        ))}
-      </div>
-      <div className="likert-ends">
-        <small>1 · Not confident at all</small>
-        <small>10 · Very confident</small>
-      </div>
-    </div>
-  );
-}
 
 /** Splits made by the participant have UUID ids; seeded ones do not. */
 export const hostedByParticipant = (p: Product) =>
@@ -175,8 +136,7 @@ export function Study({
     [why, setWhy] = useState(""),
     [showing, setShowing] = useState<Narration | null>(null),
     [age, setAge] = useState(study.age || ""),
-    [occupation, setOccupation] = useState(study.occupation || ""),
-    [postConfidence, setPostConfidence] = useState(0);
+    [occupation, setOccupation] = useState(study.occupation || "");
   const mine = state.products.find(hostedByParticipant);
 
   // Task time runs from choosing "Start a split" (from a price tag or
@@ -310,18 +270,11 @@ export function Study({
     else setStudy((s) => ({ ...s, rounds, phase: "compare" }));
   }
   function submitCompare() {
-    setStudy((s) => ({
-      ...s,
+    const finished: StudyState = {
+      ...study,
       preferred,
       themes: picked,
       preferenceComment: why.trim(),
-      phase: "post",
-    }));
-  }
-  function submitPost() {
-    const finished: StudyState = {
-      ...study,
-      postConfidence,
       completedAt: new Date().toISOString(),
       phase: "done",
     };
@@ -574,20 +527,6 @@ export function Study({
               }
               onClick={submitCompare}
             >
-              Continue
-            </Button>
-          </>
-        )}
-        {study.phase === "post" && (
-          <>
-            <span className="eyebrow">ONE LAST THING</span>
-            <h2>How do you feel now?</h2>
-            <ConfidenceScale
-              question="Now that you’ve tried ShareLah, how confident would you feel sharing a bulk buy with a neighbour you haven’t met, using an app?"
-              value={postConfidence}
-              onChange={setPostConfidence}
-            />
-            <Button disabled={!postConfidence} onClick={submitPost}>
               Submit
             </Button>
           </>
