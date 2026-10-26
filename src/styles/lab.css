@@ -517,7 +517,7 @@
   font-size: 14px;
 }
 
-/* A/B study: "in real life" pop-up over the app during a task. */
+/* A/B study: "in real life" pop-up, styled like an iOS system alert. */
 .narration {
   position: absolute;
   inset: 0;
@@ -525,40 +525,71 @@
   display: grid;
   place-items: center;
   padding: 20px;
-  background: #2b241d66;
-  backdrop-filter: blur(2px);
-  animation: narration-in 220ms var(--ease-out);
+  background: #00000033;
+  animation: narration-in 200ms ease-out;
 }
-.narration-card {
-  width: 100%;
-  max-width: 360px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 22px 20px 20px;
-  border-radius: 22px;
-  background: var(--canvas);
-  box-shadow: 0 12px 40px #2b241d33;
+.ios-alert {
+  width: 270px;
+  overflow: hidden;
+  border-radius: 14px;
+  background: #f2f2f7d1;
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
+  font-family:
+    -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, sans-serif;
+  color: #000;
+  text-align: center;
+  animation: ios-alert-in 250ms cubic-bezier(0.2, 0.9, 0.3, 1.2);
 }
-.narration-card .eyebrow {
-  color: var(--brand);
+.ios-alert-text {
+  padding: 19px 16px 18px;
 }
-.narration-card h2 {
+.ios-alert h2 {
+  margin: 0 0 4px;
+  font:
+    600 17px/22px -apple-system,
+    BlinkMacSystemFont,
+    "SF Pro Text",
+    Inter,
+    sans-serif;
+  letter-spacing: -0.4px;
+}
+.ios-alert p {
   margin: 0;
-  font: 700 22px/1.2 var(--display);
+  font-size: 13px;
+  line-height: 18px;
+  letter-spacing: -0.1px;
 }
-.narration-card p {
-  margin: 0 0 6px;
-  color: var(--muted);
-  line-height: 1.45;
+.ios-alert button {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  border: 0;
+  border-top: 0.5px solid #3c3c4349;
+  background: transparent;
+  color: #007aff;
+  font-family: inherit;
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 22px;
+}
+.ios-alert button:active {
+  background: #0000000d;
 }
 @keyframes narration-in {
   from {
     opacity: 0;
   }
 }
+@keyframes ios-alert-in {
+  from {
+    opacity: 0;
+    transform: scale(1.15);
+  }
+}
 @media (prefers-reduced-motion: reduce) {
-  .narration {
+  .narration,
+  .ios-alert {
     animation: none;
   }
 }

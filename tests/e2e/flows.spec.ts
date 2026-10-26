@@ -1257,8 +1257,6 @@ test("/a runs UI A then UI B, times each task and uploads both ratings", async (
       const next = page.getByRole("button", { name: "Continue" });
       await page.getByLabel("Age").selectOption("25–34");
       await page.getByLabel("Occupation").selectOption("Tech / IT");
-      await expect(next).toBeDisabled();
-      await page.getByRole("radio", { name: /^4/ }).click();
       await next.click();
     }
     await expect(
@@ -1322,7 +1320,9 @@ test("/a runs UI A then UI B, times each task and uploads both ratings", async (
   await page.getByRole("button", { name: "Clearer layout" }).click();
   await page.getByRole("button", { name: "Quicker to finish" }).click();
   await page
-    .getByLabel(/You picked: Clearer layout, Quicker to finish/)
+    .getByLabel(
+      /You picked: Clearer layout \(layout\), Quicker to finish \(efficient\)/,
+    )
     .fill("Could see everything at once");
   await page.getByRole("button", { name: "Continue" }).click();
   // Same confidence question as before the tasks.
@@ -1342,7 +1342,6 @@ test("/a runs UI A then UI B, times each task and uploads both ratings", async (
     preferred_version: "B",
     age_group: "25–34",
     occupation: "Tech / IT",
-    pre_confidence: 4,
     post_confidence: 7,
     preference_themes: "Layout; Efficient",
     preference_comment: "Could see everything at once",
@@ -1359,7 +1358,6 @@ test("/b shows UI B first", async ({ page }) => {
   await page.getByRole("button", { name: "Get started" }).click();
   await page.getByLabel("Age").selectOption("Prefer not to say");
   await page.getByLabel("Occupation").selectOption("Student");
-  await page.getByRole("radio", { name: /^5/ }).click();
   await page.getByRole("button", { name: "Continue" }).click();
   await page.getByRole("button", { name: "Start task" }).click();
   await page.getByRole("button", { name: "Share" }).click();

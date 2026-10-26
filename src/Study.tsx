@@ -86,7 +86,7 @@ const narrations: Record<Narration, { title: string; body: string }> = {
   },
   scan: {
     title: "Jerry is on his way",
-    body: "Jerry walks over to the pickup point and scans the pickup code on your screen. Tap OK to see the scan happen.",
+    body: "Jerry meets you at the pickup point and collects the bottle you bought for him. He then scans the pickup code on your screen, and once it’s scanned, the split is complete. Tap OK to see the scan happen.",
   },
 };
 const likert = [
@@ -176,7 +176,6 @@ export function Study({
     [showing, setShowing] = useState<Narration | null>(null),
     [age, setAge] = useState(study.age || ""),
     [occupation, setOccupation] = useState(study.occupation || ""),
-    [preConfidence, setPreConfidence] = useState(study.preConfidence || 0),
     [postConfidence, setPostConfidence] = useState(0);
   const mine = state.products.find(hostedByParticipant);
 
@@ -338,11 +337,13 @@ export function Study({
         aria-modal="true"
         aria-labelledby="narration-title"
       >
-        <div className="narration-card">
-          <span className="eyebrow">IN REAL LIFE</span>
-          <h2 id="narration-title">{narrations[showing].title}</h2>
-          <p>{narrations[showing].body}</p>
-          <Button onClick={() => acknowledge(showing)}>OK</Button>
+        {/* Styled like an iOS system alert so it reads as "outside" the app. */}
+        <div className="ios-alert">
+          <div className="ios-alert-text">
+            <h2 id="narration-title">{narrations[showing].title}</h2>
+            <p>{narrations[showing].body}</p>
+          </div>
+          <button onClick={() => acknowledge(showing)}>OK</button>
         </div>
       </div>
     ) : null;
@@ -405,19 +406,13 @@ export function Study({
                 </select>
               </label>
             </fieldset>
-            <ConfidenceScale
-              question="How confident would you feel sharing a bulk buy with a neighbour you haven’t met, using an app?"
-              value={preConfidence}
-              onChange={setPreConfidence}
-            />
             <Button
-              disabled={!age || !occupation || !preConfidence}
+              disabled={!age || !occupation}
               onClick={() =>
                 setStudy((s) => ({
                   ...s,
                   age,
                   occupation,
-                  preConfidence,
                   phase: "intro",
                 }))
               }

@@ -39,8 +39,7 @@ export type Study = {
   /** Asked once before task 1. */
   age?: string;
   occupation?: string;
-  /** Confidence sharing a bulk buy through an app, 1–10, before and after. */
-  preConfidence?: number;
+  /** Confidence sharing a bulk buy through an app, 1–10, after both tasks. */
   postConfidence?: number;
   /** "In real life" pop-ups already acknowledged in this round. */
   narrated?: Narration[];
@@ -59,13 +58,13 @@ export type Study = {
  * analysis; labels are what participants read.
  */
 export const themes = {
-  Intuitive: "Easier to understand",
-  Efficient: "Quicker to finish",
-  Layout: "Clearer layout",
-  Convenient: "Less scrolling or tapping",
-  Recoverable: "Easier to check and fix details",
-  Familiar: "Felt more familiar",
-  Modern: "Looked more modern",
+  Intuitive: "Easier to understand (intuitive)",
+  Efficient: "Quicker to finish (efficient)",
+  Layout: "Clearer layout (layout)",
+  Convenient: "Less scrolling or tapping (convenient)",
+  Recoverable: "Easier to check and fix details (recoverable)",
+  Familiar: "Felt more familiar (familiar)",
+  Modern: "Looked more modern (modern)",
   Other: "Something else",
 } as const;
 export type Theme = keyof typeof themes;
@@ -177,7 +176,6 @@ export function studyRow(s: Study) {
     participant_id: s.participant,
     age_group: s.age ?? "",
     occupation: s.occupation ?? "",
-    pre_confidence: s.preConfidence ?? "",
     post_confidence: s.postConfidence ?? "",
     route: "/" + s.route,
     first_ui: s.rounds[0].ui,
