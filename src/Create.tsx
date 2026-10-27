@@ -450,7 +450,7 @@ export function Create({
               {onePage && (
                 <>
                   <p className="create-intro review-heading">
-                    Review your split
+                    4 Review your split
                   </p>
                   {/* Edit scrolls back up to that section on the same page. */}
                   <ReviewSummary
