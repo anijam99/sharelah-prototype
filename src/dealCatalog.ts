@@ -697,10 +697,10 @@ export const seedDeals: Deal[] = [
   sample(
     "top-reference",
     2100,
-    2980,
-    2,
+    4470,
+    3,
     "1 bottle · 2.3 kg",
-    "2 for S$21",
+    "3 for S$21",
     "FairPrice · Bugis Junction",
   ),
   lifestyle(

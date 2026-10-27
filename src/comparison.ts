@@ -99,7 +99,7 @@ export const comparisonOptions: Record<
       size: 2.3,
       unit: "kg",
       singleCents: 1490,
-      bundle: { count: 2, cents: 2100 },
+      bundle: { count: 3, cents: 2100 },
       ...place(650, 12),
     },
     {

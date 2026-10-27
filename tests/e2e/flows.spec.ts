@@ -35,7 +35,7 @@ test("browse, reserve, change payment, cancel, and reset", async ({ page }) => {
   await page.getByRole("button", { name: /Payment method · Change/ }).click();
   await page.getByRole("button", { name: /ShareLah wallet/ }).click();
   await page.getByRole("button", { name: "Use payment method" }).click();
-  await review.getByRole("button", { name: "Confirm & hold S$10.65" }).click();
+  await review.getByRole("button", { name: "Confirm & hold S$7.15" }).click();
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(
     "Confirming your split",
   );
@@ -155,7 +155,7 @@ test("mobile headers stay compact and checkout can be undone during the countdow
       .evaluate((el) => el.getBoundingClientRect().height),
   ).toBeLessThanOrEqual(64);
   await page.getByRole("button", { name: "Reserve a portion" }).click();
-  await page.getByRole("button", { name: "Confirm & hold S$10.65" }).click();
+  await page.getByRole("button", { name: "Confirm & hold S$7.15" }).click();
   await expect(page.getByRole("timer")).toBeVisible();
   await page
     .getByRole("button", { name: "Cancel reservation", exact: true })
@@ -292,7 +292,7 @@ test("extra confirmation waits for a decision even after refresh and changing va
     .getByRole("button", { name: "Open TOP liquid laundry detergent" })
     .click();
   await page.getByRole("button", { name: "Reserve a portion" }).click();
-  await page.getByRole("button", { name: "Confirm & hold S$10.65" }).click();
+  await page.getByRole("button", { name: "Confirm & hold S$7.15" }).click();
   await expect(
     page.getByRole("heading", { name: "Are you sure?" }),
   ).toBeVisible();
@@ -316,9 +316,9 @@ test("extra confirmation waits for a decision even after refresh and changing va
   ).toBeVisible();
   await page.getByRole("button", { name: "B · Extra confirmation" }).click();
   await page.getByRole("button", { name: "Reserve a portion" }).click();
-  await page.getByRole("button", { name: "Confirm & hold S$10.65" }).click();
+  await page.getByRole("button", { name: "Confirm & hold S$7.15" }).click();
   await page
-    .getByRole("button", { name: "Yes, reserve & hold S$10.65" })
+    .getByRole("button", { name: "Yes, reserve & hold S$7.15" })
     .click();
   await expect(
     page.getByRole("heading", { name: "My reservation" }),
@@ -338,7 +338,7 @@ test("receipt countdown can skip the wait and changing variants does not interru
   await page.setViewportSize({ width: 1280, height: 664 });
   await page.goto("/#/offer/det");
   await page.getByRole("button", { name: "Reserve a portion" }).click();
-  await page.getByRole("button", { name: "Confirm & hold S$10.65" }).click();
+  await page.getByRole("button", { name: "Confirm & hold S$7.15" }).click();
   await page.getByRole("button", { name: "B · Extra confirmation" }).click();
   await expect(page.getByRole("timer")).toBeVisible();
   await expect(page.locator(".receipt-countdown-clock strong")).toBeVisible();
@@ -367,7 +367,7 @@ test("confirmation C shows B's question with a top-right countdown and can cance
   await page.goto("/#/offer/det");
   await page.getByRole("button", { name: "C · Confirm + countdown" }).click();
   await page.getByRole("button", { name: "Reserve a portion" }).click();
-  await page.getByRole("button", { name: "Confirm & hold S$10.65" }).click();
+  await page.getByRole("button", { name: "Confirm & hold S$7.15" }).click();
   const heading = page.getByRole("heading", { name: "Are you sure?" });
   const timer = page.getByRole("timer");
   await expect(heading).toBeVisible();
@@ -397,9 +397,9 @@ test("confirmation C shows B's question with a top-right countdown and can cance
   ).toBeUndefined();
   await page.getByRole("button", { name: "C · Confirm + countdown" }).click();
   await page.getByRole("button", { name: "Reserve a portion" }).click();
-  await page.getByRole("button", { name: "Confirm & hold S$10.65" }).click();
+  await page.getByRole("button", { name: "Confirm & hold S$7.15" }).click();
   await page
-    .getByRole("button", { name: "Yes, reserve & hold S$10.65" })
+    .getByRole("button", { name: "Yes, reserve & hold S$7.15" })
     .click();
   await expect(
     page.getByRole("heading", { name: "Request sent" }),
@@ -457,7 +457,7 @@ test("the host reviews Jerry's join request, declines, then accepts when he asks
   ).toBeVisible();
   await expect(page.locator(".app-frame .sharing-pizza")).toHaveAttribute(
     "aria-label",
-    "2 portions, 1 claimed",
+    "3 portions, 1 claimed",
   );
   await page.reload();
   await expect(
@@ -494,6 +494,10 @@ test("price-tag photos survive reload, can be reused, and are cleared by reset",
   await expect(
     page.getByRole("button", { name: "Retake photo" }),
   ).toBeVisible();
+  // Outside the study the simulated scan fills the form with no pop-up.
+  await expect(page.getByLabel("Item name")).toHaveValue(
+    "TOP liquid laundry detergent",
+  );
   // A new deal starts empty after reload, but the photo stays in the
   // saved gallery and can be reused.
   await page.reload();
@@ -555,7 +559,7 @@ test("receipt progress is a continuous browser animation and respects reduced mo
   await page.goto("/");
   await page.goto("/#/offer/det");
   await page.getByRole("button", { name: "Reserve a portion" }).click();
-  await page.getByRole("button", { name: "Confirm & hold S$10.65" }).click();
+  await page.getByRole("button", { name: "Confirm & hold S$7.15" }).click();
   const fill = page.locator(".timer-half.right .timer-arc");
   const timing = await fill.evaluate((el) => {
     const animation = el.getAnimations()[0];
@@ -726,7 +730,7 @@ test("compares brands, quantities, return travel and delivery fees", async ({
   await page.getByRole("button", { name: "Compare prices & travel" }).click();
   await expect(
     page.getByRole("region", { name: "Current split comparison" }),
-  ).toContainText("S$10.65");
+  ).toContainText("S$7.15");
   await page.getByLabel("Items needed").selectOption("6");
   const detergentOnline = page
     .locator(".compare-card")
@@ -866,7 +870,7 @@ test("home layout settings stay independent of an active confirmation", async ({
     .getByRole("button", { name: "Reserve a portion", exact: true })
     .click();
   await page
-    .getByRole("button", { name: "Confirm & hold S$10.65", exact: true })
+    .getByRole("button", { name: "Confirm & hold S$7.15", exact: true })
     .click();
   await expect(
     page.getByRole("heading", { name: "Are you sure?" }),
@@ -1103,7 +1107,7 @@ test("a declined request releases the hold and explains why", async ({
 }) => {
   await page.goto("/#/offer/det");
   await page.getByRole("button", { name: "Reserve a portion" }).click();
-  await page.getByRole("button", { name: "Confirm & hold S$10.65" }).click();
+  await page.getByRole("button", { name: "Confirm & hold S$7.15" }).click();
   await page.getByRole("button", { name: "Looks good, proceed" }).click();
   await expect(
     page.getByRole("heading", { name: "Request sent" }),
@@ -1114,7 +1118,7 @@ test("a declined request releases the hold and explains why", async ({
   await expect(
     page.getByRole("heading", { name: "Request declined" }),
   ).toBeVisible();
-  await expect(page.getByText(/S\$10\.65 hold was released/)).toBeVisible();
+  await expect(page.getByText(/S\$7\.15 hold was released/)).toBeVisible();
 });
 
 test("the prototype lab switches Start a split between steps and one page mid-flow", async ({
@@ -1271,15 +1275,46 @@ test("/a runs UI A then UI B, times each task and uploads both ratings", async (
     await page
       .locator('input[type="file"]')
       .setInputFiles("public/assets/bag.png");
-    await page.getByRole("button", { name: /TOP/ }).click();
-    if (ui === "A") {
-      await expect(page.getByText("Step 1 of 4")).toBeVisible();
-      await page.getByRole("button", { name: "Set portions & price" }).click();
-    } else await expect(page.getByText("Step 1 of 4")).toHaveCount(0);
-    if (ui === "A")
-      for (const name of ["Arrange pickup", "Review split"])
-        await page.getByRole("button", { name }).click();
+    // The photo gets an "in real life" pop-up about the AI scan, and the
+    // form only opens after OK, already filled in from the "scan".
+    await expect(
+      page.getByRole("heading", { name: "AI reads your price tag" }),
+    ).toBeVisible();
+    await expect(page.getByText("Step 1 of 4")).toHaveCount(0);
+    await page.getByRole("button", { name: "OK", exact: true }).click();
+    await expect(page.getByLabel("Item name")).toHaveValue(
+      "TOP liquid laundry detergent",
+    );
+    // The task asks for changes the scan didn't fill in: share 2, Level 3.
+    const next = (name: string) =>
+      ui === "A" ? page.getByRole("button", { name }).click() : undefined;
+    if (ui === "A") await expect(page.getByText("Step 1 of 4")).toBeVisible();
+    else await expect(page.getByText("Step 1 of 4")).toHaveCount(0);
+    await next("Set portions & price");
+    await expect(page.getByLabel("Items to share")).toHaveValue("1");
+    await page.getByLabel("Items to share").selectOption("2");
+    await next("Arrange pickup");
+    await expect(page.getByLabel("Pickup point")).toHaveValue(
+      "Bugis+ · Level 1 entrance",
+    );
+    await page.getByLabel("Pickup point").fill("Bugis+ · Level 3 entrance");
+    // Both layouts end on the same review screen.
+    await page.getByRole("button", { name: "Review split" }).click();
+    await expect(page.getByText("Step 4 of 4")).toBeVisible();
     await page.getByRole("button", { name: "Publish split" }).click();
+    await expect
+      .poll(() =>
+        page.evaluate(() => {
+          const s = JSON.parse(localStorage.getItem("sharelah-demo-v1")!);
+          const p = s.products.find((p: any) => p.owner && p.id.length === 36);
+          return [
+            p?.shareCount,
+            p?.place,
+            s.joinRequests[p?.id]?.[0]?.quantity,
+          ];
+        }),
+      )
+      .toEqual([2, "Bugis+ · Level 3 entrance", 2]);
     // Each of Jerry's steps is explained by an "in real life" pop-up that
     // appears 5 seconds after the screen changes.
     const ok = page.getByRole("button", { name: "OK", exact: true });
@@ -1363,6 +1398,7 @@ test("/b shows UI B first", async ({ page }) => {
   await page
     .locator('input[type="file"]')
     .setInputFiles("public/assets/bag.png");
+  await page.getByRole("button", { name: "OK", exact: true }).click();
   await expect(
     page.getByRole("region", { name: /Portions & price/ }),
   ).toBeVisible();

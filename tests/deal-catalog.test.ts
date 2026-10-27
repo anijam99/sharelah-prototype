@@ -79,7 +79,7 @@ it("uses the advertised multibuy totals rather than single-item shelf prices", (
   expect(lemon.priceCents).toBe(2100);
   expect(
     allocation(lemon.priceCents, lemon.bundleCount!, 1).neighbourTotal,
-  ).toBe(1065);
+  ).toBe(715);
   const sixPack = seedDeals.find((d) => d.id === "photo-kirin-six")!;
   expect(sixPack.bundleCount).toBe(6);
   expect(sixPack.priceCents).toBe(1790);

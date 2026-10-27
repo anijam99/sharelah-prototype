@@ -21,6 +21,15 @@ vi.mock("../src/ui", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../src/ui")>()),
   QRCode: () => <div aria-label="Pickup QR code" />,
 }));
+/** Fill in the item the way the AI price-tag scan would. */
+const fillItem = () => {
+  for (const [label, value] of [
+    ["Item name", "TOP liquid laundry detergent"],
+    ["One portion", "1 bottle · 2.3 kg"],
+    ["Store", "FairPrice · Bugis Junction"],
+  ])
+    fireEvent.change(screen.getByLabelText(label), { target: { value } });
+};
 const click = (name: string | RegExp) =>
   fireEvent.click(screen.getByRole("button", { name }));
 const navigate = (path: string) => act(() => go(path));
@@ -144,7 +153,7 @@ it("reserves via a sheet, saves the chosen payment, and cancels without leaving 
   click(/Payment method · Change/);
   click(/ShareLah wallet/);
   click("Use payment method");
-  click("Confirm & hold S$10.65");
+  click("Confirm & hold S$7.15");
   expect(screen.getByRole("timer").getAttribute("aria-label")).toBe(
     "Confirmation in 5 seconds",
   );
@@ -328,7 +337,7 @@ it("validates a new listing, computes its portions, publishes it, and resets onl
   click(/Start a split manually/);
   click("Set portions & price");
   expect(screen.getByRole("alert").textContent).toContain("Add an item");
-  click(/TOP/);
+  fillItem();
   click("Set portions & price");
   fireEvent.change(screen.getByLabelText("Bundle price (S$)"), {
     target: { value: "10.01" },
@@ -366,7 +375,7 @@ it("opens the camera for a deal report and offers a usable permission-denied fal
     expect.objectContaining({ audio: false }),
   );
   click("Continue without a photo");
-  click(/Demo autofill/);
+  fillItem();
   fireEvent.change(screen.getByLabelText("Advertised price (S$)"), {
     target: { value: "12.50" },
   });
@@ -383,7 +392,7 @@ it.each(["A", "C"])(
     render(<App />);
     click("Open TOP liquid laundry detergent");
     click("Reserve a portion");
-    click("Confirm & hold S$10.65");
+    click("Confirm & hold S$7.15");
     act(() => vi.advanceTimersByTime(3000));
     click(variant === "C" ? "Go back" : "Cancel reservation");
     expect(location.hash).toBe("#/offer/det");
@@ -401,7 +410,7 @@ it.each(["A", "C"])(
     const view = render(<App />);
     click("Open TOP liquid laundry detergent");
     click("Reserve a portion");
-    click("Confirm & hold S$10.65");
+    click("Confirm & hold S$7.15");
     act(() => vi.advanceTimersByTime(2000));
     click("B · Extra confirmation");
     view.unmount();
@@ -429,7 +438,7 @@ it("abandons the countdown on navigation and rejects a direct countdown URL", ()
   navigate("/holding/det");
   expect(location.hash).toBe("#/offer/det");
   click("Reserve a portion");
-  click("Confirm & hold S$10.65");
+  click("Confirm & hold S$7.15");
   navigate("/");
   act(() => vi.advanceTimersByTime(6000));
   expect(saved().reservations.det).toBeUndefined();
@@ -516,15 +525,15 @@ it("backfills completed demo splits into Past and itemizes the existing savings"
   click("Past");
   const cards = document.querySelectorAll(".offer-card");
   expect(cards).toHaveLength(4);
-  expect(screen.getByText("S$14.20")).toBeTruthy();
+  expect(screen.getByText("S$17.70")).toBeTruthy();
   expect(screen.queryByText("Your shared wins will live here.")).toBeNull();
   click("Open TOP liquid laundry detergent");
   expect(
     screen.getByRole("heading", { name: "Split complete", level: 1 }),
   ).toBeTruthy();
-  expect(screen.getByText("S$10.65 released")).toBeTruthy();
+  expect(screen.getByText("S$7.15 released")).toBeTruthy();
   navigate("/profile/savings");
-  expect(screen.getByRole("heading", { name: "S$14.20" })).toBeTruthy();
+  expect(screen.getByRole("heading", { name: "S$17.70" })).toBeTruthy();
   expect(screen.queryByText("Previous demo savings")).toBeNull();
   click(/Cloud-soft everyday socks 7 Oct 2026/);
   expect(screen.getByText("S$4.15 released")).toBeTruthy();
@@ -630,22 +639,30 @@ it("the one-page layout flags each incomplete section and publishes the same spl
   fireEvent.change(screen.getByLabelText("Pickup point"), {
     target: { value: "" },
   });
-  click("Publish split");
+  click("Review split");
   const section = (name: string) =>
     screen.getByRole("region", { name: new RegExp(name) });
   expect(within(section("Item")).getByRole("alert").textContent).toContain(
     "Add an item",
   );
   expect(within(section("Pickup")).getByRole("alert")).toBeTruthy();
-  click(/TOP/);
-  // Filling the example clears the errors and fills the bundle price.
+  fillItem();
+  // Editing a section clears its error.
   expect(within(section("Item")).queryByRole("alert")).toBeNull();
-  expect(
-    (screen.getByLabelText("Bundle price (S$)") as HTMLInputElement).value,
-  ).toBe("21");
+  fireEvent.change(screen.getByLabelText("Bundle price (S$)"), {
+    target: { value: "21" },
+  });
   fireEvent.change(screen.getByLabelText("Pickup point"), {
     target: { value: "Bugis+ · Main entrance" },
   });
+  click("Review split");
+  // B ends on the same review screen as A's step 4.
+  expect(screen.getByText("Step 4 of 4")).toBeTruthy();
+  // Edit returns to the one page, not to a separate step.
+  click("Edit pickup");
+  expect(screen.queryByText(/Step \d of 4/)).toBeNull();
+  expect(screen.getByLabelText("Pickup point")).toBeTruthy();
+  click("Review split");
   click("Publish split");
   const p = saved().products.find((p: any) => p.owner);
   expect(p).toMatchObject({

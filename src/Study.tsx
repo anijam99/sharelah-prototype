@@ -30,20 +30,27 @@ function TaskText({ round }: { round: number }) {
     <>
       <p>
         {round === 0
-          ? "Imagine you bought a bulk pack and want to split it with a neighbour."
+          ? "Imagine you’re shopping at FairPrice · Bugis Junction, near where you live in Bugis."
           : "You’ll do the same task again, this time on a slightly different version of the app."}
+      </p>
+      <p>
+        Pretend you’re buying <strong>TOP liquid laundry detergent</strong>. It’s sold
+        as a bundle of <strong>3 bottles for S$21.00</strong>, but you only need
+        1. You want to <strong>keep 1 bottle</strong> and{" "}
+        <strong>share 2</strong> with a neighbour, who will collect them at{" "}
+        <strong>Bugis+ · Level 3 entrance</strong> today.
       </p>
       <ol>
         <li>
           Tap the <strong>Share</strong> icon and start a split from a price tag
-          by <strong>taking a picture</strong> of any price tag.
+          by <strong>taking a picture</strong> of any price tag. The app fills
+          in the detergent’s details from your photo.
         </li>
         <li>
-          Share a split for <strong>TOP liquid laundry detergent</strong> from
-          FairPrice: 2 bottles for <strong>S$21.00</strong>, sharing{" "}
-          <strong>1</strong>. Tap the <strong>Demo autofill</strong> button to
-          prefill the details, then choose any pickup point, day and time, and
-          publish.
+          Check the details and change anything that doesn’t match: keep{" "}
+          <strong>1</strong> bottle, share <strong>2</strong>, and set the
+          pickup point to <strong>Bugis+ · Level 3 entrance</strong>, today at
+          any time. Then publish.
         </li>
         <li>
           When a neighbour asks to join, <strong>accept</strong> them, then
@@ -82,11 +89,11 @@ const RATING_DELAY_MS = 5000, // Let them see the completed split before the sur
 const narrations: Record<Narration, { title: string; body: string }> = {
   purchase: {
     title: "Time to buy the bundle",
-    body: "Pretend you've gone to FairPrice and bought the 2-bottle bundle. When you're done, tap Mark purchased & notify.",
+    body: "Pretend you've gone to FairPrice and bought the 3-bottle bundle. When you're done, tap Mark purchased & notify.",
   },
   scan: {
     title: "Jerry is on his way",
-    body: "Jerry meets you at the pickup point and collects the bottle you bought for him. He then scans the pickup code on your screen, and once it’s scanned, the split is complete. Tap OK to see the scan happen.",
+    body: "Jerry meets you at the pickup point and collects the bottles you bought for him. He then scans the pickup code on your screen, and once it’s scanned, the split is complete. Tap OK to see the scan happen.",
   },
 };
 const likert = [

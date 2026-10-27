@@ -77,7 +77,7 @@ describe("Reservation lifecycle", () => {
       (p) => s.reservations[p.id]?.status === "completed",
     );
     expect(past).toHaveLength(4);
-    expect(completedSavings(s)).toBe(1420);
+    expect(completedSavings(s)).toBe(1770);
     expect(
       past.every((p) => p.closed && p.purchased && p.available === 0),
     ).toBe(true);
@@ -90,7 +90,7 @@ describe("Reservation lifecycle", () => {
     expect(migrated.products).toHaveLength(s.products.length);
     expect(migrated.reservations[past[0].id].reviewComment).toBe("Easy pickup");
     expect(migrated.reservations.det.status).toBe("reserved");
-    expect(completedSavings(complete(migrated, "yog", true))).toBe(1455);
+    expect(completedSavings(complete(migrated, "yog", true))).toBe(1805);
   });
   it("starts with yoghurt in the tester’s splits", () => {
     const s = initialState();

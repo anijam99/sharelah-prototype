@@ -1,8 +1,8 @@
 import { Pizza } from "./Pizza";
 import { dealCategories } from "./dealCatalog";
 import { CachedPhotos } from "./CachedPhotos";
-import { useId, useState, type ReactNode } from "react";
-import { Images, Sparkles } from "lucide-react";
+import { useEffect, useId, useState, type ReactNode } from "react";
+import { Images } from "lucide-react";
 import { Camera } from "./Camera";
 import { Art, Button, Header, Photo } from "./ui";
 import {
@@ -38,13 +38,24 @@ const sections: Record<Section, { n: number; title: string; hint: string }> = {
   pickup: { n: 3, title: "Pickup", hint: "Where and when neighbours collect." },
 };
 
-/** The sample used by the demo autofill and the simulated AR price tag. */
+/** What the simulated AI price-tag scan "reads" from any photo. */
 const sample = seedProducts.find((q) => q.id === "det")!;
 
 /**
  * Simulated AR: the price-tag camera "recognises" the sample's shelf tag and
  * shows the per-item price. Nothing is read from the camera feed.
  */
+const scanned: Partial<Product> = {
+  title: sample.title,
+  portion: sample.portion,
+  art: sample.art,
+  category: sample.category,
+  store: sample.store,
+  bundleCents: sample.bundleCents,
+  bundleCount: sample.bundleCount,
+  shareCount: sample.shareCount,
+  retailCents: sample.retailCents,
+};
 const arSample = {
   title: sample.title,
   deal: `${sample.bundleCount} for ${money(sample.bundleCents)}`,
@@ -100,13 +111,25 @@ export function Create({
     // "From a price tag" always opens the camera, even if an earlier draft
     // (or the demo autofill) already left a photo behind.
     [camera, setCamera] = useState(mode === "camera" || mode === "deal"),
-    // A posted deal starts empty every time (Demo autofill fills it in); it
+    // A posted deal starts empty every time (a photo fills it in); it
     // never shares the saved Start-a-split draft.
     [dealDraft, setDealDraft] = useState<Partial<Product>>({}),
     [cachedPhotos, setCachedPhotos] = useState(false),
+    // In the study, the AI-scan pop-up holds the camera until they tap OK.
+    [scanNote, setScanNote] = useState(false),
     // Remounts the uncontrolled price inputs when an example fills them in.
     [filled, setFilled] = useState(0);
-  const onePage = layout === "B" && mode !== "deal";
+  // B shows the fields on one page, then the same review screen as A's step 4.
+  const onePage = layout === "B" && mode !== "deal" && stage < 4;
+  // In B, Edit on the review screen returns to the one page at that section.
+  useEffect(() => {
+    if (onePage && stage > 1)
+      document
+        .getElementById(
+          "create-" + (["item", "portions", "pickup"] as const)[stage - 1],
+        )
+        ?.scrollIntoView?.({ block: "start" });
+  }, [onePage, stage]);
   const p: Product = {
     ...seedProducts[0],
     title: "",
@@ -136,13 +159,22 @@ export function Create({
       change(values);
       setSectionErrors((e) => ({ ...e, [section]: undefined }));
     };
+  function leaveCamera() {
+    setCamera(false);
+    if (mode === "camera") go("/create/1", undefined, true);
+  }
+  /** A photo is "scanned" and fills in the item details (simulated AI). */
+  function applyPhoto(photo: string) {
+    change({ ...scanned, photo });
+    setFilled((n) => n + 1);
+    setSectionErrors({});
+    if (studyRoute()) setScanNote(true);
+    else leaveCamera();
+  }
   async function attach(blob: Blob) {
     setSaving(true);
     try {
-      const photo = await savePhoto(blob);
-      change({ photo });
-      setCamera(false);
-      if (mode === "camera") go("/create/1", undefined, true);
+      applyPhoto(await savePhoto(blob));
     } catch {
       setError(
         "This photo could not be saved. Free some browser storage and try again.",
@@ -197,7 +229,8 @@ export function Create({
     }));
     finish("/deal/" + id, "/");
   }
-  function publishSplit() {
+  /** Flags every incomplete section; true when the split is ready. */
+  function checkAll() {
     const found = problems(p);
     setSectionErrors(found);
     const first = (["item", "portions", "pickup"] as const).find(
@@ -213,8 +246,12 @@ export function Create({
       document
         .getElementById("create-" + first)
         ?.scrollIntoView?.({ block: "start", behavior: "smooth" });
-      return;
+      return false;
     }
+    return true;
+  }
+  function publishSplit() {
+    if (!checkAll()) return;
     const id = crypto.randomUUID(),
       share = p.shareCount || 1;
     const product: Product = {
@@ -231,13 +268,16 @@ export function Create({
         100000 + (crypto.getRandomValues(new Uint32Array(1))[0] % 900000),
       ),
     };
-    // Jerry asks to join shortly after the split goes live.
+    // Jerry asks to join shortly after the split goes live. In the study he
+    // asks for every shared portion, so the task ends with one handover.
+    const study = !!studyRoute();
     update((s) =>
       requestToJoin(
         { ...s, products: [...s.products, product], createDraft: {} },
         id,
         "jerry",
-        new Date(Date.now() + (studyRoute() ? 3000 : 8000)).toISOString(),
+        new Date(Date.now() + (study ? 3000 : 8000)).toISOString(),
+        study ? share : 1,
       ),
     );
     finish("/hosting/" + id + "?published=1");
@@ -247,27 +287,51 @@ export function Create({
       key={"item" + filled}
       p={p}
       change={changeIn("item")}
-      fillExample={() => {
-        setFilled((n) => n + 1);
-        setSectionErrors({});
-      }}
       takePhoto={() => setCamera(true)}
       chooseSaved={() => setCachedPhotos(true)}
       deal={mode === "deal"}
     />
   );
+
   return (
     <>
       {cachedPhotos && (
         <CachedPhotos
           onClose={() => setCachedPhotos(false)}
           onSelect={(photo) => {
-            change({ photo });
             setCachedPhotos(false);
-            setCamera(false);
-            if (mode === "camera") go("/create/1", undefined, true);
+            applyPhoto(photo);
           }}
         />
+      )}
+      {scanNote && (
+        <div
+          className="narration"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="scan-note-title"
+        >
+          {/* Styled like the study's other "in real life" iOS alerts. */}
+          <div className="ios-alert">
+            <div className="ios-alert-text">
+              <h2 id="scan-note-title">AI reads your price tag</h2>
+              <p>
+                In the real app, AI image detection scans the product
+                information on your photo and fills in the split for you: the
+                item name, portion, store and bundle price. Tap OK to see the
+                details it found.
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                setScanNote(false);
+                leaveCamera();
+              }}
+            >
+              OK
+            </button>
+          </div>
+        </div>
       )}
       <Header
         title={
@@ -292,7 +356,11 @@ export function Create({
         onBack={() =>
           camera && mode === "split"
             ? setCamera(false)
-            : back(!onePage && stage > 1 ? "/create/" + (stage - 1) : "/")
+            : back(
+                onePage || stage === 1
+                  ? "/"
+                  : "/create/" + (layout === "B" ? 1 : stage - 1),
+              )
         }
       />
       <main className={"page-scroll" + (camera ? " capture-page" : "")}>
@@ -322,10 +390,7 @@ export function Create({
               <button
                 className="text-button capture-skip"
                 disabled={saving}
-                onClick={() => {
-                  setCamera(false);
-                  if (mode === "camera") go("/create/1", undefined, true);
-                }}
+                onClick={leaveCamera}
               >
                 Continue without a photo
               </button>
@@ -413,20 +478,24 @@ export function Create({
             onClick={
               mode === "deal"
                 ? publishDeal
-                : onePage || stage === 4
+                : stage === 4
                   ? publishSplit
-                  : next
+                  : onePage
+                    ? () => checkAll() && go("/create/4", "Pickup")
+                    : next
             }
           >
             {mode === "deal"
               ? "Post deal"
-              : onePage || stage === 4
+              : stage === 4
                 ? "Publish split"
-                : stage === 1
-                  ? "Set portions & price"
-                  : stage === 2
-                    ? "Arrange pickup"
-                    : "Review split"}
+                : onePage
+                  ? "Review split"
+                  : stage === 1
+                    ? "Set portions & price"
+                    : stage === 2
+                      ? "Arrange pickup"
+                      : "Review split"}
           </Button>
         </footer>
       )}
@@ -484,14 +553,12 @@ function CreateSection({
 function ItemFields({
   p,
   change,
-  fillExample,
   takePhoto,
   chooseSaved,
   deal,
 }: {
   p: Product;
   change: Change;
-  fillExample: () => void;
   takePhoto: () => void;
   chooseSaved: () => void;
   deal: boolean;
@@ -516,32 +583,7 @@ function ItemFields({
         </div>
       </div>
       <div className="field">
-        <div className="field-label-row">
-          <label htmlFor={nameId}>Item name</label>
-          <button
-            className="demo-autofill"
-            aria-label={`Demo autofill: ${sample.title} (for demo purposes only)`}
-            title="For demo purposes only. Fills in a sample item and price."
-            onClick={() => {
-              change({
-                title: sample.title,
-                portion: sample.portion,
-                art: sample.art,
-                photo: p.photo ?? sample.photo,
-                category: sample.category,
-                store: sample.store,
-                bundleCents: sample.bundleCents,
-                bundleCount: sample.bundleCount,
-                shareCount: sample.shareCount,
-                retailCents: sample.retailCents,
-              });
-              fillExample();
-            }}
-          >
-            <Sparkles size={13} aria-hidden="true" />
-            Demo autofill
-          </button>
-        </div>
+        <label htmlFor={nameId}>Item name</label>
         <input
           id={nameId}
           value={p.title}

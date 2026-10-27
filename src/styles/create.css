@@ -122,36 +122,6 @@
   width: 100%;
 }
 
-.field-label-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-/* Clearly not part of the product: a small dashed, neutral demo shortcut. */
-.demo-autofill {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  min-height: 28px;
-  padding: 3px 9px;
-  border: 1.5px dashed #a99c90;
-  border-radius: 999px;
-  background: #f4efe9;
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-@media (hover: hover) {
-  .demo-autofill:hover {
-    border-color: var(--ink);
-    color: var(--ink);
-  }
-}
-
 .split-preview {
   display: flex;
   align-items: center;
