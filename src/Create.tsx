@@ -1,8 +1,8 @@
 import { Pizza } from "./Pizza";
 import { dealCategories } from "./dealCatalog";
 import { CachedPhotos } from "./CachedPhotos";
-import { useEffect, useId, useState, type ReactNode } from "react";
-import { Images } from "lucide-react";
+import { useId, useState, type ReactNode } from "react";
+import { Images, Sparkles } from "lucide-react";
 import { Camera } from "./Camera";
 import { Art, Button, Header, Photo } from "./ui";
 import {
@@ -115,21 +115,12 @@ export function Create({
     // never shares the saved Start-a-split draft.
     [dealDraft, setDealDraft] = useState<Partial<Product>>({}),
     [cachedPhotos, setCachedPhotos] = useState(false),
-    // In the study, the AI-scan pop-up holds the camera until they tap OK.
+    // The AI autofill pill opens an explanation of the price-tag scan.
     [scanNote, setScanNote] = useState(false),
     // Remounts the uncontrolled price inputs when an example fills them in.
     [filled, setFilled] = useState(0);
-  // B shows the fields on one page, then the same review screen as A's step 4.
-  const onePage = layout === "B" && mode !== "deal" && stage < 4;
-  // In B, Edit on the review screen returns to the one page at that section.
-  useEffect(() => {
-    if (onePage && stage > 1)
-      document
-        .getElementById(
-          "create-" + (["item", "portions", "pickup"] as const)[stage - 1],
-        )
-        ?.scrollIntoView?.({ block: "start" });
-  }, [onePage, stage]);
+  // B shows the fields and, at the bottom, the same review cards as A's step 4.
+  const onePage = layout === "B" && mode !== "deal";
   const p: Product = {
     ...seedProducts[0],
     title: "",
@@ -168,8 +159,7 @@ export function Create({
     change({ ...scanned, photo });
     setFilled((n) => n + 1);
     setSectionErrors({});
-    if (studyRoute()) setScanNote(true);
-    else leaveCamera();
+    leaveCamera();
   }
   async function attach(blob: Blob) {
     setSaving(true);
@@ -268,16 +258,13 @@ export function Create({
         100000 + (crypto.getRandomValues(new Uint32Array(1))[0] % 900000),
       ),
     };
-    // Jerry asks to join shortly after the split goes live. In the study he
-    // asks for every shared portion, so the task ends with one handover.
-    const study = !!studyRoute();
+    // Jerry asks to join shortly after the split goes live.
     update((s) =>
       requestToJoin(
         { ...s, products: [...s.products, product], createDraft: {} },
         id,
         "jerry",
-        new Date(Date.now() + (study ? 3000 : 8000)).toISOString(),
-        study ? share : 1,
+        new Date(Date.now() + (studyRoute() ? 3000 : 8000)).toISOString(),
       ),
     );
     finish("/hosting/" + id + "?published=1");
@@ -289,6 +276,7 @@ export function Create({
       change={changeIn("item")}
       takePhoto={() => setCamera(true)}
       chooseSaved={() => setCachedPhotos(true)}
+      explainScan={() => setScanNote(true)}
       deal={mode === "deal"}
     />
   );
@@ -311,25 +299,22 @@ export function Create({
           aria-modal="true"
           aria-labelledby="scan-note-title"
         >
-          {/* Styled like the study's other "in real life" iOS alerts. */}
           <div className="ios-alert">
             <div className="ios-alert-text">
-              <h2 id="scan-note-title">AI reads your price tag</h2>
+              <h2 id="scan-note-title">AI autofill</h2>
               <p>
-                In the real app, AI image detection scans the product
-                information on your photo and fills in the split for you: the
-                item name, portion, store and bundle price. Tap OK to see the
-                details it found.
+                AI image detection scanned the product information on your
+                price-tag photo and filled in the details for you: the item
+                name, portion, store, category and bundle price.
+              </p>
+              <p>
+                <strong>
+                  AI can make mistakes, so check every detail and change
+                  anything that doesn’t match before you publish.
+                </strong>
               </p>
             </div>
-            <button
-              onClick={() => {
-                setScanNote(false);
-                leaveCamera();
-              }}
-            >
-              OK
-            </button>
+            <button onClick={() => setScanNote(false)}>OK</button>
           </div>
         </div>
       )}
@@ -356,11 +341,7 @@ export function Create({
         onBack={() =>
           camera && mode === "split"
             ? setCamera(false)
-            : back(
-                onePage || stage === 1
-                  ? "/"
-                  : "/create/" + (layout === "B" ? 1 : stage - 1),
-              )
+            : back(onePage || stage === 1 ? "/" : "/create/" + (stage - 1))
         }
       />
       <main className={"page-scroll" + (camera ? " capture-page" : "")}>
@@ -466,6 +447,29 @@ export function Create({
                 </CreateSection>
               )}
               {!onePage && stage === 4 && <ReviewSummary p={p} jump={jump} />}
+              {onePage && (
+                <>
+                  <p className="create-intro review-heading">
+                    Review your split
+                  </p>
+                  {/* Edit scrolls back up to that section on the same page. */}
+                  <ReviewSummary
+                    p={p}
+                    idPrefix="review-"
+                    jump={(n) =>
+                      document
+                        .getElementById(
+                          "create-" +
+                            (["item", "portions", "pickup"] as const)[n - 1],
+                        )
+                        ?.scrollIntoView?.({
+                          block: "start",
+                          behavior: "smooth",
+                        })
+                    }
+                  />
+                </>
+              )}
               {(onePage || stage === 4) && <ErrorNotice message={error} />}
             </>
           )}
@@ -481,7 +485,7 @@ export function Create({
                 : stage === 4
                   ? publishSplit
                   : onePage
-                    ? () => checkAll() && go("/create/4", "Pickup")
+                    ? publishSplit
                     : next
             }
           >
@@ -490,7 +494,7 @@ export function Create({
               : stage === 4
                 ? "Publish split"
                 : onePage
-                  ? "Review split"
+                  ? "Publish split"
                   : stage === 1
                     ? "Set portions & price"
                     : stage === 2
@@ -514,11 +518,14 @@ function ErrorNotice({ message }: { message: string }) {
 /** One numbered section card, used by both layouts and the review step. */
 function CreateSection({
   id,
+  idPrefix = "create-",
   error,
   action,
   children,
 }: {
   id: Section;
+  /** Keeps element ids unique when B shows review cards below the fields. */
+  idPrefix?: string;
   error?: string;
   action?: ReactNode;
   children: ReactNode;
@@ -526,16 +533,16 @@ function CreateSection({
   const { n, title, hint } = sections[id];
   return (
     <section
-      id={"create-" + id}
+      id={idPrefix + id}
       className={"create-section" + (error ? " invalid" : "")}
-      aria-labelledby={"create-" + id + "-title"}
+      aria-labelledby={idPrefix + id + "-title"}
     >
       <header>
         <span className="section-number" aria-hidden="true">
           {n}
         </span>
         <div>
-          <h3 id={"create-" + id + "-title"}>{title}</h3>
+          <h3 id={idPrefix + id + "-title"}>{title}</h3>
           {!action && <p>{hint}</p>}
         </div>
         {action}
@@ -555,12 +562,14 @@ function ItemFields({
   change,
   takePhoto,
   chooseSaved,
+  explainScan,
   deal,
 }: {
   p: Product;
   change: Change;
   takePhoto: () => void;
   chooseSaved: () => void;
+  explainScan: () => void;
   deal: boolean;
 }) {
   const nameId = useId();
@@ -583,7 +592,20 @@ function ItemFields({
         </div>
       </div>
       <div className="field">
-        <label htmlFor={nameId}>Item name</label>
+        <div className="field-label-row">
+          <label htmlFor={nameId}>Item name</label>
+          {/* Only a scanned photo fills the form, so only then is it "AI". */}
+          {p.photo && (
+            <button
+              className="ai-autofill"
+              aria-label="AI autofill: what was filled in"
+              onClick={explainScan}
+            >
+              <Sparkles size={13} aria-hidden="true" />
+              AI autofill
+            </button>
+          )}
+        </div>
         <input
           id={nameId}
           value={p.title}
@@ -789,7 +811,15 @@ function PickupFields({ p, change }: { p: Product; change: Change }) {
 }
 
 /** Step 4 of layout A: the same section cards, read-only, each with Edit. */
-function ReviewSummary({ p, jump }: { p: Product; jump: (n: number) => void }) {
+function ReviewSummary({
+  p,
+  jump,
+  idPrefix,
+}: {
+  p: Product;
+  jump: (n: number) => void;
+  idPrefix?: string;
+}) {
   const count = p.bundleCount || 2,
     share = p.shareCount || 1,
     prices = allocation(p.bundleCents, count, share);
@@ -804,7 +834,7 @@ function ReviewSummary({ p, jump }: { p: Product; jump: (n: number) => void }) {
   );
   return (
     <>
-      <CreateSection id="item" action={edit(1, "item")}>
+      <CreateSection id="item" idPrefix={idPrefix} action={edit(1, "item")}>
         <div className="review-item">
           {p.photo ? <Photo id={p.photo} alt={p.title} /> : <Art p={p} />}
           <div>
@@ -816,7 +846,11 @@ function ReviewSummary({ p, jump }: { p: Product; jump: (n: number) => void }) {
           </div>
         </div>
       </CreateSection>
-      <CreateSection id="portions" action={edit(2, "portions")}>
+      <CreateSection
+        id="portions"
+        idPrefix={idPrefix}
+        action={edit(2, "portions")}
+      >
         <div className="price-rows">
           <div>
             <span>Bundle</span>
@@ -842,7 +876,7 @@ function ReviewSummary({ p, jump }: { p: Product; jump: (n: number) => void }) {
           </div>
         </div>
       </CreateSection>
-      <CreateSection id="pickup" action={edit(3, "pickup")}>
+      <CreateSection id="pickup" idPrefix={idPrefix} action={edit(3, "pickup")}>
         <div className="review-pickup">
           <strong>{p.place}</strong>
           <span>

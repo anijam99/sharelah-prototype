@@ -46,6 +46,11 @@
   color: var(--muted);
 }
 
+.review-heading {
+  margin-top: 8px;
+  font-weight: 600;
+}
+
 .create-progress .step-name {
   display: none;
 }
@@ -120,6 +125,33 @@
 .field-row select {
   min-width: 0;
   width: 100%;
+}
+
+.field-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+/* Marks details filled in from the price-tag scan; opens what it did. */
+.ai-autofill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 28px;
+  padding: 3px 10px;
+  border: 1px solid var(--peach);
+  border-radius: 999px;
+  background: var(--tint);
+  color: var(--brand);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.ios-alert p + p {
+  margin-top: 8px;
 }
 
 .split-preview {

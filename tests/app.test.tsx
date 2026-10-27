@@ -639,9 +639,10 @@ it("the one-page layout flags each incomplete section and publishes the same spl
   fireEvent.change(screen.getByLabelText("Pickup point"), {
     target: { value: "" },
   });
-  click("Review split");
+  click("Publish split");
+  // The form's section comes first; the review copy is at the bottom.
   const section = (name: string) =>
-    screen.getByRole("region", { name: new RegExp(name) });
+    screen.getAllByRole("region", { name: new RegExp(name) })[0];
   expect(within(section("Item")).getByRole("alert").textContent).toContain(
     "Add an item",
   );
@@ -655,14 +656,10 @@ it("the one-page layout flags each incomplete section and publishes the same spl
   fireEvent.change(screen.getByLabelText("Pickup point"), {
     target: { value: "Bugis+ · Main entrance" },
   });
-  click("Review split");
-  // B ends on the same review screen as A's step 4.
-  expect(screen.getByText("Step 4 of 4")).toBeTruthy();
-  // Edit returns to the one page, not to a separate step.
-  click("Edit pickup");
-  expect(screen.queryByText(/Step \d of 4/)).toBeNull();
-  expect(screen.getByLabelText("Pickup point")).toBeTruthy();
-  click("Review split");
+  // The same review cards as A's step 4 sit at the bottom and update live.
+  expect(screen.getByText("Review your split")).toBeTruthy();
+  expect(screen.getByText("Bugis+ · Main entrance")).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Edit pickup" })).toBeTruthy();
   click("Publish split");
   const p = saved().products.find((p: any) => p.owner);
   expect(p).toMatchObject({

@@ -26,14 +26,12 @@ export type Study = {
     "welcome" | "profile" | "intro" | "task" | "rating" | "compare" | "done";
   /** Epoch ms when the current task started; 0 until the participant begins. */
   taskStart: number;
-  /** Epoch ms when Jerry collected and the round ended; 0 while in progress. */
+  /** Epoch ms when the split was published and the round ended; 0 while in progress. */
   taskEnd: number;
   rounds: [Round, Round];
   /** Asked once before task 1. */
   age?: string;
   occupation?: string;
-  /** "In real life" pop-ups already acknowledged in this round. */
-  narrated?: Narration[];
   /** Epoch ms when the split was published, which stops the task clock. */
   publishedAt?: number;
   /** After both tasks: which layout they'd use, why, and in their words. */
@@ -85,9 +83,6 @@ export const occupations = [
   "Other",
   "Prefer not to say",
 ];
-
-/** Jerry's steps, each explained by an "in real life" pop-up. */
-export type Narration = "purchase" | "scan";
 
 /** Rough device details from the browser, so no one has to type them. */
 export function deviceInfo(ua = navigator.userAgent) {

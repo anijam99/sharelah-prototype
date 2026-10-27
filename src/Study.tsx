@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "./ui";
 import { useStore } from "./store";
 import { go } from "./router";
-import { collectJoiner, hostedComplete, type Product } from "./model";
+import type { Product } from "./model";
 import {
   loadStudy,
   saveStudy,
@@ -12,7 +12,6 @@ import {
   themes,
   ageGroups,
   occupations,
-  type Narration,
   type Study as StudyState,
   type StudyRoute,
   type Round,
@@ -34,28 +33,23 @@ function TaskText({ round }: { round: number }) {
           : "You’ll do the same task again, this time on a slightly different version of the app."}
       </p>
       <p>
-        Pretend you’re buying <strong>TOP liquid laundry detergent</strong>. It’s sold
-        as a bundle of <strong>3 bottles for S$21.00</strong>, but you only need
-        1. You want to <strong>keep 1 bottle</strong> and{" "}
+        Pretend you’re buying <strong>TOP liquid laundry detergent</strong>.
+        It’s sold as a bundle of <strong>3 bottles for S$21.00</strong>, but you
+        only need 1. You want to <strong>keep 1 bottle</strong> and{" "}
         <strong>share 2</strong> with a neighbour, who will collect them at{" "}
         <strong>Bugis+ · Level 3 entrance</strong> today.
       </p>
       <ol>
         <li>
-          Tap the <strong>Share</strong> icon and start a split from a price tag
-          by <strong>taking a picture</strong> of any price tag. The app fills
-          in the detergent’s details from your photo.
+          The app opens on the camera. <strong>Take a picture</strong> of any
+          price tag. <strong>AI autofill</strong> fills in the detergent’s
+          details from your photo.
         </li>
         <li>
-          Check the details and change anything that doesn’t match: keep{" "}
-          <strong>1</strong> bottle, share <strong>2</strong>, and set the
-          pickup point to <strong>Bugis+ · Level 3 entrance</strong>, today at
-          any time. Then publish.
-        </li>
-        <li>
-          When a neighbour asks to join, <strong>accept</strong> them, then
-          follow the <strong>In real life</strong> notes to buy the bundle and
-          hand it over.
+          <strong>Check the details</strong> and change anything that doesn’t
+          match: keep <strong>1</strong> bottle, share <strong>2</strong>, and
+          set the pickup point to <strong>Bugis+ · Level 3 entrance</strong>,
+          today at any time. Then publish.
         </li>
       </ol>
     </>
@@ -80,22 +74,7 @@ function withRound(
     ) as StudyState["rounds"],
   };
 }
-const RATING_DELAY_MS = 5000, // Let them see the completed split before the survey.
-  /** Let people see the new screen before the pop-up explains it. */
-  NARRATION_DELAY_MS = 5000,
-  SCAN_MS = 1500;
 
-/** What happens in real life at each of Jerry's steps. */
-const narrations: Record<Narration, { title: string; body: string }> = {
-  purchase: {
-    title: "Time to buy the bundle",
-    body: "Pretend you've gone to FairPrice and bought the 3-bottle bundle. When you're done, tap Mark purchased & notify.",
-  },
-  scan: {
-    title: "Jerry is on his way",
-    body: "Jerry meets you at the pickup point and collects the bottles you bought for him. He then scans the pickup code on your screen, and once it’s scanned, the split is complete. Tap OK to see the scan happen.",
-  },
-};
 const likert = [
   "Very difficult",
   "Difficult",
@@ -130,7 +109,7 @@ export function Study({
   study: StudyState;
   setStudy: (fn: (s: StudyState) => StudyState) => void;
 }) {
-  const { state, update, reset } = useStore(),
+  const { state, reset } = useStore(),
     round = study.rounds[study.current],
     [busy, setBusy] = useState(false),
     [upload, setUpload] = useState<"idle" | "sending" | "sent" | "failed">(
@@ -141,13 +120,11 @@ export function Study({
     [preferred, setPreferred] = useState<CreateVariant | "none">(),
     [picked, setPicked] = useState<Theme[]>([]),
     [why, setWhy] = useState(""),
-    [showing, setShowing] = useState<Narration | null>(null),
     [age, setAge] = useState(study.age || ""),
     [occupation, setOccupation] = useState(study.occupation || "");
   const mine = state.products.find(hostedByParticipant);
 
-  // Task time runs from choosing "Start a split" (from a price tag or
-  // manually) until the split is published: the part where A and B differ.
+  // Task time runs from the camera opening until the split is published.
   useEffect(() => {
     if (
       study.phase === "task" &&
@@ -166,10 +143,11 @@ export function Study({
       !mine
     )
       return;
+    // Publishing ends the task and goes straight to the rating.
     const at = Date.now();
     setStudy((s) =>
       withRound(
-        { ...s, publishedAt: at },
+        { ...s, publishedAt: at, taskEnd: at, phase: "rating" },
         { seconds: Math.round((at - s.taskStart) / 100) / 10 },
       ),
     );
@@ -192,63 +170,16 @@ export function Study({
     return () => window.removeEventListener(VALIDATION_EVENT, blocked);
   }, [counting, setStudy]);
 
-  // After publishing, each of Jerry's steps gets an "in real life" pop-up,
-  // 5 seconds after the screen changes so people see it first.
-  const jerry = mine
-      ? (state.joinRequests[mine.id] || []).find((r) => r.person === "jerry")
-      : undefined,
-    accepted = jerry?.status === "accepted",
-    done = study.narrated || [],
-    next: Narration | null =
-      study.phase !== "task" || study.taskEnd || !mine
-        ? null
-        : accepted && !mine.purchased && !done.includes("purchase")
-          ? "purchase"
-          : accepted && mine.purchased && !done.includes("scan")
-            ? "scan"
-            : null;
-  useEffect(() => {
-    setShowing(null);
-    if (!next) return;
-    const timer = window.setTimeout(() => setShowing(next), NARRATION_DELAY_MS);
-    return () => window.clearTimeout(timer);
-  }, [next]);
-  function acknowledge(step: Narration) {
-    setShowing(null);
-    setStudy((s) => ({ ...s, narrated: [...(s.narrated || []), step] }));
-    // Jerry's scan only happens once they've read what it means.
-    if (step === "scan" && mine)
-      window.setTimeout(
-        () => update((s) => collectJoiner(s, mine.id, "jerry")),
-        SCAN_MS,
-      );
-  }
-
-  // The round ends when Jerry has collected; then ask for the rating.
-  const complete = !!mine && hostedComplete(state, mine);
-  useEffect(() => {
-    if (study.phase !== "task" || study.taskEnd || !complete) return;
-    setStudy((s) => ({ ...s, taskEnd: Date.now() }));
-  }, [complete, study.phase, study.taskEnd, setStudy]);
-  useEffect(() => {
-    if (study.phase !== "task" || !study.taskEnd) return;
-    const timer = window.setTimeout(
-      () => setStudy((s) => ({ ...s, phase: "rating" })),
-      RATING_DELAY_MS,
-    );
-    return () => window.clearTimeout(timer);
-  }, [study.phase, study.taskEnd, setStudy]);
-
   async function begin() {
     setBusy(true);
     await reset("seeded");
-    go("/", "Home", true);
+    // Each task opens straight on the price-tag camera.
+    go("/capture", "Home", true);
     setStudy((s) => ({
       ...s,
       phase: "task",
       taskStart: 0,
       taskEnd: 0,
-      narrated: [],
       publishedAt: 0,
     }));
     setBusy(false);
@@ -289,24 +220,7 @@ export function Study({
     void send(finished);
   }
 
-  if (study.phase === "task")
-    return showing ? (
-      <div
-        className="narration"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="narration-title"
-      >
-        {/* Styled like an iOS system alert so it reads as "outside" the app. */}
-        <div className="ios-alert">
-          <div className="ios-alert-text">
-            <h2 id="narration-title">{narrations[showing].title}</h2>
-            <p>{narrations[showing].body}</p>
-          </div>
-          <button onClick={() => acknowledge(showing)}>OK</button>
-        </div>
-      </div>
-    ) : null;
+  if (study.phase === "task") return null;
   const seconds = round.seconds ?? 0;
   return (
     <div className="study" role="dialog" aria-modal="true">
@@ -392,18 +306,15 @@ export function Study({
                 <strong>Background</strong>
                 <p>
                   In ShareLah, a host buys a bundle and shares part of it.
-                  Neighbours ask to join, the host accepts them, buys the
-                  bundle, and hands each portion over at a pickup point by
-                  scanning a code. In this task, you’re the host and Jerry is
-                  your neighbour.
+                  Neighbours ask to join and collect their portion from the host
+                  at a pickup point. In this task, you’re the host.
                 </p>
               </div>
             )}
             <TaskText round={study.current} />
             <p className="fine">
               These instructions stay visible beside the app. Work as you
-              normally would. The task ends by itself once Jerry has collected
-              his portion.
+              normally would. The task ends as soon as you publish the split.
             </p>
             <Button disabled={busy} onClick={begin}>
               {busy ? "Getting ready…" : "Start task"}

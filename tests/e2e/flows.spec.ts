@@ -1135,7 +1135,7 @@ test("the prototype lab switches Start a split between steps and one page mid-fl
     "Kirin Ichiban beer six-pack",
   );
   await expect(
-    page.getByRole("region", { name: /Portions & price/ }),
+    page.getByRole("region", { name: /Portions & price/ }).first(),
   ).toBeVisible();
   await page.reload();
   await expect(
@@ -1268,23 +1268,24 @@ test("/a runs UI A then UI B, times each task and uploads both ratings", async (
     ).toBeVisible();
     await page.getByRole("button", { name: "Start task" }).click();
     await expect(page.locator(".study")).toHaveCount(0);
-    await page.getByRole("button", { name: "Share" }).click();
-    await page
-      .getByRole("button", { name: /Start a split from a price tag/ })
-      .click();
+    // Each task opens straight on the price-tag camera.
+    await expect(
+      page.getByRole("heading", { name: "Photograph a price tag" }),
+    ).toBeVisible();
     await page
       .locator('input[type="file"]')
       .setInputFiles("public/assets/bag.png");
-    // The photo gets an "in real life" pop-up about the AI scan, and the
-    // form only opens after OK, already filled in from the "scan".
-    await expect(
-      page.getByRole("heading", { name: "AI reads your price tag" }),
-    ).toBeVisible();
-    await expect(page.getByText("Step 1 of 4")).toHaveCount(0);
-    await page.getByRole("button", { name: "OK", exact: true }).click();
+    // The photo opens the form already filled in, with no pop-up; the
+    // AI autofill pill explains it and reminds them to check.
     await expect(page.getByLabel("Item name")).toHaveValue(
       "TOP liquid laundry detergent",
     );
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await page.getByRole("button", { name: /AI autofill/ }).click();
+    await expect(
+      page.getByRole("dialog").getByText(/check every detail/),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "OK", exact: true }).click();
     // The task asks for changes the scan didn't fill in: share 2, Level 3.
     const next = (name: string) =>
       ui === "A" ? page.getByRole("button", { name }).click() : undefined;
@@ -1298,46 +1299,28 @@ test("/a runs UI A then UI B, times each task and uploads both ratings", async (
       "Bugis+ · Level 1 entrance",
     );
     await page.getByLabel("Pickup point").fill("Bugis+ · Level 3 entrance");
-    // Both layouts end on the same review screen.
-    await page.getByRole("button", { name: "Review split" }).click();
-    await expect(page.getByText("Step 4 of 4")).toBeVisible();
-    await page.getByRole("button", { name: "Publish split" }).click();
-    await expect
-      .poll(() =>
-        page.evaluate(() => {
-          const s = JSON.parse(localStorage.getItem("sharelah-demo-v1")!);
-          const p = s.products.find((p: any) => p.owner && p.id.length === 36);
-          return [
-            p?.shareCount,
-            p?.place,
-            s.joinRequests[p?.id]?.[0]?.quantity,
-          ];
-        }),
-      )
-      .toEqual([2, "Bugis+ · Level 3 entrance", 2]);
-    // Each of Jerry's steps is explained by an "in real life" pop-up that
-    // appears 5 seconds after the screen changes.
-    const ok = page.getByRole("button", { name: "OK", exact: true });
-    await page
-      .getByRole("button", { name: "Accept", exact: true })
-      .click({ timeout: 15_000 });
-    for (const [title, action] of [
-      ["Time to buy the bundle", "Mark purchased & notify"],
-      ["Jerry is on his way", ""],
-    ] as const) {
-      await expect(page.getByRole("heading", { name: title })).toBeVisible({
-        timeout: 15_000,
-      });
-      await ok.click();
-      if (action)
-        await page.getByRole("button", { name: action, exact: true }).click();
+    // A reviews on step 4; B has the same review cards at the bottom.
+    if (ui === "A") {
+      await page.getByRole("button", { name: "Review split" }).click();
+      await expect(page.getByText("Step 4 of 4")).toBeVisible();
+    } else {
+      await expect(page.getByText("Review your split")).toBeVisible();
+      await expect(page.locator(".review-pickup strong")).toHaveText(
+        "Bugis+ · Level 3 entrance",
+      );
     }
-    await expect(
-      page.getByRole("button", { name: /Simulate Jerry scanning/ }),
-    ).toHaveCount(0);
+    await page.getByRole("button", { name: "Publish split" }).click();
+    // Publishing ends the task: the rating appears straight away.
     await expect(
       page.getByText("Task " + round + " complete", { exact: false }),
-    ).toBeVisible({ timeout: 15_000 });
+    ).toBeVisible();
+    expect(
+      await page.evaluate(() => {
+        const s = JSON.parse(localStorage.getItem("sharelah-demo-v1")!);
+        const p = s.products.find((p: any) => p.owner && p.id.length === 36);
+        return [p?.shareCount, p?.place];
+      }),
+    ).toEqual([2, "Bugis+ · Level 3 entrance"]);
     await expect(page.getByText(/Task time: [\d.]+s/)).toBeVisible();
     await page.getByLabel(/What did you like/).fill("Felt fine");
     await page.getByRole("radio", { name: /^5,/ }).click();
@@ -1391,15 +1374,10 @@ test("/b shows UI B first", async ({ page }) => {
   await page.getByLabel("Occupation").selectOption("Student");
   await page.getByRole("button", { name: "Continue" }).click();
   await page.getByRole("button", { name: "Start task" }).click();
-  await page.getByRole("button", { name: "Share" }).click();
-  await page
-    .getByRole("button", { name: /Start a split from a price tag/ })
-    .click();
   await page
     .locator('input[type="file"]')
     .setInputFiles("public/assets/bag.png");
-  await page.getByRole("button", { name: "OK", exact: true }).click();
   await expect(
-    page.getByRole("region", { name: /Portions & price/ }),
+    page.getByRole("region", { name: /Portions & price/ }).first(),
   ).toBeVisible();
 });
