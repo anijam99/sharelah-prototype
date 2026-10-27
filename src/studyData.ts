@@ -12,6 +12,10 @@ export type Round = {
   pages?: number;
   /** Times a Next/Publish tap was blocked by a validation message. */
   errors?: number;
+  /** Whether the published pickup point was changed to Level 3. */
+  pickupLevel3?: boolean;
+  /** Whether the published split shares 2 items (keeping 1). */
+  share2?: boolean;
   /** Ease of use, 1–5. */
   rating?: number;
   comment?: string;
@@ -154,6 +158,13 @@ export function saveStudy(study: Study) {
 }
 
 /** One spreadsheet row per participant. */
+/** PASS when the published split has both changes the task asks for. */
+const taskSuccess = (r: Round) =>
+  r.pickupLevel3 === undefined
+    ? ""
+    : r.pickupLevel3 && r.share2
+      ? "PASS"
+      : "FAIL";
 export function studyRow(s: Study) {
   const of = (ui: CreateVariant) => s.rounds.find((r) => r.ui === ui)!,
     device = deviceInfo();
@@ -175,6 +186,8 @@ export function studyRow(s: Study) {
     ui_b_pages: of("B").pages ?? "",
     ui_a_errors: of("A").errors ?? "",
     ui_b_errors: of("B").errors ?? "",
+    ui_a_task_success: taskSuccess(of("A")),
+    ui_b_task_success: taskSuccess(of("B")),
     preferred_version:
       s.preferred === "none" ? "No preference" : (s.preferred ?? ""),
     preference_themes: (s.themes || []).join("; "),

@@ -494,6 +494,142 @@
   font: inherit;
   color: var(--ink);
 }
+/* The two versions sit side by side; "No preference" spans below them. */
+.preference:has(.layout-preview) {
+  grid-template-columns: 1fr 1fr;
+}
+.preference button:not(:has(.layout-preview)) {
+  grid-column: 1 / -1;
+}
+.preference button:has(.layout-preview) {
+  align-items: stretch;
+  gap: 8px;
+  padding: 8px;
+}
+.preference button:has(.layout-preview) strong {
+  font-size: 15px;
+}
+.preference button:has(.layout-preview) small {
+  font-size: 12px;
+  line-height: 1.3;
+}
+.preference button:has(.layout-preview) > span:last-child {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: center;
+}
+.layout-preview {
+  position: relative;
+  display: block;
+  width: 100%;
+  margin: 0 auto;
+  aspect-ratio: 600 / 1298;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--canvas);
+  box-shadow: var(--shadow);
+  container-type: inline-size;
+}
+.layout-preview img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: auto;
+}
+/* A: four screens, 2.5 s each; the tap lands on the button before each change. */
+.preview-a img {
+  opacity: 0;
+  animation: preview-frame 10s step-end infinite both;
+  animation-delay: calc(var(--i) * 2.5s - 10s);
+}
+.preview-a .preview-tap {
+  animation: preview-tap 2.5s ease-out infinite;
+}
+@keyframes preview-frame {
+  0% {
+    opacity: 1;
+  }
+  25% {
+    opacity: 0;
+  }
+}
+/* B: pause at the top, scroll to Publish, tap it, scroll back up. */
+.preview-b img {
+  animation: preview-scroll 10s ease-in-out infinite;
+}
+.preview-b .preview-tap {
+  animation: preview-tap-b 10s ease-out infinite;
+}
+@keyframes preview-scroll {
+  0%,
+  12% {
+    transform: translateY(0);
+  }
+  70%,
+  90% {
+    /* The frame is 1298/600 of its width tall. */
+    transform: translateY(calc(-100% + 216.33cqw));
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+.preview-tap {
+  position: absolute;
+  left: 50%;
+  top: 94%;
+  width: 34px;
+  height: 34px;
+  margin: -17px 0 0 -17px;
+  border-radius: 50%;
+  background: #ffffffb3;
+  box-shadow: 0 0 0 2px #2b241d40;
+  opacity: 0;
+}
+@keyframes preview-tap {
+  0%,
+  62% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  72% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  92%,
+  100% {
+    opacity: 0;
+    transform: scale(1.6);
+  }
+}
+@keyframes preview-tap-b {
+  0%,
+  76% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  80% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  88%,
+  100% {
+    opacity: 0;
+    transform: scale(1.6);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .layout-preview img,
+  .layout-preview .preview-tap {
+    animation: none;
+  }
+  .preview-a img:first-child {
+    opacity: 1;
+  }
+}
 .preference button small {
   color: var(--muted);
   font-size: 13px;

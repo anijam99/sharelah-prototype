@@ -1298,7 +1298,9 @@ test("/a runs UI A then UI B, times each task and uploads both ratings", async (
     await expect(page.getByLabel("Pickup point")).toHaveValue(
       "Bugis+ · Level 1 entrance",
     );
-    await page.getByLabel("Pickup point").fill("Bugis+ · Level 3 entrance");
+    // Round 2 forgets the pickup change, so it should be marked FAIL.
+    if (round === 1)
+      await page.getByLabel("Pickup point").fill("Bugis+ · Level 3 entrance");
     // A reviews on step 4; B has the same review cards at the bottom.
     if (ui === "A") {
       await page.getByRole("button", { name: "Review split" }).click();
@@ -1306,7 +1308,7 @@ test("/a runs UI A then UI B, times each task and uploads both ratings", async (
     } else {
       await expect(page.getByText("Review your split")).toBeVisible();
       await expect(page.locator(".review-pickup strong")).toHaveText(
-        "Bugis+ · Level 3 entrance",
+        "Bugis+ · Level 1 entrance",
       );
     }
     await page.getByRole("button", { name: "Publish split" }).click();
@@ -1320,7 +1322,10 @@ test("/a runs UI A then UI B, times each task and uploads both ratings", async (
         const p = s.products.find((p: any) => p.owner && p.id.length === 36);
         return [p?.shareCount, p?.place];
       }),
-    ).toEqual([2, "Bugis+ · Level 3 entrance"]);
+    ).toEqual([
+      2,
+      round === 1 ? "Bugis+ · Level 3 entrance" : "Bugis+ · Level 1 entrance",
+    ]);
     await expect(page.getByText(/Task time: [\d.]+s/)).toBeVisible();
     await page.getByLabel(/What did you like/).fill("Felt fine");
     await page.getByRole("radio", { name: /^5,/ }).click();
@@ -1332,6 +1337,9 @@ test("/a runs UI A then UI B, times each task and uploads both ratings", async (
   await expect(
     page.getByRole("heading", { name: "Which version would you use?" }),
   ).toBeVisible();
+  // Each option shows an animated picture of its layout.
+  await expect(page.locator(".preference .preview-a img")).toHaveCount(4);
+  await expect(page.locator(".preference .preview-b img")).toBeVisible();
   const submit = page.getByRole("button", { name: "Submit" });
   await page.getByRole("radio", { name: /The second version/ }).click();
   await expect(submit).toBeDisabled();
@@ -1355,6 +1363,8 @@ test("/a runs UI A then UI B, times each task and uploads both ratings", async (
     ui_a_comment: "Felt fine",
     ui_b_ease: 5,
     preferred_version: "B",
+    ui_a_task_success: "PASS",
+    ui_b_task_success: "FAIL",
     age_group: "25–34",
     occupation: "Tech / IT",
     preference_themes: "Layout; Efficient",

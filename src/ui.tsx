@@ -51,7 +51,7 @@ export function Button({
     </button>
   );
 }
-/** A "!" on a tab or shortcut when join requests need an answer. */
+/** A count on a tab or shortcut of the items that need attention there. */
 export function AlertBadge({
   count,
   ready = 0,
@@ -69,7 +69,7 @@ export function AlertBadge({
   return (
     <>
       <b className="alert-badge" aria-hidden="true">
-        !
+        {count + ready > 99 ? "99+" : count + ready}
       </b>
       <span className="sr-only">, {parts.join(", ")}</span>
     </>

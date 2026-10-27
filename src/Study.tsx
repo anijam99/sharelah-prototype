@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { Button } from "./ui";
 import { useStore } from "./store";
 import { go } from "./router";
@@ -53,6 +53,32 @@ function TaskText({ round }: { round: number }) {
         </li>
       </ol>
     </>
+  );
+}
+/**
+ * A looping picture of each layout for the final question: A taps through its
+ * four screens; B scrolls its one page down to Publish and back up.
+ */
+function LayoutPreview({ ui }: { ui: CreateVariant }) {
+  return (
+    <span
+      className={"layout-preview preview-" + ui.toLowerCase()}
+      aria-hidden="true"
+    >
+      {ui === "A" ? (
+        [1, 2, 3, 4].map((n) => (
+          <img
+            key={n}
+            src={`/assets/study/a-${n}.jpg`}
+            alt=""
+            style={{ "--i": n - 1 } as CSSProperties}
+          />
+        ))
+      ) : (
+        <img src="/assets/study/b-full.jpg" alt="" />
+      )}
+      <i className="preview-tap" />
+    </span>
   );
 }
 /** How each layout is described when asking which one people preferred. */
@@ -148,7 +174,12 @@ export function Study({
     setStudy((s) =>
       withRound(
         { ...s, publishedAt: at, taskEnd: at, phase: "rating" },
-        { seconds: Math.round((at - s.taskStart) / 100) / 10 },
+        {
+          seconds: Math.round((at - s.taskStart) / 100) / 10,
+          // Did they make the two changes the task asked for?
+          pickupLevel3: /\b(level|lvl|l)\s*3\b/i.test(mine.place),
+          share2: mine.shareCount === 2,
+        },
       ),
     );
   }, [mine, study.phase, study.taskStart, study.publishedAt, setStudy]);
@@ -383,8 +414,11 @@ export function Study({
                   className={preferred === r.ui ? "on" : ""}
                   onClick={() => setPreferred(r.ui)}
                 >
-                  <strong>The {i === 0 ? "first" : "second"} version</strong>
-                  <small>{layoutHint[r.ui]}</small>
+                  <LayoutPreview ui={r.ui} />
+                  <span>
+                    <strong>The {i === 0 ? "first" : "second"} version</strong>
+                    <small>{layoutHint[r.ui]}</small>
+                  </span>
                 </button>
               ))}
               <button

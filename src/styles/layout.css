@@ -408,9 +408,11 @@
   right: 4px;
   display: grid;
   place-items: center;
-  width: 18px;
+  /* Grows into a pill for two or more digits. */
+  min-width: 18px;
   height: 18px;
-  border-radius: 50%;
+  padding: 0 3px;
+  border-radius: 9px;
   border: 2px solid var(--canvas);
   background: #d92d20;
   color: white;
