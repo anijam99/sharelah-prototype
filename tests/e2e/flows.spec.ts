@@ -1430,3 +1430,16 @@ test("/pitch scans the coconut water deal instead of TOP detergent", async ({
   );
   await expect(page.getByLabel("Address")).toHaveValue("2 Handy Road");
 });
+
+test("/landing shows only the splash screen", async ({ page }) => {
+  await page.goto("/landing");
+  await expect(
+    page.getByRole("heading", { name: "sharelah.", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("See a deal? No one to split with? shareLAH."),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("navigation", { name: "Main navigation" }),
+  ).toHaveCount(0);
+});
