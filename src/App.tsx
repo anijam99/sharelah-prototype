@@ -22,6 +22,7 @@ import { go, parseRoute, useRoute } from "./router";
 import { nextArrival, pendingRequests, readyAlerts } from "./model";
 import { Study, StudyPanel, useStudy } from "./Study";
 import { studyRoute } from "./studyData";
+import { pitchRoute } from "./pitch";
 
 function Navigation({
   active,
@@ -228,7 +229,8 @@ function Root() {
   }
   return (
     <div className="app-layout">
-      {!mobile && !testingPage && !study && lab}
+      {/* The pitch link shows the app on its own, without the lab panel. */}
+      {!mobile && !testingPage && !study && !pitchRoute() && lab}
       <section className="app-frame">
         {storageError && (
           <div className="storage-error" role="alert">

@@ -466,13 +466,15 @@
     ar-track 3.2s ease-in-out 320ms infinite;
 }
 .ar-tag small {
+  /* Long product names wrap to a second line rather than cut off. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   max-width: 100%;
-  font-size: 10px;
-  line-height: 1.2;
-  color: var(--ink);
-  white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis;
+  font-size: 10px;
+  line-height: 1.25;
+  color: var(--ink);
 }
 .ar-deal {
   font-size: 11px;

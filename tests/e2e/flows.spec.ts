@@ -1404,3 +1404,29 @@ test("/b shows UI B first", async ({ page }) => {
     page.getByRole("region", { name: /Portions & price/ }).first(),
   ).toBeVisible();
 });
+
+test("/pitch scans the coconut water deal instead of TOP detergent", async ({
+  page,
+}) => {
+  await page.goto("/pitch");
+  await page.getByRole("button", { name: "Share" }).click();
+  await page
+    .getByRole("button", { name: /Start a split from a price tag/ })
+    .click();
+  await page
+    .locator('input[type="file"]')
+    .setInputFiles("public/assets/bag.png");
+  await expect(page.getByLabel("Item name")).toHaveValue(
+    "ICE Cool Roasted Coconut Water",
+  );
+  await expect(page.getByLabel("One portion")).toHaveValue("1 bottle · 500 ml");
+  await expect(page.getByLabel("Store")).toHaveValue(
+    "Sheng Siong · The Cathay, Basement 1",
+  );
+  await page.getByRole("button", { name: "Set portions & price" }).click();
+  await page.getByRole("button", { name: "Arrange pickup" }).click();
+  await expect(page.getByLabel("Pickup point")).toHaveValue(
+    "The Cathay · Main entrance",
+  );
+  await expect(page.getByLabel("Address")).toHaveValue("2 Handy Road");
+});

@@ -17,6 +17,7 @@ import {
 import { savePhoto, useStore } from "./store";
 import { back, finish, go } from "./router";
 import { studyRoute } from "./studyData";
+import { pitchPickup, pitchRoute, pitchSample } from "./pitch";
 
 /** A/B test: A walks through four steps; B shows every field on one page. */
 export type CreateVariant = "A" | "B";
@@ -38,8 +39,13 @@ const sections: Record<Section, { n: number; title: string; hint: string }> = {
   pickup: { n: 3, title: "Pickup", hint: "Where and when neighbours collect." },
 };
 
-/** What the simulated AI price-tag scan "reads" from any photo. */
-const sample = seedProducts.find((q) => q.id === "det")!;
+/**
+ * What the simulated AI price-tag scan "reads" from any photo: the pitch deal
+ * on /pitch, TOP detergent everywhere else (including the A/B study).
+ */
+const sample = pitchRoute()
+  ? pitchSample
+  : seedProducts.find((q) => q.id === "det")!;
 
 /**
  * Simulated AR: the price-tag camera "recognises" the sample's shelf tag and
@@ -59,7 +65,8 @@ const scanned: Partial<Product> = {
 const arSample = {
   title: sample.title,
   deal: `${sample.bundleCount} for ${money(sample.bundleCents)}`,
-  unit: money(Math.round(sample.bundleCents / (sample.bundleCount || 2))),
+  // Matches the per-portion price the split form shows (rounded down).
+  unit: money(Math.floor(sample.bundleCents / (sample.bundleCount || 2))),
 };
 
 /** Lets the A/B study count blocked Next/Publish taps. */
@@ -123,6 +130,8 @@ export function Create({
   const onePage = layout === "B" && mode !== "deal";
   const p: Product = {
     ...seedProducts[0],
+    // /pitch collects at the mall the coconut water deal is from.
+    ...(pitchRoute() ? pitchPickup : {}),
     title: "",
     portion: "",
     store: "",
