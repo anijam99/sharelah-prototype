@@ -18,6 +18,8 @@ export type Round = {
   share2?: boolean;
   /** Ease of use, 1–5. */
   rating?: number;
+  /** Effort to check the details were right before publishing, 1–5 (5 = most effort). */
+  verifyEffort?: number;
   comment?: string;
 };
 export type Study = {
@@ -179,6 +181,8 @@ export function studyRow(s: Study) {
     ui_a_ease: of("A").rating ?? "",
     ui_a_comment: of("A").comment ?? "",
     ui_b_ease: of("B").rating ?? "",
+    ui_a_verify_effort: of("A").verifyEffort ?? "",
+    ui_b_verify_effort: of("B").verifyEffort ?? "",
     ui_b_comment: of("B").comment ?? "",
     ui_a_time_sec: of("A").seconds ?? "",
     ui_b_time_sec: of("B").seconds ?? "",

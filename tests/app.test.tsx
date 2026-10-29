@@ -657,7 +657,7 @@ it("the one-page layout flags each incomplete section and publishes the same spl
     target: { value: "Bugis+ · Main entrance" },
   });
   // The same review cards as A's step 4 sit at the bottom and update live.
-  expect(screen.getByText("Review your split")).toBeTruthy();
+  expect(screen.getByText("4 Review your split")).toBeTruthy();
   expect(screen.getByText("Bugis+ · Main entrance")).toBeTruthy();
   expect(screen.getByRole("button", { name: "Edit pickup" })).toBeTruthy();
   click("Publish split");

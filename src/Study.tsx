@@ -108,6 +108,52 @@ const likert = [
   "Easy",
   "Very easy",
 ];
+const effortScale = [
+  "Very little effort",
+  "Little effort",
+  "Some effort",
+  "A lot of effort",
+  "A great deal of effort",
+];
+
+/** A labelled 1–5 scale; used for ease of use and for checking effort. */
+function Likert({
+  question,
+  name,
+  labels,
+  value,
+  onChange,
+}: {
+  question: string;
+  name: string;
+  labels: string[];
+  value: number;
+  onChange: (n: number) => void;
+}) {
+  return (
+    <>
+      <p>{question}</p>
+      <div className="likert" role="radiogroup" aria-label={name}>
+        {labels.map((label, i) => (
+          <button
+            key={label}
+            role="radio"
+            aria-checked={value === i + 1}
+            aria-label={`${i + 1}, ${label}`}
+            className={value === i + 1 ? "on" : ""}
+            onClick={() => onChange(i + 1)}
+          >
+            {i + 1}
+          </button>
+        ))}
+      </div>
+      <div className="likert-ends">
+        <small>1 · {labels[0]}</small>
+        <small>5 · {labels[4]}</small>
+      </div>
+    </>
+  );
+}
 
 /** Splits made by the participant have UUID ids; seeded ones do not. */
 export const hostedByParticipant = (p: Product) =>
@@ -142,6 +188,7 @@ export function Study({
       study.uploaded ? "sent" : "idle",
     ),
     [rating, setRating] = useState<number>(0),
+    [effort, setEffort] = useState<number>(0),
     [comment, setComment] = useState(""),
     [preferred, setPreferred] = useState<CreateVariant | "none">(),
     [picked, setPicked] = useState<Theme[]>([]),
@@ -223,9 +270,12 @@ export function Study({
   }
   function submitRating() {
     const rounds = study.rounds.map((r, i) =>
-      i === study.current ? { ...r, rating, comment: comment.trim() } : r,
+      i === study.current
+        ? { ...r, rating, verifyEffort: effort, comment: comment.trim() }
+        : r,
     ) as StudyState["rounds"];
     setRating(0);
+    setEffort(0);
     setComment("");
     if (study.current === 0)
       setStudy((s) => ({
@@ -356,25 +406,20 @@ export function Study({
           <>
             <span className="eyebrow">TASK {study.current + 1} COMPLETE</span>
             <h2>Tell us about that version</h2>
-            <p>Overall, how easy was it to use this version of the app?</p>
-            <div className="likert" role="radiogroup" aria-label="Ease of use">
-              {likert.map((label, i) => (
-                <button
-                  key={label}
-                  role="radio"
-                  aria-checked={rating === i + 1}
-                  aria-label={`${i + 1}, ${label}`}
-                  className={rating === i + 1 ? "on" : ""}
-                  onClick={() => setRating(i + 1)}
-                >
-                  {i + 1}
-                </button>
-              ))}
-            </div>
-            <div className="likert-ends">
-              <small>1 · Very difficult</small>
-              <small>5 · Very easy</small>
-            </div>
+            <Likert
+              question="Overall, how easy was it to use this version of the app?"
+              name="Ease of use"
+              labels={likert}
+              value={rating}
+              onChange={setRating}
+            />
+            <Likert
+              question="How much effort did it take to check that the split’s details were correct before you published it?"
+              name="Effort to check details"
+              labels={effortScale}
+              value={effort}
+              onChange={setEffort}
+            />
             <label className="study-comment">
               What did you like or find frustrating? What would you change?
               <textarea
@@ -385,7 +430,7 @@ export function Study({
               />
             </label>
             <Button
-              disabled={!rating || !comment.trim()}
+              disabled={!rating || !effort || !comment.trim()}
               onClick={submitRating}
             >
               {study.current === 0 ? "Next task" : "Continue"}

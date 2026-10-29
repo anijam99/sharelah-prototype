@@ -2,6 +2,7 @@
 const HEADERS = [
   "timestamp", "participant_id", "age_group", "occupation", "route", "first_ui", "second_ui",
   "ui_a_ease", "ui_a_comment", "ui_b_ease", "ui_b_comment",
+  "ui_a_verify_effort", "ui_b_verify_effort",
   "ui_a_time_sec", "ui_b_time_sec", "ui_a_pages", "ui_b_pages",
   "ui_a_errors", "ui_b_errors", "ui_a_task_success", "ui_b_task_success",
   "preferred_version", "preference_themes",
