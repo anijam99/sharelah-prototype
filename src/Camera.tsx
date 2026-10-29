@@ -17,8 +17,11 @@ export function Camera({
   extra,
   onPhoto,
   onCode,
+  anyCode = false,
 }: {
   mode: "photo" | "qr";
+  /** QR mode for any code (the /scanning page), not a split's pickup code. */
+  anyCode?: boolean;
   /** Simulated AR: shows this tag's per-item price over the live feed. */
   ar?: ArPriceTag;
   /** Another way to supply a photo, shown beside "Choose a photo". */
@@ -66,7 +69,9 @@ export function Camera({
       try {
         if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia)
           throw Error(
-            "Camera access needs HTTPS (or localhost). You can still choose a photo or enter a pickup code.",
+            anyCode
+              ? "Camera access needs HTTPS (or localhost). You can still choose a photo of a QR code."
+              : "Camera access needs HTTPS (or localhost). You can still choose a photo or enter a pickup code.",
           );
         const s = await navigator.mediaDevices.getUserMedia({
           video: {
@@ -102,9 +107,13 @@ export function Camera({
         const name = (e as Error).name;
         setError(
           name === "NotAllowedError"
-            ? "Camera permission was denied. Allow camera access in your browser settings and try again, or upload a QR photo."
+            ? anyCode
+              ? "Camera permission was denied. Allow camera access in your browser settings and try again, or choose a photo of a QR code."
+              : "Camera permission was denied. Allow camera access in your browser settings and try again, or upload a QR photo."
             : name === "NotFoundError"
-              ? "No camera was found. Choose a QR photo or enter the pickup code."
+              ? anyCode
+                ? "No camera was found. Choose a photo of a QR code instead."
+                : "No camera was found. Choose a QR photo or enter the pickup code."
               : name === "NotReadableError"
                 ? "Your camera is being used by another app. Close it and try again."
                 : (e as Error).message,
@@ -143,7 +152,9 @@ export function Camera({
         } catch {
           if (!cancelled)
             setError(
-              "Could not read the QR code. Try a clearer photo or enter the 6-digit code.",
+              anyCode
+                ? "Could not read the QR code. Try holding it steady in better light."
+                : "Could not read the QR code. Try a clearer photo or enter the 6-digit code.",
             );
         }
       }
@@ -166,7 +177,7 @@ export function Camera({
       stream.current = null;
       document.removeEventListener("visibilitychange", visibility);
     };
-  }, [facing, attempt, mode]);
+  }, [facing, attempt, mode, anyCode]);
   async function capture() {
     if (!video.current?.videoWidth) return;
     setBusy(true);
@@ -201,7 +212,9 @@ export function Camera({
         const code = await decodeQR(await imageDataFromFile(blob));
         if (!code || !handler.current?.(code))
           throw Error(
-            "No matching pickup QR code found. Try a sharper photo or enter the code.",
+            anyCode
+              ? "No QR code found in that photo. Try a sharper photo."
+              : "No matching pickup QR code found. Try a sharper photo or enter the code.",
           );
         stop();
       } else {
@@ -224,7 +237,9 @@ export function Camera({
           {!arLocked && <ScanLine size={44} />}
           <span>
             {mode === "qr"
-              ? "Keep the host’s QR code inside the frame"
+              ? anyCode
+                ? "Keep the QR code inside the frame"
+                : "Keep the host’s QR code inside the frame"
               : arLocked
                 ? "Price tag found · take a photo to use it"
                 : "Fit the item and price tag inside the frame"}

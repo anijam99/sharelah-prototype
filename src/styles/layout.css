@@ -498,3 +498,37 @@
     animation: none;
   }
 }
+
+/* /scanning: a stand-alone QR scanner. */
+.scanning {
+  width: min(100%, 480px);
+  min-height: 100dvh;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: calc(16px + env(safe-area-inset-top, 0px)) 20px
+    calc(20px + env(safe-area-inset-bottom, 0px));
+  background: var(--canvas);
+}
+.scanning-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.scanning-header h1 {
+  margin: 0;
+  font: 800 24px/1.2 var(--display);
+}
+.scanning-intro {
+  margin: 0;
+  color: var(--muted);
+  font-size: 15px;
+}
+.scanning .camera {
+  flex: 1;
+}
+.scanning .viewfinder {
+  height: min(60dvh, 460px);
+  max-height: none;
+}

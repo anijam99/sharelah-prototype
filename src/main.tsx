@@ -2,6 +2,7 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import { Landing, landingRoute } from "./Landing";
+import { Scanning, scanningRoute } from "./Scanning";
 import "./styles/index.css";
 class ErrorBoundary extends React.Component<
   { children: React.ReactNode },
@@ -24,5 +25,8 @@ class ErrorBoundary extends React.Component<
   }
 }
 createRoot(document.getElementById("root")!).render(
-  <ErrorBoundary>{landingRoute() ? <Landing /> : <App />}</ErrorBoundary>,
+  <ErrorBoundary>
+    {/* Stand-alone pages that skip the app entirely. */}
+    {landingRoute() ? <Landing /> : scanningRoute() ? <Scanning /> : <App />}
+  </ErrorBoundary>,
 );

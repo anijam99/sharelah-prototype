@@ -1443,3 +1443,37 @@ test("/landing shows only the splash screen", async ({ page }) => {
     page.getByRole("navigation", { name: "Main navigation" }),
   ).toHaveCount(0);
 });
+
+test("/scanning opens the coconut water receipt and completes the split", async ({
+  page,
+}) => {
+  await page.goto("/scanning");
+  await expect(
+    page.getByRole("heading", { name: "Scan the host’s pickup code" }),
+  ).toBeVisible();
+  // Any QR code works; this one is a ShareLah pickup code.
+  const svg = await readFile(
+    new URL("../../public/testing/pickup-yog.svg", import.meta.url),
+  );
+  await page.locator("input[type=file]").setInputFiles({
+    name: "code.svg",
+    mimeType: "image/svg+xml",
+    buffer: svg,
+  });
+  await expect(page).toHaveURL(/\/pitch#\/receipt\/pitch-coconut$/);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+    "Confirm receipt",
+  );
+  await expect(
+    page.getByText("ICE Cool Roasted Coconut Water").first(),
+  ).toBeVisible();
+  const release = page.getByRole("button", {
+    name: "Confirm & release S$1.46",
+  });
+  await expect(release).toBeDisabled();
+  await page.getByRole("checkbox").check();
+  await release.click();
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+    "Split complete",
+  );
+});

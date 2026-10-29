@@ -22,7 +22,7 @@ import { go, parseRoute, useRoute } from "./router";
 import { nextArrival, pendingRequests, readyAlerts } from "./model";
 import { Study, StudyPanel, useStudy } from "./Study";
 import { studyRoute } from "./studyData";
-import { pitchRoute } from "./pitch";
+import { PITCH_SCANNED, pitchRoute, withPitchSplit } from "./pitch";
 
 function Navigation({
   active,
@@ -105,7 +105,7 @@ function Root() {
   useArrivals();
   const mobile = useMobileLayout();
   const path = useRoute(),
-    { state, storageError } = useStore(),
+    { state, storageError, update } = useStore(),
     [modal, setModal] = useState<Modal | null>(null);
   const [variant, selectVariant] = useStoredVariant<ConfirmationVariant>(
     "sharelah-confirmation-variant",
@@ -119,6 +119,12 @@ function Root() {
     "sharelah-create-variant",
     createVariant,
   );
+  // Coming from /scanning: add the joined coconut water split it collects.
+  useEffect(() => {
+    if (!pitchRoute() || !sessionStorage.getItem(PITCH_SCANNED)) return;
+    sessionStorage.removeItem(PITCH_SCANNED);
+    update(withPitchSplit);
+  }, [update]);
   // On /a and /b the study decides which start-a-split layout is shown.
   const [study, setStudy] = useStudy(studyRoute());
   const createLayout = study ? study.rounds[study.current].ui : storedLayout;
