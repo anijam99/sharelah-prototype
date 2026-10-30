@@ -29,27 +29,21 @@ function TaskText({ round }: { round: number }) {
     <>
       <p>
         {round === 0
-          ? "Imagine you’re shopping at FairPrice · Bugis Junction, near where you live in Bugis."
-          : "You’ll do the same task again, this time on a slightly different version of the app."}
-      </p>
-      <p>
-        Pretend you’re buying <strong>TOP liquid laundry detergent</strong>.
-        It’s sold as a bundle of <strong>3 bottles for S$21.00</strong>, but you
-        only need 1. You want to <strong>keep 1 bottle</strong> and{" "}
-        <strong>share 2</strong> with a neighbour, who will collect them at{" "}
-        <strong>Bugis+ · Level 3 entrance</strong> today.
+          ? "You’re at FairPrice · Bugis Junction. TOP liquid laundry detergent is 3 bottles for S$21.00, but you only need 1."
+          : "Same task, slightly different app."}
       </p>
       <ol>
         <li>
-          The app opens on the camera. <strong>Take a picture</strong> of any
-          price tag. <strong>AI autofill</strong> fills in the detergent’s
-          details from your photo.
+          <strong>Take a photo</strong> of any price tag. AI fills in the
+          details.
         </li>
         <li>
-          <strong>Check the details</strong> and change anything that doesn’t
-          match: keep <strong>1</strong> bottle, share <strong>2</strong>, and
-          set the pickup point to <strong>Bugis+ · Level 3 entrance</strong>,
-          today at any time. Then publish.
+          <strong>Check and fix</strong> the details: keep <strong>1</strong>,
+          share <strong>2</strong>, pickup at{" "}
+          <strong>Bugis+ · Level 3 entrance</strong>, today, any time.
+        </li>
+        <li>
+          <strong>Publish</strong>.
         </li>
       </ol>
     </>
@@ -386,16 +380,14 @@ export function Study({
               <div className="study-background">
                 <strong>Background</strong>
                 <p>
-                  In ShareLah, a host buys a bundle and shares part of it.
-                  Neighbours ask to join and collect their portion from the host
-                  at a pickup point. In this task, you’re the host.
+                  Hosts buy a bundle and share the extra with neighbours. Here,
+                  you’re the host.
                 </p>
               </div>
             )}
             <TaskText round={study.current} />
             <p className="fine">
-              These instructions stay visible beside the app. Work as you
-              normally would. The task ends as soon as you publish the split.
+              These steps stay beside the app. The task ends when you publish.
             </p>
             <Button disabled={busy} onClick={begin}>
               {busy ? "Getting ready…" : "Start task"}
